@@ -1,5 +1,6 @@
 "use client";
 
+import AuthApi from "@/api/auth";
 import {
   createContext,
   useCallback,
@@ -30,7 +31,10 @@ type AuthState = {
   loginWithProvider: (provider: "google" | "facebook") => Promise<void>;
   logout: () => void;
   updateProfile: (patch: Partial<Pick<AuthUser, "name" | "avatarUrl">>) => void;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  changePassword: (
+    currentPassword: string,
+    newPassword: string,
+  ) => Promise<void>;
   deleteAccount: (password?: string) => Promise<void>;
 };
 
@@ -39,9 +43,7 @@ const SESSION_KEY = "career-lens.session";
 
 const AuthContext = createContext<AuthState | null>(null);
 
-// Lightweight non-cryptographic hash. NOT real security — this is a frontend
-// mock so the password isn't stored in plain text in localStorage. Replace
-// with a real backend call before going to production.
+// --- CÁC HELPER GIỮ NGUYÊN ĐỂ TRANH LỖI ---
 function hash(input: string): string {
   let h = 5381;
   for (let i = 0; i < input.length; i++) {
@@ -94,82 +96,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setReady(true);
   }, []);
 
+  // --- UPDATE: HÀM LOGIN GỌI AUTHAPI ---
   const login = useCallback(async (email: string, password: string) => {
-    const e = email.trim().toLowerCase();
-    if (!e || !password) throw new Error("Vui lòng nhập email và mật khẩu");
-    const u = readUsers().find((x) => x.email === e);
-    if (!u) throw new Error("Email chưa được đăng ký");
-    if (u.passwordHash !== hash(password)) throw new Error("Mật khẩu không đúng");
-    writeSession(u.id);
-    setUser(toPublic(u));
-  }, []);
+    const res = await AuthApi.login({ email, password });
 
-  const register = useCallback(
-    async (name: string, email: string, password: string) => {
-      const n = name.trim();
-      const e = email.trim().toLowerCase();
-      if (!n) throw new Error("Vui lòng nhập họ tên");
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
-        throw new Error("Email không hợp lệ");
-      if (password.length < 6)
-        throw new Error("Mật khẩu phải có ít nhất 6 ký tự");
-      const users = readUsers();
-      if (users.some((x) => x.email === e))
-        throw new Error("Email đã được đăng ký");
-      const newUser: StoredUser = {
-        id: `u_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-        name: n,
-        email: e,
+    if (res.data) {
+      const {
+        access_token,
+        refresh_token,
+        user_id,
+        email: userEmail,
+      } = res.data;
+
+      localStorage.setItem("access_token", access_token);
+      localStorage.setItem("refresh_token", refresh_token);
+      writeSession(user_id);
+
+      setUser({
+        id: user_id,
+        email: userEmail || email,
+        name: "",
         provider: "password",
         createdAt: Date.now(),
-        passwordHash: hash(password),
-      };
-      users.push(newUser);
-      writeUsers(users);
-      writeSession(newUser.id);
-      setUser(toPublic(newUser));
+      });
+    } else {
+      throw new Error(res.message || "Đăng nhập thất bại");
+    }
+  }, []);
+
+  // --- UPDATE: HÀM REGISTER GỌI AUTHAPI ---
+  const register = useCallback(
+    async (name: string, email: string, password: string) => {
+      const res = await AuthApi.register({
+        full_name: name, // Map đúng field full_name của NestJS DTO
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (res.data) {
+        // Sau khi đăng ký thành công, tự động đăng nhập
+        await login(email, password);
+      } else {
+        throw new Error(res.message || "Đăng ký thất bại");
+      }
     },
-    [],
+    [login],
   );
 
+  // --- UPDATE: HÀM LOGIN VỚI PROVIDER GỌI AUTHAPI ---
   const loginWithProvider = useCallback(
     async (provider: "google" | "facebook") => {
-      // FRONTEND MOCK: simulate the OAuth round-trip with a short delay and a
-      // random demo profile. Replace with real OAuth (NextAuth / Firebase /
-      // backend OIDC) before production.
-      await new Promise((r) => setTimeout(r, 700));
-      const demoNames = [
-        "Minh Nguyễn",
-        "Linh Trần",
-        "Khoa Phạm",
-        "An Lê",
-        "Mai Hoàng",
-      ];
-      const name = demoNames[Math.floor(Math.random() * demoNames.length)];
-      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, ".").replace(/^\.|\.$/g, "");
-      const domain = provider === "google" ? "gmail.com" : "facebook.com";
-      const email = `${slug}.${Math.floor(Math.random() * 9000 + 1000)}@${domain}`;
-      const users = readUsers();
-      let u = users.find((x) => x.email === email);
-      if (!u) {
-        u = {
-          id: `u_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-          name,
-          email,
-          provider,
-          avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundColor=${provider === "google" ? "ea4335" : "1877f2"}`,
-          createdAt: Date.now(),
-        };
-        users.push(u);
-        writeUsers(users);
+      if (provider === "google") {
+        const res = await AuthApi.getGoogleUrl();
+        if (res.data?.url) {
+          window.location.href = res.data.url; // Chuyển hướng sang Google Auth
+        }
+      } else {
+        // Hiện tại NestJS của bạn chưa bật Facebook, có thể để thông báo
+        console.warn("Facebook login is not implemented yet on Backend");
       }
-      writeSession(u.id);
-      setUser(toPublic(u));
     },
     [],
   );
 
   const logout = useCallback(() => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
     writeSession(null);
     setUser(null);
   }, []);
@@ -234,8 +226,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo<AuthState>(
-    () => ({ user, ready, login, register, loginWithProvider, logout, updateProfile, changePassword, deleteAccount }),
-    [user, ready, login, register, loginWithProvider, logout, updateProfile, changePassword, deleteAccount],
+    () => ({
+      user,
+      ready,
+      login,
+      register,
+      loginWithProvider,
+      logout,
+      updateProfile,
+      changePassword,
+      deleteAccount,
+    }),
+    [
+      user,
+      ready,
+      login,
+      register,
+      loginWithProvider,
+      logout,
+      updateProfile,
+      changePassword,
+      deleteAccount,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
