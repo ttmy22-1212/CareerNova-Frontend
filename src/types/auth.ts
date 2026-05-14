@@ -31,3 +31,12 @@ export interface ResetPasswordDto {
   token: string;
   newPassword: string;
 }
+
+export interface RefreshTokenDto {
+  refresh_token: string;
+}
+
+export interface RefreshTokenResponseDto {
+  access_token: string;
+  refresh_token: string;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import AuthApi from "@/api/auth";
+import CookieHelper from "@/utils/cookie-helper";
 import {
   createContext,
   useCallback,
@@ -87,11 +88,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const sid = readSession();
-    if (sid) {
-      const u = readUsers().find((x) => x.id === sid);
-      if (u) setUser(toPublic(u));
-      else writeSession(null);
+    const token = CookieHelper.getItem("token");
+
+    if (token) {
+      setUser({
+        id: "authenticated-user",
+        email: "",
+        name: "",
+        provider: "password",
+        createdAt: Date.now(),
+      });
     }
     setReady(true);
   }, []);
@@ -108,9 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: userEmail,
       } = res.data;
 
-      localStorage.setItem("access_token", access_token);
-      localStorage.setItem("refresh_token", refresh_token);
-      writeSession(user_id);
+      CookieHelper.setItem("token", access_token);
+      CookieHelper.setItem("refresh_token", refresh_token);
 
       setUser({
         id: user_id,
@@ -160,9 +165,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(() => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    writeSession(null);
+    CookieHelper.removeItem("token");
+    CookieHelper.removeItem("refresh_token");
     setUser(null);
   }, []);
 

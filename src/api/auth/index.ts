@@ -7,6 +7,8 @@ import {
   RegisterResponse,
   ForgotPasswordDto,
   ResetPasswordDto,
+  RefreshTokenDto,
+  RefreshTokenResponseDto,
 } from "@/types/auth";
 
 export default class AuthApi {
@@ -72,5 +74,15 @@ export default class AuthApi {
     code: string,
   ): Promise<IBaseResponse<LoginResponse>> {
     return await apiGet("/auth/google/callback", { code });
+  }
+
+  /**
+   * CẤP LẠI ACCESS TOKEN MỚI
+   * POST /auth/refresh
+   */
+  static async refreshToken(
+    payload: RefreshTokenDto,
+  ): Promise<IBaseResponse<RefreshTokenResponseDto>> {
+    return await apiPost("/auth/refresh", payload);
   }
 }
