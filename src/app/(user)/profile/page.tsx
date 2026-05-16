@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -37,16 +37,16 @@ import {
   EyeOff,
   AlertTriangle,
 } from "lucide-react";
-import { useOnboarding } from "@/contexts/onboarding/onboarding-context";
+import {
+  CareerInterest,
+  Goal,
+  StudentMajor,
+  useOnboarding,
+} from "@/contexts/onboarding/onboarding-context";
 import { useTheme } from "@/contexts/theme/theme-context";
 import { useAuth, type AuthProvider } from "@/contexts/auth/auth-context";
 import { jobsWithDetails } from "@/data/mockData";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +56,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import ProfileApi from "@/api/profile";
 
 const interestLabels: Record<string, string> = {
   frontend: "Frontend",
@@ -87,9 +88,18 @@ const majorLabels: Record<string, string> = {
 };
 
 const providerMeta: Record<AuthProvider, { label: string; tone: string }> = {
-  password: { label: "Email & mật khẩu", tone: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
-  google: { label: "Google", tone: "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300" },
-  facebook: { label: "Facebook", tone: "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300" },
+  password: {
+    label: "Email & mật khẩu",
+    tone: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  },
+  google: {
+    label: "Google",
+    tone: "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300",
+  },
+  facebook: {
+    label: "Facebook",
+    tone: "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300",
+  },
 };
 
 function formatDate(ts: number) {
@@ -109,11 +119,50 @@ function getInitials(name: string) {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { profile, isOnboarded, strength, checklist, reset, setProfile } = useOnboarding();
+  const { profile, isOnboarded, strength, checklist, reset, setProfile } =
+    useOnboarding();
   const { theme, toggle: toggleTheme } = useTheme();
-  const { user, logout, updateProfile, changePassword, deleteAccount } = useAuth();
+  const { user, logout, updateProfile, changePassword, deleteAccount } =
+    useAuth();
 
   const initials = getInitials(user?.name || profile.major || "User");
+
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const res = await ProfileApi.getMe();
+
+        if (res.data) {
+          const userData = res.data.user;
+
+          const orientationRaw = userData.orientation || "";
+
+          const [selectedPart, quizPart] = orientationRaw.split("|");
+
+          setProfile({
+            major: userData.major ? (userData.major as StudentMajor) : null,
+            university: userData.school,
+
+            interests: selectedPart
+              ? (selectedPart.split(",") as CareerInterest[])
+              : [],
+
+            suggestedPaths: quizPart
+              ? (quizPart.split(",") as CareerInterest[])
+              : [],
+
+            goal: userData.objective ? (userData.objective as Goal) : null,
+            targetSalaryUSD: userData.target_salary,
+            preferRemote: userData.prefer_remote,
+          });
+        }
+      } catch (err) {
+        console.error("Lỗi lấy thông tin profile:", err);
+      }
+    };
+
+    fetchProfileData();
+  }, []);
 
   // Bookmarked / applied job objects
   const bookmarkedJobs = useMemo(() => {
@@ -130,12 +179,42 @@ export default function ProfilePage() {
   // Achievements (computed badges)
   const achievements = useMemo(() => {
     const list: { id: string; label: string; desc: string; got: boolean }[] = [
-      { id: "quiz", label: "Career Explorer", desc: "Hoàn thành Career Quiz", got: profile.quizDone },
-      { id: "cv", label: "CV Ready", desc: "Đã upload CV", got: profile.hasUploadedCV },
-      { id: "skill5", label: "Skill Mapper", desc: "Khai báo ≥ 5 skill", got: profile.topSkills.length >= 5 },
-      { id: "save5", label: "Job Hunter", desc: "Lưu ≥ 5 job", got: profile.bookmarkedJobIds.length >= 5 },
-      { id: "apply3", label: "Action Taker", desc: "Apply ≥ 3 job", got: profile.appliedJobIds.length >= 3 },
-      { id: "full", label: "Complete Profile", desc: "Hồ sơ 100%", got: strength === 100 },
+      {
+        id: "quiz",
+        label: "Career Explorer",
+        desc: "Hoàn thành Career Quiz",
+        got: profile.quizDone,
+      },
+      {
+        id: "cv",
+        label: "CV Ready",
+        desc: "Đã upload CV",
+        got: profile.hasUploadedCV,
+      },
+      {
+        id: "skill5",
+        label: "Skill Mapper",
+        desc: "Khai báo ≥ 5 skill",
+        got: profile.topSkills.length >= 5,
+      },
+      {
+        id: "save5",
+        label: "Job Hunter",
+        desc: "Lưu ≥ 5 job",
+        got: profile.bookmarkedJobIds.length >= 5,
+      },
+      {
+        id: "apply3",
+        label: "Action Taker",
+        desc: "Apply ≥ 3 job",
+        got: profile.appliedJobIds.length >= 3,
+      },
+      {
+        id: "full",
+        label: "Complete Profile",
+        desc: "Hồ sơ 100%",
+        got: strength === 100,
+      },
     ];
     return list;
   }, [profile, strength]);
@@ -151,8 +230,8 @@ export default function ProfilePage() {
             Bạn chưa có hồ sơ
           </h1>
           <p className="mx-auto mb-5 max-w-md text-sm text-slate-600 dark:text-slate-400">
-            Hoàn thành onboarding 5 bước (~5 phút) để tạo hồ sơ cá nhân — chúng tôi sẽ gợi ý
-            job, lộ trình &amp; skill chính xác cho bạn.
+            Hoàn thành onboarding 5 bước (~5 phút) để tạo hồ sơ cá nhân — chúng
+            tôi sẽ gợi ý job, lộ trình &amp; skill chính xác cho bạn.
           </p>
           <Link
             href="/onboarding/welcome"
@@ -295,7 +374,8 @@ export default function ProfilePage() {
                 <Sparkles className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 <div>
                   <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
-                    Hồ sơ {strength}% — còn {checklist.filter((c) => !c.done).length} bước nữa
+                    Hồ sơ {strength}% — còn{" "}
+                    {checklist.filter((c) => !c.done).length} bước nữa
                   </p>
                   <div className="mt-1 h-1.5 w-48 overflow-hidden rounded-full bg-amber-200 dark:bg-amber-900/60">
                     <div
@@ -334,7 +414,10 @@ export default function ProfilePage() {
             <div className="grid gap-5 md:grid-cols-3">
               <Card icon={Compass} title="Định hướng quan tâm" tone="blue">
                 {profile.interests.length === 0 ? (
-                  <Empty href="/onboarding/welcome?step=2" label="Chọn 1-3 mảng quan tâm" />
+                  <Empty
+                    href="/onboarding/welcome?step=2"
+                    label="Chọn 1-3 mảng quan tâm"
+                  />
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {profile.interests.map((i) => (
@@ -349,7 +432,9 @@ export default function ProfilePage() {
                 )}
                 {profile.suggestedPaths.length > 0 && (
                   <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">
-                    <p className="text-xs font-medium text-slate-500">Đề xuất từ Quiz:</p>
+                    <p className="text-xs font-medium text-slate-500">
+                      Đề xuất từ Quiz:
+                    </p>
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {profile.suggestedPaths.map((i) => (
                         <span
@@ -364,7 +449,11 @@ export default function ProfilePage() {
                 )}
               </Card>
 
-              <Card icon={GraduationCap} title="Mục tiêu nghề nghiệp" tone="violet">
+              <Card
+                icon={GraduationCap}
+                title="Mục tiêu nghề nghiệp"
+                tone="violet"
+              >
                 {profile.goal ? (
                   <div className="space-y-2.5">
                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
@@ -379,7 +468,11 @@ export default function ProfilePage() {
                           ${profile.targetSalaryUSD.toLocaleString()}/năm
                         </p>
                         <p className="text-xs text-slate-500">
-                          ~{Math.round((profile.targetSalaryUSD * 25000) / 12 / 1_000_000)}tr/tháng
+                          ~
+                          {Math.round(
+                            (profile.targetSalaryUSD * 25000) / 12 / 1_000_000,
+                          )}
+                          tr/tháng
                         </p>
                       </div>
                     )}
@@ -391,7 +484,10 @@ export default function ProfilePage() {
                     )}
                   </div>
                 ) : (
-                  <Empty href="/onboarding/welcome?step=4" label="Đặt mục tiêu nghề nghiệp" />
+                  <Empty
+                    href="/onboarding/welcome?step=4"
+                    label="Đặt mục tiêu nghề nghiệp"
+                  />
                 )}
               </Card>
 
@@ -402,7 +498,9 @@ export default function ProfilePage() {
                       <Link
                         href={c.href}
                         className={`flex items-center gap-2 rounded px-1.5 py-1 text-xs transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 ${
-                          c.done ? "text-slate-400" : "text-slate-700 dark:text-slate-200"
+                          c.done
+                            ? "text-slate-400"
+                            : "text-slate-700 dark:text-slate-200"
                         }`}
                       >
                         {c.done ? (
@@ -410,7 +508,11 @@ export default function ProfilePage() {
                         ) : (
                           <Circle className="h-3.5 w-3.5 shrink-0 text-slate-300" />
                         )}
-                        <span className={`flex-1 ${c.done ? "line-through" : ""}`}>{c.label}</span>
+                        <span
+                          className={`flex-1 ${c.done ? "line-through" : ""}`}
+                        >
+                          {c.label}
+                        </span>
                         {!c.done && (
                           <span className="shrink-0 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
                             +{c.weight}%
@@ -421,55 +523,6 @@ export default function ProfilePage() {
                   ))}
                 </ul>
               </Card>
-            </div>
-
-            {/* Achievements */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Award className="h-4 w-4 text-amber-500" />
-                  <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                    Thành tựu
-                  </h2>
-                </div>
-                <span className="text-xs text-slate-500">
-                  {achievements.filter((a) => a.got).length}/{achievements.length} đã đạt
-                </span>
-              </div>
-              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-                {achievements.map((a) => (
-                  <div
-                    key={a.id}
-                    className={`flex items-center gap-3 rounded-xl border p-3 transition-all ${
-                      a.got
-                        ? "border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 dark:border-amber-900/60 dark:from-amber-950/30 dark:to-orange-950/20"
-                        : "border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/30"
-                    }`}
-                  >
-                    <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                        a.got
-                          ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md shadow-amber-200 dark:shadow-amber-900/30"
-                          : "bg-slate-200 text-slate-400 dark:bg-slate-700 dark:text-slate-500"
-                      }`}
-                    >
-                      <Award className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <p
-                        className={`text-sm font-bold ${
-                          a.got
-                            ? "text-amber-900 dark:text-amber-200"
-                            : "text-slate-500 dark:text-slate-400"
-                        }`}
-                      >
-                        {a.label}
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{a.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           </TabsContent>
 
@@ -492,7 +545,10 @@ export default function ProfilePage() {
                   </Link>
                 </div>
                 {profile.topSkills.length === 0 ? (
-                  <Empty href="/onboarding/welcome?step=3" label="Khai báo skill mạnh nhất" />
+                  <Empty
+                    href="/onboarding/welcome?step=3"
+                    label="Khai báo skill mạnh nhất"
+                  />
                 ) : (
                   <ul className="space-y-3">
                     {profile.topSkills.map((s) => (
@@ -502,8 +558,13 @@ export default function ProfilePage() {
                             {s.name}
                           </span>
                           <span className="text-xs font-bold text-emerald-600">
-                            {["Mới học", "Cơ bản", "Trung bình", "Khá", "Thành thạo"][s.level - 1] ??
-                              `Level ${s.level}`}
+                            {[
+                              "Mới học",
+                              "Cơ bản",
+                              "Trung bình",
+                              "Khá",
+                              "Thành thạo",
+                            ][s.level - 1] ?? `Level ${s.level}`}
                           </span>
                         </div>
                         <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
@@ -522,7 +583,9 @@ export default function ProfilePage() {
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-amber-600" />
-                    <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">CV</h2>
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      CV
+                    </h2>
                   </div>
                   <Link
                     href="/cv-matching"
@@ -603,9 +666,18 @@ export default function ProfilePage() {
                 <Row label="Career Quiz" done={profile.quizDone} />
                 <Row label="Onboarding 5 bước" done={isOnboarded} />
                 <Row label="Upload CV" done={profile.hasUploadedCV} />
-                <Row label="Khai báo ≥ 5 skill" done={profile.topSkills.length >= 5} />
-                <Row label="Lưu ≥ 1 job" done={profile.bookmarkedJobIds.length >= 1} />
-                <Row label="Apply ≥ 1 job" done={profile.appliedJobIds.length >= 1} />
+                <Row
+                  label="Khai báo ≥ 5 skill"
+                  done={profile.topSkills.length >= 5}
+                />
+                <Row
+                  label="Lưu ≥ 1 job"
+                  done={profile.bookmarkedJobIds.length >= 1}
+                />
+                <Row
+                  label="Apply ≥ 1 job"
+                  done={profile.appliedJobIds.length >= 1}
+                />
               </ul>
             </div>
           </TabsContent>
@@ -658,7 +730,8 @@ export default function ProfilePage() {
                         Giao diện
                       </p>
                       <p className="text-xs text-slate-500">
-                        Đang dùng: {theme === "dark" ? "Dark mode" : "Light mode"}
+                        Đang dùng:{" "}
+                        {theme === "dark" ? "Dark mode" : "Light mode"}
                       </p>
                     </div>
                   </div>
@@ -685,15 +758,21 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => setProfile({ preferRemote: !profile.preferRemote })}
+                    onClick={() =>
+                      setProfile({ preferRemote: !profile.preferRemote })
+                    }
                     className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                      profile.preferRemote ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-700"
+                      profile.preferRemote
+                        ? "bg-blue-600"
+                        : "bg-slate-300 dark:bg-slate-700"
                     }`}
                     aria-label="Toggle remote"
                   >
                     <span
                       className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                        profile.preferRemote ? "translate-x-[22px]" : "translate-x-0.5"
+                        profile.preferRemote
+                          ? "translate-x-[22px]"
+                          : "translate-x-0.5"
                       }`}
                     />
                   </button>
@@ -804,7 +883,11 @@ export default function ProfilePage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => {
-                    if (confirm("Xoá toàn bộ hồ sơ onboarding? Hành động này không thể hoàn tác.")) {
+                    if (
+                      confirm(
+                        "Xoá toàn bộ hồ sơ onboarding? Hành động này không thể hoàn tác.",
+                      )
+                    ) {
                       reset();
                     }
                   }}
@@ -846,14 +929,18 @@ function Stat({
 }) {
   return (
     <div className="flex items-center gap-2.5 px-3 py-1.5 sm:border-l sm:border-slate-100 sm:first:border-l-0 dark:sm:border-slate-800">
-      <div className={`flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-800/50`}>
+      <div
+        className={`flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-800/50`}
+      >
         <Icon className={`h-4 w-4 ${tone}`} />
       </div>
       <div className="min-w-0">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
           {label}
         </p>
-        <p className="text-base font-bold text-slate-900 dark:text-slate-100">{value}</p>
+        <p className="text-base font-bold text-slate-900 dark:text-slate-100">
+          {value}
+        </p>
       </div>
     </div>
   );
@@ -872,19 +959,26 @@ function Card({
 }) {
   const toneMap: Record<string, string> = {
     blue: "bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300",
-    emerald: "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300",
-    amber: "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300",
-    violet: "bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300",
+    emerald:
+      "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300",
+    amber:
+      "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300",
+    violet:
+      "bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300",
     rose: "bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-300",
     slate: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
   };
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-3 flex items-center gap-2">
-        <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${toneMap[tone]}`}>
+        <div
+          className={`flex h-7 w-7 items-center justify-center rounded-lg ${toneMap[tone]}`}
+        >
           <Icon className="h-3.5 w-3.5" />
         </div>
-        <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{title}</p>
+        <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+          {title}
+        </p>
       </div>
       {children}
     </div>
@@ -967,14 +1061,18 @@ function ActivityList({
   emptyLabel: string;
 }) {
   const toneMap = {
-    amber: "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300",
-    violet: "bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300",
+    amber:
+      "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300",
+    violet:
+      "bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300",
   };
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${toneMap[tone]}`}>
+          <div
+            className={`flex h-7 w-7 items-center justify-center rounded-lg ${toneMap[tone]}`}
+          >
             <Icon className="h-3.5 w-3.5" />
           </div>
           <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -982,7 +1080,10 @@ function ActivityList({
           </h2>
         </div>
         {count > 0 && (
-          <Link href={href} className="text-xs font-semibold text-blue-600 hover:underline">
+          <Link
+            href={href}
+            className="text-xs font-semibold text-blue-600 hover:underline"
+          >
             Xem tất cả →
           </Link>
         )}
@@ -1034,9 +1135,7 @@ function EditNameDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-        >
+        <button className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
           <Pencil className="h-3.5 w-3.5" />
           Đổi tên
         </button>
@@ -1044,7 +1143,9 @@ function EditNameDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Đổi tên hiển thị</DialogTitle>
-          <DialogDescription>Tên này sẽ hiển thị trên hồ sơ và menu của bạn.</DialogDescription>
+          <DialogDescription>
+            Tên này sẽ hiển thị trên hồ sơ và menu của bạn.
+          </DialogDescription>
         </DialogHeader>
         <input
           autoFocus
@@ -1091,9 +1192,11 @@ function EditAvatarDialog({
     const styles = ["initials", "thumbs", "bottts", "lorelei", "notionists"];
     const seeds = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta"];
     return styles.flatMap((style) =>
-      seeds.slice(0, 2).map(
-        (seed) => `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`,
-      ),
+      seeds
+        .slice(0, 2)
+        .map(
+          (seed) => `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`,
+        ),
     );
   }, []);
 
@@ -1270,7 +1373,11 @@ function ChangePasswordDialog({
                   onClick={() => setShowCurrent((v) => !v)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                 >
-                  {showCurrent ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  {showCurrent ? (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -1292,7 +1399,11 @@ function ChangePasswordDialog({
                   onClick={() => setShowNext((v) => !v)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                 >
-                  {showNext ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  {showNext ? (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5" />
+                  )}
                 </button>
               </div>
               {next.length > 0 && (
@@ -1318,7 +1429,11 @@ function ChangePasswordDialog({
                           : "text-emerald-600"
                     }`}
                   >
-                    {strength < 50 ? "Yếu" : strength < 100 ? "Trung bình" : "Mạnh"}
+                    {strength < 50
+                      ? "Yếu"
+                      : strength < 100
+                        ? "Trung bình"
+                        : "Mạnh"}
                   </span>
                 </div>
               )}
@@ -1430,8 +1545,8 @@ function DeleteAccountDialog({
             Xoá tài khoản vĩnh viễn
           </DialogTitle>
           <DialogDescription>
-            Hành động này sẽ xoá tài khoản <strong>{email}</strong> và toàn bộ dữ liệu hồ sơ.
-            Không thể hoàn tác.
+            Hành động này sẽ xoá tài khoản <strong>{email}</strong> và toàn bộ
+            dữ liệu hồ sơ. Không thể hoàn tác.
           </DialogDescription>
         </DialogHeader>
 
@@ -1453,7 +1568,11 @@ function DeleteAccountDialog({
 
           <div>
             <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Gõ <code className="rounded bg-red-100 px-1.5 py-0.5 font-mono text-[11px] text-red-700 dark:bg-red-950/40 dark:text-red-300">XOA</code> để xác nhận
+              Gõ{" "}
+              <code className="rounded bg-red-100 px-1.5 py-0.5 font-mono text-[11px] text-red-700 dark:bg-red-950/40 dark:text-red-300">
+                XOA
+              </code>{" "}
+              để xác nhận
             </label>
             <input
               value={confirmText}
@@ -1483,7 +1602,9 @@ function DeleteAccountDialog({
             Huỷ
           </button>
           <button
-            disabled={loading || confirmText !== "XOA" || (requirePassword && !password)}
+            disabled={
+              loading || confirmText !== "XOA" || (requirePassword && !password)
+            }
             onClick={handleSubmit}
             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
           >
@@ -1502,7 +1623,13 @@ function exportData(
   user: ReturnType<typeof useAuth>["user"],
 ) {
   const blob = new Blob(
-    [JSON.stringify({ exportedAt: new Date().toISOString(), user, profile }, null, 2)],
+    [
+      JSON.stringify(
+        { exportedAt: new Date().toISOString(), user, profile },
+        null,
+        2,
+      ),
+    ],
     { type: "application/json" },
   );
   const url = URL.createObjectURL(blob);

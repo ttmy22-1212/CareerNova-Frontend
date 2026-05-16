@@ -1,6 +1,7 @@
 "use client";
 
 import AuthApi from "@/api/auth";
+import ProfileApi from "@/api/profile";
 import CookieHelper from "@/utils/cookie-helper";
 import {
   createContext,
@@ -39,70 +40,58 @@ type AuthState = {
   deleteAccount: (password?: string) => Promise<void>;
 };
 
-const USERS_KEY = "career-lens.users";
-const SESSION_KEY = "career-lens.session";
-
 const AuthContext = createContext<AuthState | null>(null);
-
-// --- CÁC HELPER GIỮ NGUYÊN ĐỂ TRANH LỖI ---
-function hash(input: string): string {
-  let h = 5381;
-  for (let i = 0; i < input.length; i++) {
-    h = (h * 33) ^ input.charCodeAt(i);
-  }
-  return (h >>> 0).toString(16);
-}
-
-function readUsers(): StoredUser[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(USERS_KEY);
-    return raw ? (JSON.parse(raw) as StoredUser[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeUsers(users: StoredUser[]) {
-  window.localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-function readSession(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(SESSION_KEY);
-}
-
-function writeSession(userId: string | null) {
-  if (userId) window.localStorage.setItem(SESSION_KEY, userId);
-  else window.localStorage.removeItem(SESSION_KEY);
-}
-
-function toPublic(u: StoredUser): AuthUser {
-  const { passwordHash: _ph, ...rest } = u;
-  void _ph;
-  return rest;
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const token = CookieHelper.getItem("token");
+    const autoRefreshToken = async () => {
+      const refreshToken = await CookieHelper.getItem("refresh_token");
 
-    if (token) {
-      setUser({
-        id: "authenticated-user",
-        email: "",
-        name: "",
-        provider: "password",
-        createdAt: Date.now(),
-      });
-    }
-    setReady(true);
+      if (refreshToken && typeof refreshToken === "string") {
+        try {
+          const res = await AuthApi.refreshToken({
+            refresh_token: refreshToken,
+          });
+
+          if (res.data) {
+            const { access_token, refresh_token: newRefreshToken } = res.data;
+
+            CookieHelper.setItem("token", access_token);
+            CookieHelper.setItem(
+              "refresh_token",
+              newRefreshToken || refreshToken,
+            );
+
+            const profileRes = await ProfileApi.getMe();
+
+            if (profileRes.data) {
+              const userData = profileRes.data.user;
+              setUser({
+                id: userData.user_id,
+                email: userData.email,
+                name: userData.name,
+                avatarUrl: userData.avatarUrl,
+                provider: userData.provider as AuthProvider,
+                createdAt: userData.createdAt,
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Phiên đăng nhập đã hết hạn hoặc không hợp lệ:", err);
+          CookieHelper.removeItem("token");
+          CookieHelper.removeItem("refresh_token");
+          setUser(null);
+        }
+      }
+      setReady(true);
+    };
+
+    autoRefreshToken();
   }, []);
 
-  // --- UPDATE: HÀM LOGIN GỌI AUTHAPI ---
   const login = useCallback(async (email: string, password: string) => {
     const res = await AuthApi.login({ email, password });
 
@@ -129,17 +118,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // --- UPDATE: HÀM REGISTER GỌI AUTHAPI ---
   const register = useCallback(
     async (name: string, email: string, password: string) => {
       const res = await AuthApi.register({
-        full_name: name, // Map đúng field full_name của NestJS DTO
+        full_name: name,
         email: email.trim().toLowerCase(),
         password,
       });
 
       if (res.data) {
-        // Sau khi đăng ký thành công, tự động đăng nhập
         await login(email, password);
       } else {
         throw new Error(res.message || "Đăng ký thất bại");
@@ -148,16 +135,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [login],
   );
 
-  // --- UPDATE: HÀM LOGIN VỚI PROVIDER GỌI AUTHAPI ---
   const loginWithProvider = useCallback(
     async (provider: "google" | "facebook") => {
       if (provider === "google") {
         const res = await AuthApi.getGoogleUrl();
         if (res.data?.url) {
-          window.location.href = res.data.url; // Chuyển hướng sang Google Auth
+          window.location.href = res.data.url;
         }
       } else {
-        // Hiện tại NestJS của bạn chưa bật Facebook, có thể để thông báo
         console.warn("Facebook login is not implemented yet on Backend");
       }
     },
@@ -171,41 +156,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateProfile = useCallback(
-    (patch: Partial<Pick<AuthUser, "name" | "avatarUrl">>) => {
-      setUser((prev) => {
-        if (!prev) return prev;
-        const next = { ...prev, ...patch };
-        const users = readUsers();
-        const idx = users.findIndex((x) => x.id === prev.id);
-        if (idx >= 0) {
-          users[idx] = { ...users[idx], ...patch };
-          writeUsers(users);
-        }
-        return next;
+    async (patch: Partial<Pick<AuthUser, "name" | "avatarUrl">>) => {
+      if (!user) return;
+
+      const ProfileApi = (await import("@/api/profile")).default;
+
+      const res = await ProfileApi.updateProfile({
+        name: patch.name,
+        avatarUrl: patch.avatarUrl,
       });
+
+      if (res.data) {
+        setUser((prev) => (prev ? { ...prev, ...patch } : null));
+      }
     },
-    [],
+    [user],
   );
 
   const changePassword = useCallback(
     async (currentPassword: string, newPassword: string) => {
       if (!user) throw new Error("Bạn chưa đăng nhập");
-      const users = readUsers();
-      const idx = users.findIndex((x) => x.id === user.id);
-      if (idx < 0) throw new Error("Không tìm thấy tài khoản");
-      const u = users[idx];
-      if (u.provider !== "password")
-        throw new Error(
-          `Tài khoản này đăng nhập bằng ${u.provider === "google" ? "Google" : "Facebook"} — không có mật khẩu để đổi.`,
-        );
-      if (u.passwordHash !== hash(currentPassword))
-        throw new Error("Mật khẩu hiện tại không đúng");
-      if (newPassword.length < 6)
-        throw new Error("Mật khẩu mới phải có ít nhất 6 ký tự");
-      if (newPassword === currentPassword)
-        throw new Error("Mật khẩu mới phải khác mật khẩu hiện tại");
-      users[idx] = { ...u, passwordHash: hash(newPassword) };
-      writeUsers(users);
+
+      const res = await ProfileApi.changePassword({
+        current: currentPassword,
+        next: newPassword,
+      });
+
+      if (!res.data) {
+        throw new Error(res.message || "Đổi mật khẩu thất bại");
+      }
     },
     [user],
   );
@@ -213,18 +192,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const deleteAccount = useCallback(
     async (password?: string) => {
       if (!user) throw new Error("Bạn chưa đăng nhập");
-      const users = readUsers();
-      const u = users.find((x) => x.id === user.id);
-      if (!u) throw new Error("Không tìm thấy tài khoản");
-      if (u.provider === "password") {
-        if (!password) throw new Error("Vui lòng nhập mật khẩu để xác nhận");
-        if (u.passwordHash !== hash(password))
-          throw new Error("Mật khẩu không đúng");
+
+      const res = await ProfileApi.deleteAccount();
+
+      if (res.data) {
+        CookieHelper.removeItem("token");
+        CookieHelper.removeItem("refresh_token");
+        setUser(null);
+      } else {
+        throw new Error(res.message || "Xóa tài khoản thất bại");
       }
-      const remaining = users.filter((x) => x.id !== user.id);
-      writeUsers(remaining);
-      writeSession(null);
-      setUser(null);
     },
     [user],
   );

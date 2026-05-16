@@ -1,6 +1,7 @@
 import { apiGet } from "@/utils/api-request";
 import { IBaseResponse } from "@/types/apis";
 import { JobListItem, JobDetailResponse } from "@/types/job-insight";
+import { GetSkillsResponse } from "@/types/skill";
 
 export interface GetJobsQueryDto {
   page?: number;
@@ -44,5 +45,11 @@ export default class JobApi {
   ): Promise<IBaseResponse<JobDetailResponse>> {
     const params = cvId ? { cv_id: cvId } : {};
     return await apiGet(`/jobs/${id}`, params);
+  }
+
+  static async getSkills(query?: {
+    q?: string;
+  }): Promise<IBaseResponse<GetSkillsResponse>> {
+    return await apiGet("/jobs/skills", query);
   }
 }
