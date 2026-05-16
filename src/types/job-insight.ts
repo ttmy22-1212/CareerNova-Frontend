@@ -32,7 +32,7 @@ export interface Benefit {
 }
 
 export interface Job {
-  job_id: number;
+  job_id: string;
   company_id: number | null;
   title: string;
   skills_desc: string | null;
@@ -84,4 +84,31 @@ export interface UserProfile {
   experience_years: number;
   education_level: string;
   target_roles: string[];
+}
+
+export interface MatchBreakdown {
+  strong: string[];
+  partial: string[];
+  missing: string[];
+}
+
+export interface JobDetailResponse {
+  job: Job;
+  company: Company | null;
+  salary: Salary | null;
+  skills: (JobSkill & { is_inferred: boolean })[];
+  benefits: (Benefit & { is_inferred: boolean })[];
+  industries: Industry[];
+  match_breakdown: MatchBreakdown;
+}
+
+export interface JobListItem extends Job {
+  company: {
+    company_id: string;
+    name: string;
+    logo_url?: string;
+  };
+  salary: Salary | null;
+  skills: JobSkill[];
+  match_score: number | null;
 }
