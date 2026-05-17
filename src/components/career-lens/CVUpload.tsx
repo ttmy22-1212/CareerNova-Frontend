@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import React, { useState, useRef } from 'react';
-import { FileUp, CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react';
+import React, { useState, useRef } from "react";
+import { FileUp, CheckCircle2, AlertCircle, Loader2, X } from "lucide-react";
+import CvApi from "@/api/cv";
 
 interface CVUploadProps {
   onUpload?: (file: File) => void;
@@ -12,8 +13,10 @@ export function CVUpload({ onUpload, existingCV }: CVUploadProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [uploadStatus, setUploadStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
+  const [errorMessage, setErrorMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -39,28 +42,30 @@ export function CVUpload({ onUpload, existingCV }: CVUploadProps) {
   const handleFileSelect = (selectedFile: File) => {
     // Validate file type
     const validTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ];
 
     if (!validTypes.includes(selectedFile.type)) {
-      setErrorMessage('Please upload a PDF or Word document (.pdf, .doc, .docx)');
-      setUploadStatus('error');
-      setTimeout(() => setUploadStatus('idle'), 5000);
+      setErrorMessage(
+        "Please upload a PDF or Word document (.pdf, .doc, .docx)",
+      );
+      setUploadStatus("error");
+      setTimeout(() => setUploadStatus("idle"), 5000);
       return;
     }
 
     if (selectedFile.size > 5 * 1024 * 1024) {
-      setErrorMessage('File size must be less than 5MB');
-      setUploadStatus('error');
-      setTimeout(() => setUploadStatus('idle'), 5000);
+      setErrorMessage("File size must be less than 5MB");
+      setUploadStatus("error");
+      setTimeout(() => setUploadStatus("idle"), 5000);
       return;
     }
 
     setFile(selectedFile);
-    setUploadStatus('idle');
-    setErrorMessage('');
+    setUploadStatus("idle");
+    setErrorMessage("");
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,21 +79,29 @@ export function CVUpload({ onUpload, existingCV }: CVUploadProps) {
     if (!file) return;
 
     setIsLoading(true);
+    setUploadStatus("idle");
+    setErrorMessage("");
+
     try {
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setUploadStatus('success');
-      onUpload?.(file);
-      
-      // Reset after 3 seconds
-      setTimeout(() => {
-        setFile(null);
-        setUploadStatus('idle');
-      }, 3000);
-    } catch (error) {
-      setErrorMessage('Failed to upload file. Please try again.');
-      setUploadStatus('error');
+      const response = await CvApi.uploadCv(file);
+
+      if (response && response.data) {
+        setUploadStatus("success");
+        if (onUpload) {
+          onUpload(file);
+        }
+      } else {
+        setUploadStatus("error");
+        setErrorMessage(
+          response?.message || "Tải CV lên thất bại. Vui lòng thử lại.",
+        );
+      }
+    } catch (error: any) {
+      console.error("Lỗi khi upload CV:", error);
+      setUploadStatus("error");
+      setErrorMessage(
+        error?.message || "Có lỗi hệ thống xảy ra trong quá trình tải lên.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -97,28 +110,36 @@ export function CVUpload({ onUpload, existingCV }: CVUploadProps) {
   return (
     <div className="space-y-4">
       {/* Status Messages */}
-      {uploadStatus === 'success' && (
+      {uploadStatus === "success" && (
         <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900/30 dark:bg-green-900/20 flex items-center gap-3">
           <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
           <div>
-            <h3 className="font-semibold text-green-900 dark:text-green-300">CV Uploaded Successfully</h3>
-            <p className="text-sm text-green-800 dark:text-green-200">Your CV has been parsed and skills extracted.</p>
+            <h3 className="font-semibold text-green-900 dark:text-green-300">
+              CV Uploaded Successfully
+            </h3>
+            <p className="text-sm text-green-800 dark:text-green-200">
+              Your CV has been parsed and skills extracted.
+            </p>
           </div>
         </div>
       )}
 
-      {uploadStatus === 'error' && (
+      {uploadStatus === "error" && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/30 dark:bg-red-900/20 flex items-center gap-3">
           <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
           <div>
-            <h3 className="font-semibold text-red-900 dark:text-red-300">Upload Failed</h3>
-            <p className="text-sm text-red-800 dark:text-red-200">{errorMessage}</p>
+            <h3 className="font-semibold text-red-900 dark:text-red-300">
+              Upload Failed
+            </h3>
+            <p className="text-sm text-red-800 dark:text-red-200">
+              {errorMessage}
+            </p>
           </div>
         </div>
       )}
 
       {/* Upload Area */}
-      {!file || uploadStatus !== 'idle' ? (
+      {!file || uploadStatus !== "idle" ? (
         <div
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
@@ -126,8 +147,8 @@ export function CVUpload({ onUpload, existingCV }: CVUploadProps) {
           onClick={() => fileInputRef.current?.click()}
           className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-all ${
             isDragging
-              ? 'border-violet-500 bg-violet-50 dark:border-violet-500 dark:bg-violet-900/20'
-              : 'border-slate-300 bg-slate-50 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-slate-600'
+              ? "border-violet-500 bg-violet-50 dark:border-violet-500 dark:bg-violet-900/20"
+              : "border-slate-300 bg-slate-50 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-slate-600"
           }`}
         >
           <input
@@ -144,7 +165,7 @@ export function CVUpload({ onUpload, existingCV }: CVUploadProps) {
             </div>
             <div>
               <p className="font-semibold text-slate-900 dark:text-white">
-                {isDragging ? 'Drop your CV here' : 'Drag & drop your CV'}
+                {isDragging ? "Drop your CV here" : "Drag & drop your CV"}
               </p>
               <p className="text-xs text-slate-600 dark:text-slate-400">
                 or click to browse • PDF, DOC, DOCX (max 5MB)
@@ -160,7 +181,9 @@ export function CVUpload({ onUpload, existingCV }: CVUploadProps) {
                 <FileUp className="h-5 w-5 text-slate-600 dark:text-slate-400" />
               </div>
               <div className="flex-1">
-                <p className="font-medium text-slate-900 dark:text-white text-sm truncate">{file.name}</p>
+                <p className="font-medium text-slate-900 dark:text-white text-sm truncate">
+                  {file.name}
+                </p>
                 <p className="text-xs text-slate-600 dark:text-slate-400">
                   {(file.size / 1024).toFixed(2)} KB
                 </p>
@@ -177,26 +200,29 @@ export function CVUpload({ onUpload, existingCV }: CVUploadProps) {
       )}
 
       {/* Upload Button */}
-      {file && uploadStatus === 'idle' && (
+      {file && uploadStatus === "idle" && (
         <button
           onClick={handleUpload}
           disabled={isLoading}
           className="w-full flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-6 py-3 font-semibold text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-          {isLoading ? 'Uploading...' : 'Upload CV'}
+          {isLoading ? "Uploading..." : "Upload CV"}
         </button>
       )}
 
       {/* Existing CV Info */}
-      {existingCV && uploadStatus !== 'success' && (
+      {existingCV && uploadStatus !== "success" && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/30 dark:bg-blue-900/20">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             <div>
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-300">CV on file</p>
+              <p className="text-sm font-medium text-blue-900 dark:text-blue-300">
+                CV on file
+              </p>
               <p className="text-xs text-blue-800 dark:text-blue-200">
-                Your current CV: <span className="font-medium">{existingCV}</span>
+                Your current CV:{" "}
+                <span className="font-medium">{existingCV}</span>
               </p>
             </div>
           </div>
