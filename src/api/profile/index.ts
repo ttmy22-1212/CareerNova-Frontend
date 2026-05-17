@@ -8,6 +8,10 @@ import {
   UserProfileResponse,
   UpdateProfilePayload,
   ChangePasswordPayload,
+  GetSavedJobsResponse,
+  SaveJobPayload,
+  SaveJobResponse,
+  DeleteSavedJobResponse,
 } from "@/types/profile";
 
 export default class ProfileApi {
@@ -83,5 +87,29 @@ export default class ProfileApi {
    */
   static async deleteAccount(): Promise<IBaseResponse<any>> {
     return await apiDelete("/profile/me", {});
+  }
+
+  static async getSavedJobs(): Promise<IBaseResponse<GetSavedJobsResponse[]>> {
+    return await apiGet("/profile/saved-jobs");
+  }
+
+  /**
+   * POST /profile/saved-jobs
+   * Lưu công việc vào danh sách
+   */
+  static async saveJob(
+    payload: SaveJobPayload,
+  ): Promise<IBaseResponse<SaveJobResponse>> {
+    return await apiPost("/profile/saved-jobs", payload);
+  }
+
+  /**
+   * DELETE /profile/saved-jobs/:jobId
+   * Hủy lưu công việc khỏi danh sách dựa trên jobId
+   */
+  static async deleteSavedJob(
+    jobId: string,
+  ): Promise<IBaseResponse<DeleteSavedJobResponse>> {
+    return await apiDelete(`/profile/saved-jobs/${jobId}`, {});
   }
 }

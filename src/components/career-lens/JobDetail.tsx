@@ -20,10 +20,12 @@ import {
   ExternalLink,
   ChevronRight,
   Loader2,
+  Bookmark,
 } from "lucide-react";
 import JobApi from "@/api/job";
 import CvApi from "@/api/cv";
 import { JobDetailResponse } from "@/types/job-insight";
+import ProfileApi from "@/api/profile";
 
 const typeColors: Record<string, string> = {
   "Full-time": "bg-blue-100 text-blue-700",
@@ -37,6 +39,8 @@ export function JobDetail() {
   const id = Array.isArray(paramValues[0]) ? paramValues[0][0] : paramValues[0];
   const [data, setData] = useState<JobDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSaved, setIsSaved] = useState<boolean>(false);
+  const [saving, setSaving] = useState<boolean>(false);
 
   const formatSalary = (
     min: string | number | undefined,
@@ -65,6 +69,7 @@ export function JobDetail() {
       const res = await JobApi.findOne(id, activeCvId);
       if (res && res.data) {
         setData(res.data);
+        setIsSaved(!!(res.data as any).is_saved);
       }
     } catch (error) {
       console.error("Failed to load job detail:", error);
@@ -112,6 +117,28 @@ export function JobDetail() {
       "Bachelor's degree in Computer Science or equivalent experience",
     ];
   }, [job?.formatted_experience_level]);
+
+  const handleToggleSaveJob = async () => {
+    if (!id || saving) return;
+    try {
+      setSaving(true);
+      if (isSaved) {
+        const res = await ProfileApi.deleteSavedJob(id);
+        if (res.message || res.data) {
+          setIsSaved(false);
+        }
+      } else {
+        const res = await ProfileApi.saveJob({ job_id: id });
+        if (res.message || res.data) {
+          setIsSaved(true);
+        }
+      }
+    } catch (error) {
+      console.error("Lỗi khi xử lý lưu/hủy lưu job:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -189,8 +216,18 @@ export function JobDetail() {
                 Match Analysis Active
               </div>
               <div className="flex gap-2">
-                <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors">
-                  <BookmarkPlus className="w-4 h-4" />
+                <button
+                  onClick={handleToggleSaveJob}
+                  disabled={saving}
+                  className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-center disabled:opacity-50 ${
+                    isSaved
+                      ? "bg-amber-50 border-amber-200 text-amber-600 dark:bg-amber-950/30 dark:border-amber-900"
+                      : "border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:border-slate-800"
+                  }`}
+                >
+                  <BookmarkPlus
+                    className={`w-5 h-5 ${isSaved ? "fill-amber-500 text-amber-500" : ""}`}
+                  />
                 </button>
                 <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors">
                   <Share2 className="w-4 h-4" />

@@ -20,12 +20,8 @@ import {
   MapPin,
   Briefcase,
   Bookmark,
-  Send,
-  Award,
   Calendar,
   Camera,
-  Sun,
-  Moon,
   Download,
   Shield,
   ChevronRight,
@@ -41,9 +37,9 @@ import {
   CareerInterest,
   Goal,
   StudentMajor,
+  StudentYear,
   useOnboarding,
 } from "@/contexts/onboarding/onboarding-context";
-import { useTheme } from "@/contexts/theme/theme-context";
 import { useAuth, type AuthProvider } from "@/contexts/auth/auth-context";
 import { jobsWithDetails } from "@/data/mockData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -56,6 +52,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { GetSavedJobsResponse } from "@/types/profile";
 import ProfileApi from "@/api/profile";
 
 const interestLabels: Record<string, string> = {
@@ -121,128 +118,96 @@ export default function ProfilePage() {
   const router = useRouter();
   const { profile, isOnboarded, strength, checklist, reset, setProfile } =
     useOnboarding();
-  const { theme, toggle: toggleTheme } = useTheme();
   const { user, logout, updateProfile, changePassword, deleteAccount } =
     useAuth();
 
-  const initials = getInitials(user?.name || profile.major || "User");
+  const initials = getInitials(user?.full_name || profile.major || "User");
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [savedJobs, setSavedJobs] = useState<GetSavedJobsResponse[]>([]);
+  const [loadingSavedJobs, setLoadingSavedJobs] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
         const res = await ProfileApi.getMe();
-
         if (res.data) {
-          const userData = res.data.user;
-
+          const rawData = res.data;
+          const userData = rawData.user;
           const orientationRaw = userData.orientation || "";
-
           const [selectedPart, quizPart] = orientationRaw.split("|");
+
+          const apiInterests = selectedPart
+            ? (selectedPart.split(",") as CareerInterest[])
+            : [];
+          const apiSuggestedPaths = quizPart
+            ? (quizPart.split(",") as CareerInterest[])
+            : [];
+
+          const apiSkills = Array.isArray(rawData.cv_skills_summary)
+            ? rawData.cv_skills_summary.map((skillName: string) => ({
+                name: skillName,
+                level: 1,
+              }))
+            : [];
 
           setProfile({
             major: userData.major ? (userData.major as StudentMajor) : null,
-            university: userData.school,
-
-            interests: selectedPart
-              ? (selectedPart.split(",") as CareerInterest[])
-              : [],
-
-            suggestedPaths: quizPart
-              ? (quizPart.split(",") as CareerInterest[])
-              : [],
-
+            university: userData.school || "",
+            year:
+              userData.current_year && Number(userData.current_year) > 0
+                ? (Number(userData.current_year) as StudentYear)
+                : null,
+            interests: apiInterests,
+            suggestedPaths: apiSuggestedPaths,
+            topSkills: apiSkills,
             goal: userData.objective ? (userData.objective as Goal) : null,
-            targetSalaryUSD: userData.target_salary,
-            preferRemote: userData.prefer_remote,
+            targetSalaryUSD: userData.target_salary || null,
+            preferRemote: !!userData.prefer_remote,
+            quizDone: apiSuggestedPaths.length > 0,
+            hasUploadedCV: !!rawData.latest_cv,
+            cvFileName: rawData.latest_cv?.file_name || null,
+            completedAt: userData.onboarding_completed
+              ? new Date().toISOString()
+              : null,
           });
+          fetchSavedJobs();
         }
       } catch (err) {
-        console.error("Lỗi lấy thông tin profile:", err);
+        console.error("Lỗi lấy thông tin profile từ API thực tế:", err);
       }
     };
 
     fetchProfileData();
   }, []);
 
-  // Bookmarked / applied job objects
-  const bookmarkedJobs = useMemo(() => {
-    return jobsWithDetails
-      .filter((j) => profile.bookmarkedJobIds.includes(String(j.job_id)))
-      .slice(0, 5);
-  }, [profile.bookmarkedJobIds]);
-  const appliedJobs = useMemo(() => {
-    return jobsWithDetails
-      .filter((j) => profile.appliedJobIds.includes(String(j.job_id)))
-      .slice(0, 5);
-  }, [profile.appliedJobIds]);
+  const fetchSavedJobs = async () => {
+    try {
+      setLoadingSavedJobs(true);
+      const res = await ProfileApi.getSavedJobs();
+      if (res.data) {
+        setSavedJobs(res.data);
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách job đã lưu:", error);
+    } finally {
+      setLoadingSavedJobs(false);
+    }
+  };
 
-  // Achievements (computed badges)
-  const achievements = useMemo(() => {
-    const list: { id: string; label: string; desc: string; got: boolean }[] = [
-      {
-        id: "quiz",
-        label: "Career Explorer",
-        desc: "Hoàn thành Career Quiz",
-        got: profile.quizDone,
-      },
-      {
-        id: "cv",
-        label: "CV Ready",
-        desc: "Đã upload CV",
-        got: profile.hasUploadedCV,
-      },
-      {
-        id: "skill5",
-        label: "Skill Mapper",
-        desc: "Khai báo ≥ 5 skill",
-        got: profile.topSkills.length >= 5,
-      },
-      {
-        id: "save5",
-        label: "Job Hunter",
-        desc: "Lưu ≥ 5 job",
-        got: profile.bookmarkedJobIds.length >= 5,
-      },
-      {
-        id: "apply3",
-        label: "Action Taker",
-        desc: "Apply ≥ 3 job",
-        got: profile.appliedJobIds.length >= 3,
-      },
-      {
-        id: "full",
-        label: "Complete Profile",
-        desc: "Hồ sơ 100%",
-        got: strength === 100,
-      },
-    ];
-    return list;
-  }, [profile, strength]);
+  // Hàm hủy lưu công việc
+  const handleUnsaveJob = async (jobId: string) => {
+    try {
+      const res = await ProfileApi.deleteSavedJob(jobId);
 
-  if (!isOnboarded) {
-    return (
-      <div className="p-6">
-        <div className="mx-auto max-w-2xl rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/40 p-10 text-center dark:border-blue-800 dark:bg-blue-950/20">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-md">
-            <Sparkles className="h-7 w-7 text-white" />
-          </div>
-          <h1 className="mb-2 text-2xl font-bold text-slate-900 dark:text-slate-100">
-            Bạn chưa có hồ sơ
-          </h1>
-          <p className="mx-auto mb-5 max-w-md text-sm text-slate-600 dark:text-slate-400">
-            Hoàn thành onboarding 5 bước (~5 phút) để tạo hồ sơ cá nhân — chúng
-            tôi sẽ gợi ý job, lộ trình &amp; skill chính xác cho bạn.
-          </p>
-          <Link
-            href="/onboarding/welcome"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            Bắt đầu onboarding →
-          </Link>
-        </div>
-      </div>
-    );
-  }
+      if (res) {
+        setSavedJobs((prev) =>
+          prev.filter((item) => String(item.job?.job_id) !== String(jobId)),
+        );
+      }
+    } catch (error) {
+      console.error("Lỗi khi hủy lưu công việc:", error);
+    }
+  };
 
   const headline = [
     profile.major ? majorLabels[profile.major] : null,
@@ -255,7 +220,7 @@ export default function ProfilePage() {
   return (
     <div className="pb-10">
       {/* COVER + HERO */}
-      <div className="relative">
+      <div className="relative w-full overflow-hidden">
         <div className="h-40 w-full bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 sm:h-48 md:h-56">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.12),transparent_50%)]" />
           <div className="pointer-events-none absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-violet-400/20 blur-3xl" />
@@ -270,7 +235,7 @@ export default function ProfilePage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={user.avatarUrl}
-                    alt={user.name}
+                    alt={user.full_name}
                     className="h-28 w-28 rounded-2xl border-4 border-white object-cover shadow-lg dark:border-slate-900 sm:h-32 sm:w-32"
                   />
                 ) : (
@@ -287,14 +252,14 @@ export default function ProfilePage() {
               <div className="min-w-0 sm:pb-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 md:text-3xl">
-                    {user?.name ?? "Sinh viên IT"}
+                    {user?.full_name ?? "Sinh viên IT"}
                   </h1>
-                  {user?.provider && (
+                  {user?.provider && providerMeta[user.provider] && (
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${providerMeta[user.provider].tone}`}
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${providerMeta[user.provider]?.tone ?? providerMeta["password"].tone}`}
                     >
                       <Shield className="h-2.5 w-2.5" />
-                      {providerMeta[user.provider].label}
+                      {providerMeta[user.provider]?.label ?? "Tài khoản"}
                     </span>
                   )}
                 </div>
@@ -325,22 +290,18 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex flex-wrap gap-2 sm:pb-2">
-              <EditNameDialog
-                currentName={user?.name ?? ""}
-                onSave={(name) => updateProfile({ name })}
-              />
-              <Link
-                href="/onboarding/welcome?step=1"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700"
+              <button
+                onClick={() => setOpenEditDialog(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 transition-all"
               >
                 <Pencil className="h-3.5 w-3.5" />
                 Chỉnh sửa hồ sơ
-              </Link>
+              </button>
             </div>
           </div>
 
-          {/* Quick stats strip */}
-          <div className="mt-5 grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-4 sm:gap-0 dark:border-slate-800 dark:bg-slate-900">
+          {/* Quick stats strip - Đã gỡ Đã Apply, chia Grid 3 đều đặn */}
+          <div className="mt-5 grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-3 sm:gap-0 dark:border-slate-800 dark:bg-slate-900">
             <Stat
               icon={TrendingUp}
               label="Hoàn thiện"
@@ -356,14 +317,8 @@ export default function ProfilePage() {
             <Stat
               icon={Bookmark}
               label="Đã lưu"
-              value={profile.bookmarkedJobIds.length}
+              value={savedJobs.length}
               tone="text-amber-600"
-            />
-            <Stat
-              icon={Send}
-              label="Đã apply"
-              value={profile.appliedJobIds.length}
-              tone="text-violet-600"
             />
           </div>
 
@@ -399,14 +354,12 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* TABS */}
       <div className="mx-auto mt-6 max-w-5xl px-4 md:px-6">
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview">Tổng quan</TabsTrigger>
             <TabsTrigger value="skills">Skills &amp; CV</TabsTrigger>
             <TabsTrigger value="activity">Hoạt động</TabsTrigger>
-            <TabsTrigger value="settings">Cài đặt</TabsTrigger>
           </TabsList>
 
           {/* OVERVIEW */}
@@ -526,7 +479,7 @@ export default function ProfilePage() {
             </div>
           </TabsContent>
 
-          {/* SKILLS & CV */}
+          {/* SKILLS & CV - Đã loại bỏ hoàn toàn Level & Progress bar rườm rà */}
           <TabsContent value="skills" className="mt-5 space-y-5">
             <div className="grid gap-5 md:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -550,32 +503,16 @@ export default function ProfilePage() {
                     label="Khai báo skill mạnh nhất"
                   />
                 ) : (
-                  <ul className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
                     {profile.topSkills.map((s) => (
-                      <li key={s.name}>
-                        <div className="mb-1 flex items-center justify-between">
-                          <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                            {s.name}
-                          </span>
-                          <span className="text-xs font-bold text-emerald-600">
-                            {[
-                              "Mới học",
-                              "Cơ bản",
-                              "Trung bình",
-                              "Khá",
-                              "Thành thạo",
-                            ][s.level - 1] ?? `Level ${s.level}`}
-                          </span>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all"
-                            style={{ width: `${(s.level / 5) * 100}%` }}
-                          />
-                        </div>
-                      </li>
+                      <span
+                        key={s.name}
+                        className="px-3 py-1.5 text-sm font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm"
+                      >
+                        {s.name}
+                      </span>
                     ))}
-                  </ul>
+                  </div>
                 )}
               </div>
 
@@ -630,286 +567,344 @@ export default function ProfilePage() {
             </div>
           </TabsContent>
 
-          {/* ACTIVITY */}
-          <TabsContent value="activity" className="mt-5 space-y-5">
-            <div className="grid gap-5 md:grid-cols-2">
-              <ActivityList
-                icon={Bookmark}
-                tone="amber"
-                title="Job đã lưu"
-                count={profile.bookmarkedJobIds.length}
-                href="/recommendations"
-                jobs={bookmarkedJobs}
-                emptyHref="/jobs"
-                emptyLabel="Khám phá jobs để lưu"
-              />
-              <ActivityList
-                icon={Send}
-                tone="violet"
-                title="Job đã apply"
-                count={profile.appliedJobIds.length}
-                href="/recommendations"
-                jobs={appliedJobs}
-                emptyHref="/recommendations"
-                emptyLabel="Chuyển job từ 'Đã lưu' sang 'Đã apply'"
-              />
-            </div>
+          <TabsContent value="activity" className="space-y-6">
+            <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+              <h3 className="mb-1 text-lg font-bold text-slate-900 dark:text-white">
+                Công việc đã lưu
+              </h3>
+              <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">
+                Xem lại các cơ hội việc làm bạn đã đánh dấu quan tâm.
+              </p>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div className="mb-4 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-blue-600" />
-                <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                  Trạng thái hành trình
-                </h2>
-              </div>
-              <ul className="grid gap-2 sm:grid-cols-2">
-                <Row label="Career Quiz" done={profile.quizDone} />
-                <Row label="Onboarding 5 bước" done={isOnboarded} />
-                <Row label="Upload CV" done={profile.hasUploadedCV} />
-                <Row
-                  label="Khai báo ≥ 5 skill"
-                  done={profile.topSkills.length >= 5}
-                />
-                <Row
-                  label="Lưu ≥ 1 job"
-                  done={profile.bookmarkedJobIds.length >= 1}
-                />
-                <Row
-                  label="Apply ≥ 1 job"
-                  done={profile.appliedJobIds.length >= 1}
-                />
-              </ul>
+              {/* Logic hiển thị trạng thái loading / trống / danh sách */}
+              {loadingSavedJobs ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="h-6 w-6 animate-spin text-slate-500" />
+                  <span className="ml-2 text-sm text-slate-500">
+                    Đang tải danh sách...
+                  </span>
+                </div>
+              ) : savedJobs.length === 0 ? (
+                <div className="text-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                  <Bookmark className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-700 mb-3" />
+                  <p className="text-slate-500 dark:text-slate-400">
+                    Bạn chưa lưu công việc nào.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {savedJobs.map((item) => {
+                    const job = item.job;
+                    if (!job) return null;
+
+                    return (
+                      <div
+                        key={item.saved_job_id}
+                        className="relative flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                              {job.company?.url ? (
+                                <img
+                                  src={job.company.url}
+                                  alt={job.company.name}
+                                  className="h-12 w-12 rounded-lg object-cover border border-slate-100 dark:border-slate-800"
+                                />
+                              ) : (
+                                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500">
+                                  <Building2 className="h-6 w-6" />
+                                </div>
+                              )}
+                              <div>
+                                <h4 className="font-semibold text-slate-900 dark:text-white line-clamp-1">
+                                  {job.title}
+                                </h4>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                  {job.company?.name}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Nút Hủy lưu */}
+                            <button
+                              onClick={() => handleUnsaveJob(job.job_id)}
+                              className="rounded-full p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
+                              title="Hủy lưu công việc"
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </button>
+                          </div>
+
+                          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+                            {job.location && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3.5 w-3.5" />{" "}
+                                {job.location}
+                              </span>
+                            )}
+                            {job.salary && (
+                              <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                                {job.salary}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800 text-xs text-slate-400">
+                          <span>
+                            Đã lưu:{" "}
+                            {new Date(item.created_at).toLocaleDateString(
+                              "vi-VN",
+                            )}
+                          </span>
+                          <Link
+                            href={`/jobs/${job.job_id}`}
+                            className="flex items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
+                          >
+                            Xem chi tiết <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </TabsContent>
+        </Tabs>
+      </div>
 
-          {/* SETTINGS */}
-          <TabsContent value="settings" className="mt-5 space-y-5">
-            {/* Account */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h2 className="mb-4 text-sm font-bold text-slate-900 dark:text-slate-100">
-                Tài khoản
-              </h2>
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                <Field label="Họ và tên" value={user?.name ?? "—"}>
-                  <EditNameDialog
-                    currentName={user?.name ?? ""}
-                    onSave={(name) => updateProfile({ name })}
+      {/* DIALOG CHỈNH SỬA HỒ SƠ TỔNG HỢP - CHUYỂN TỪ TAB CÀI ĐẶT CŨ SANG */}
+      <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
+        {/* Thay thế class của DialogContent để ép chiều rộng lớn hơn */}
+        <DialogContent className="p-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900 w-full max-w-2xl h-[85vh] flex flex-col">
+          {/* HEADER: Giữ cố định trên cùng, không bị cuộn */}
+          <DialogHeader className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">
+              Cấu hình thông tin tài khoản
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-500 dark:text-slate-400">
+              Quản lý toàn bộ thông tin cá nhân, bảo mật mật khẩu và tùy chọn hệ
+              thống.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* CONTENT BODY: Chỉ cuộn vùng này, pr-6 tạo khoảng cách an toàn với scrollbar */}
+          <div className="flex-1 overflow-y-auto pl-6 pr-6 py-4 space-y-4 divide-y divide-slate-100 dark:divide-slate-800 min-h-0">
+            {/* 1. Phần thông tin cá nhân */}
+            <div className="space-y-3 pb-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Thông tin cơ bản
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Họ và tên
+                  </label>
+                  <input
+                    type="text"
+                    defaultValue={user?.full_name || ""}
+                    placeholder="Nhập họ tên..."
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    id="dialog-edit-name"
                   />
-                </Field>
-                <Field label="Email" value={user?.email ?? "—"}>
-                  <span className="text-xs text-slate-400">Không thể đổi</span>
-                </Field>
-                <Field
-                  label="Phương thức đăng nhập"
-                  value={user ? providerMeta[user.provider].label : "—"}
-                />
-                <Field
-                  label="Tham gia từ"
-                  value={user ? formatDate(user.createdAt) : "—"}
-                />
-              </div>
-            </div>
-
-            {/* Preferences */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h2 className="mb-4 text-sm font-bold text-slate-900 dark:text-slate-100">
-                Tuỳ chọn
-              </h2>
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                <div className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
-                      {theme === "dark" ? (
-                        <Moon className="h-4 w-4 text-slate-700 dark:text-slate-300" />
-                      ) : (
-                        <Sun className="h-4 w-4 text-amber-500" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        Giao diện
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        Đang dùng:{" "}
-                        {theme === "dark" ? "Dark mode" : "Light mode"}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={toggleTheme}
-                    className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                  >
-                    Chuyển sang {theme === "dark" ? "Light" : "Dark"}
-                  </button>
                 </div>
-
-                <div className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <MapPin className="h-4 w-4 text-slate-600 dark:text-slate-300" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        Ưu tiên Remote
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        Filter mặc định khi tìm job
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() =>
-                      setProfile({ preferRemote: !profile.preferRemote })
-                    }
-                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                      profile.preferRemote
-                        ? "bg-blue-600"
-                        : "bg-slate-300 dark:bg-slate-700"
-                    }`}
-                    aria-label="Toggle remote"
-                  >
-                    <span
-                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                        profile.preferRemote
-                          ? "translate-x-[22px]"
-                          : "translate-x-0.5"
-                      }`}
-                    />
-                  </button>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Trường Đại học
+                  </label>
+                  <input
+                    type="text"
+                    defaultValue={profile.university || ""}
+                    placeholder="Nhập tên trường học..."
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    id="dialog-edit-school"
+                  />
                 </div>
               </div>
-            </div>
-
-            {/* Security */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h2 className="mb-4 text-sm font-bold text-slate-900 dark:text-slate-100">
-                Bảo mật
-              </h2>
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                <div className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <KeyRound className="h-4 w-4 text-slate-600 dark:text-slate-300" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        Mật khẩu
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {user?.provider === "password"
-                          ? "Đổi mật khẩu đăng nhập định kỳ để bảo mật"
-                          : `Đăng nhập qua ${providerMeta[user?.provider ?? "password"].label} — không có mật khẩu để đổi`}
-                      </p>
-                    </div>
-                  </div>
-                  {user?.provider === "password" ? (
-                    <ChangePasswordDialog onSubmit={changePassword} />
-                  ) : (
-                    <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                      Không khả dụng
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-                      <Shield className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        Phiên đăng nhập
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        Lưu trong trình duyệt này (localStorage)
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      logout();
-                      router.replace("/auth/login");
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                  >
-                    <LogOut className="h-3.5 w-3.5" />
-                    Đăng xuất
-                  </button>
-                </div>
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Địa chỉ Email: <strong>{user?.email ?? "—"}</strong>
+                </span>
               </div>
-            </div>
-
-            {/* Data & sessions */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h2 className="mb-4 text-sm font-bold text-slate-900 dark:text-slate-100">
-                Dữ liệu &amp; phiên
-              </h2>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex items-center justify-between pt-2">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    Ưu tiên làm việc Từ xa
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Bộ lọc mặc định khi tìm kiếm việc làm
+                  </p>
+                </div>
                 <button
-                  onClick={() => exportData(profile, user)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                  onClick={() =>
+                    setProfile({ preferRemote: !profile.preferRemote })
+                  }
+                  className={`relative h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors ${
+                    profile.preferRemote
+                      ? "bg-blue-600"
+                      : "bg-slate-300 dark:bg-slate-700"
+                  }`}
                 >
-                  <Download className="h-3.5 w-3.5" />
-                  Xuất dữ liệu (JSON)
+                  <span
+                    className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      profile.preferRemote ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
                 </button>
-                <Link
-                  href="/onboarding/welcome"
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Làm lại onboarding
-                </Link>
+              </div>
+            </div>
+
+            {/* 3. Phần bảo mật tài khoản */}
+            <div className="space-y-3 py-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                An toàn bảo mật
+              </h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    Mật khẩu đăng nhập
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {user?.provider === "password"
+                      ? "Thay đổi mật khẩu tài khoản định kỳ"
+                      : `Đăng nhập qua liên kết ${providerMeta[user?.provider ?? "password"]?.label} — Không có mật khẩu`}
+                  </p>
+                </div>
+                {user?.provider === "password" ? (
+                  <ChangePasswordDialog onSubmit={changePassword} />
+                ) : (
+                  <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-400 dark:bg-slate-800">
+                    Không khả dụng
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center justify-between pt-2">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    Phương thức:{" "}
+                    <span className="font-bold text-blue-600">
+                      {user?.provider
+                        ? (providerMeta[user.provider]?.label ?? "Liên kết")
+                        : "—"}
+                    </span>
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Tham gia hệ thống vào ngày:{" "}
+                    {user ? formatDate(user.createdAt) : "—"}
+                  </p>
+                </div>
                 <button
                   onClick={() => {
                     logout();
                     router.replace("/auth/login");
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
-                  <LogOut className="h-3.5 w-3.5" />
-                  Đăng xuất
+                  <LogOut className="h-3.5 w-3.5" /> Đăng xuất
                 </button>
               </div>
             </div>
 
-            {/* Danger zone */}
-            <div className="rounded-2xl border border-red-200 bg-red-50/40 p-5 dark:border-red-900/60 dark:bg-red-950/10">
-              <h2 className="mb-1 text-sm font-bold text-red-700 dark:text-red-300">
-                Vùng nguy hiểm
-              </h2>
-              <p className="mb-4 text-xs text-red-600/80 dark:text-red-400/80">
-                Các hành động dưới đây không thể hoàn tác.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => {
-                    if (
-                      confirm(
-                        "Xoá toàn bộ hồ sơ onboarding? Hành động này không thể hoàn tác.",
-                      )
-                    ) {
-                      reset();
-                    }
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Xoá hồ sơ onboarding
-                </button>
-                <DeleteAccountDialog
-                  requirePassword={user?.provider === "password"}
-                  email={user?.email ?? ""}
-                  onConfirm={async (pwd) => {
-                    await deleteAccount(pwd);
+            {/* 4. Vùng nguy hiểm */}
+            <div className="pt-4 pb-2 flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  if (
+                    confirm(
+                      "Xoá toàn bộ hồ sơ onboarding? Hành động này không thể hoàn tác.",
+                    )
+                  ) {
                     reset();
-                    router.replace("/auth/register");
-                  }}
-                />
-              </div>
+                    setOpenEditDialog(false);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Xoá Onboarding
+              </button>
+              <DeleteAccountDialog
+                requirePassword={user?.provider === "password"}
+                email={user?.email ?? ""}
+                onConfirm={async (pwd) => {
+                  await deleteAccount(pwd);
+                  reset();
+                  router.replace("/auth/register");
+                }}
+              />
+              <button
+                onClick={() => exportData(profile, user)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              >
+                <Download className="h-3.5 w-3.5" /> Xuất JSON
+              </button>
             </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+          </div>
+
+          {/* FOOTER: Cố định dưới chân Dialog, không bị cuộn lấp mất nút */}
+          <DialogFooter className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-end gap-2">
+            <button
+              onClick={() => setOpenEditDialog(false)}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            >
+              Hủy bỏ
+            </button>
+            <button
+              onClick={async () => {
+                const nameInp = document.getElementById(
+                  "dialog-edit-name",
+                ) as HTMLInputElement;
+                const schoolInp = document.getElementById(
+                  "dialog-edit-school",
+                ) as HTMLInputElement;
+
+                try {
+                  const updateData: any = {};
+
+                  if (nameInp) updateData.name = nameInp.value.trim();
+
+                  const updatedUser = await ProfileApi.updateProfile({
+                    full_name: nameInp?.value.trim(),
+                    school: schoolInp?.value.trim(),
+                    target_salary: 0,
+                    prefer_remote: false,
+                  });
+
+                  if (updatedUser) {
+                    await updateProfile({
+                      full_name: updatedUser.data.full_name,
+                      target_salary: updatedUser.data.target_salary,
+                      prefer_remote: updatedUser.data.prefer_remote,
+                    });
+
+                    // Hàm cập nhật thông tin học vấn từ context useOnboarding của bạn
+                    setProfile({
+                      ...profile,
+                      university: schoolInp?.value.trim(),
+                    });
+                  }
+
+                  // 4. Đóng dialog sau khi lưu thành công
+                  setOpenEditDialog(false);
+
+                  // Hiển thị thông báo (nếu dự án của bạn có dùng alert/snackbar)
+                  // showSnackbarSuccess("Cập nhật thông tin tài khoản thành công!");
+                } catch (err) {
+                  console.error(
+                    "Lỗi khi kết nối endpoint update profile:",
+                    err,
+                  );
+                  // showSnackbarError("Cập nhật thất bại, vui lòng thử lại!");
+                }
+              }}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm"
+            >
+              Xác nhận lưu
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -929,9 +924,7 @@ function Stat({
 }) {
   return (
     <div className="flex items-center gap-2.5 px-3 py-1.5 sm:border-l sm:border-slate-100 sm:first:border-l-0 dark:sm:border-slate-800">
-      <div
-        className={`flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-800/50`}
-      >
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-800/50">
         <Icon className={`h-4 w-4 ${tone}`} />
       </div>
       <div className="min-w-0">
@@ -996,30 +989,6 @@ function Empty({ href, label }: { href: string; label: string }) {
   );
 }
 
-function Field({
-  label,
-  value,
-  children,
-}: {
-  label: string;
-  value: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 py-3">
-      <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-          {label}
-        </p>
-        <p className="mt-0.5 truncate text-sm font-medium text-slate-900 dark:text-slate-100">
-          {value}
-        </p>
-      </div>
-      {children}
-    </div>
-  );
-}
-
 function Row({ label, done }: { label: string; done: boolean }) {
   return (
     <li className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/30">
@@ -1029,11 +998,7 @@ function Row({ label, done }: { label: string; done: boolean }) {
         <Circle className="h-4 w-4 text-slate-300" />
       )}
       <span
-        className={`text-sm ${
-          done
-            ? "font-medium text-slate-700 dark:text-slate-200"
-            : "text-slate-500"
-        }`}
+        className={`text-sm ${done ? "font-medium text-slate-700 dark:text-slate-200" : "text-slate-500"}`}
       >
         {label}
       </span>
@@ -1123,60 +1088,6 @@ function ActivityList({
 
 /* ---------- Edit dialogs ---------- */
 
-function EditNameDialog({
-  currentName,
-  onSave,
-}: {
-  currentName: string;
-  onSave: (name: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState(currentName);
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
-          <Pencil className="h-3.5 w-3.5" />
-          Đổi tên
-        </button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Đổi tên hiển thị</DialogTitle>
-          <DialogDescription>
-            Tên này sẽ hiển thị trên hồ sơ và menu của bạn.
-          </DialogDescription>
-        </DialogHeader>
-        <input
-          autoFocus
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-          placeholder="Nguyễn Văn A"
-        />
-        <DialogFooter>
-          <button
-            onClick={() => setOpen(false)}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-          >
-            Huỷ
-          </button>
-          <button
-            disabled={!name.trim()}
-            onClick={() => {
-              onSave(name.trim());
-              setOpen(false);
-            }}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
-          >
-            Lưu
-          </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 function EditAvatarDialog({
   currentUrl,
   onSave,
@@ -1187,7 +1098,6 @@ function EditAvatarDialog({
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState(currentUrl ?? "");
 
-  // Curated dicebear avatar options
   const presets = useMemo(() => {
     const styles = ["initials", "thumbs", "bottts", "lorelei", "notionists"];
     const seeds = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta"];
@@ -1284,7 +1194,7 @@ function ChangePasswordDialog({
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const strength =
+  const pwdStrength =
     next.length === 0
       ? 0
       : next.length < 6
@@ -1295,7 +1205,7 @@ function ChangePasswordDialog({
             ? 100
             : 80;
 
-  const reset = () => {
+  const resetDialog = () => {
     setCurrent("");
     setNext("");
     setConfirm("");
@@ -1318,7 +1228,7 @@ function ChangePasswordDialog({
       setSuccess(true);
       setTimeout(() => {
         setOpen(false);
-        reset();
+        resetDialog();
       }, 1200);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Có lỗi xảy ra");
@@ -1331,7 +1241,7 @@ function ChangePasswordDialog({
       open={open}
       onOpenChange={(v) => {
         setOpen(v);
-        if (!v) reset();
+        if (!v) resetDialog();
       }}
     >
       <DialogTrigger asChild>
@@ -1411,27 +1321,27 @@ function ChangePasswordDialog({
                   <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                     <div
                       className={`h-full rounded-full transition-all ${
-                        strength < 50
+                        pwdStrength < 50
                           ? "bg-red-500"
-                          : strength < 100
+                          : pwdStrength < 100
                             ? "bg-amber-500"
                             : "bg-emerald-500"
                       }`}
-                      style={{ width: `${strength}%` }}
+                      style={{ width: `${pwdStrength}%` }}
                     />
                   </div>
                   <span
                     className={`text-[10px] font-bold uppercase tracking-wider ${
-                      strength < 50
+                      pwdStrength < 50
                         ? "text-red-600"
-                        : strength < 100
+                        : pwdStrength < 100
                           ? "text-amber-600"
                           : "text-emerald-600"
                     }`}
                   >
-                    {strength < 50
+                    {pwdStrength < 50
                       ? "Yếu"
-                      : strength < 100
+                      : pwdStrength < 100
                         ? "Trung bình"
                         : "Mạnh"}
                   </span>
@@ -1466,7 +1376,7 @@ function ChangePasswordDialog({
             <button
               onClick={() => {
                 setOpen(false);
-                reset();
+                resetDialog();
               }}
               disabled={loading}
               className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
@@ -1502,11 +1412,11 @@ function DeleteAccountDialog({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const reset = () => {
+  const resetDelDialog = () => {
     setPassword("");
     setConfirmText("");
     setError(null);
-    setLoading(false);
+    loading && setLoading(false);
   };
 
   const handleSubmit = async () => {
@@ -1529,7 +1439,7 @@ function DeleteAccountDialog({
       open={open}
       onOpenChange={(v) => {
         setOpen(v);
-        if (!v) reset();
+        if (!v) resetDelDialog();
       }}
     >
       <DialogTrigger asChild>
@@ -1594,7 +1504,7 @@ function DeleteAccountDialog({
           <button
             onClick={() => {
               setOpen(false);
-              reset();
+              resetDelDialog();
             }}
             disabled={loading}
             className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"

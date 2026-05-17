@@ -19,6 +19,7 @@ import {
 import JobApi, { GetJobsQueryDto } from "@/api/job";
 import CvApi from "@/api/cv";
 import { JobListItem } from "@/types/job-insight";
+import ProfileApi from "@/api/profile";
 
 const jobTypes = ["All", "Full-time", "Remote", "Hybrid", "Part-time"];
 
@@ -75,6 +76,7 @@ export function JobSearch() {
   const [jobs, setJobs] = useState<JobListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [processingJobId, setProcessingJobId] = useState<string | null>(null);
 
   const loadJobs = useCallback(async () => {
     setLoading(true);
@@ -144,6 +146,30 @@ export function JobSearch() {
       }
       return next;
     });
+  };
+
+  const handleToggleSaveJobInList = async (
+    jobId: string,
+    currentIsSaved: boolean,
+  ) => {
+    if (processingJobId) return;
+    try {
+      setProcessingJobId(jobId);
+      if (currentIsSaved) {
+        await ProfileApi.deleteSavedJob(jobId);
+      } else {
+        await ProfileApi.saveJob({ job_id: jobId });
+      }
+      setJobs((prevJobs) =>
+        prevJobs.map((job) =>
+          job.job_id === jobId ? { ...job, is_saved: !currentIsSaved } : job,
+        ),
+      );
+    } catch (error) {
+      console.error("Lỗi thay đổi trạng thái lưu công việc:", error);
+    } finally {
+      setProcessingJobId(null);
+    }
   };
 
   const getPaginationRange = () => {
@@ -427,14 +453,26 @@ export function JobSearch() {
                           : "Not Analyzed"}
                       </span>
                       <button
-                        onClick={(e) => toggleSave(job.job_id, e)}
-                        className={`p-1.5 rounded-lg border transition-all ${
-                          savedJobs.has(job.job_id)
-                            ? "bg-blue-50 border-blue-200 text-blue-600"
-                            : "border-slate-200 text-slate-400 hover:border-blue-200 hover:text-blue-500"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const isJobSaved = !!(job as any).is_saved;
+                          handleToggleSaveJobInList(job.job_id, isJobSaved);
+                        }}
+                        disabled={processingJobId === job.job_id}
+                        className={`p-2 border rounded-lg transition-colors cursor-pointer disabled:opacity-50 ${
+                          (job as any).is_saved
+                            ? "bg-amber-50 border-amber-200 text-amber-600 dark:bg-amber-950/20 dark:border-amber-900"
+                            : "border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:border-slate-800"
                         }`}
                       >
-                        <BookmarkPlus className="w-4 h-4" />
+                        <BookmarkPlus
+                          className={`w-4 h-4 ${
+                            (job as any).is_saved
+                              ? "fill-amber-500 text-amber-500"
+                              : ""
+                          }`}
+                        />
                       </button>
                     </div>
                   </div>

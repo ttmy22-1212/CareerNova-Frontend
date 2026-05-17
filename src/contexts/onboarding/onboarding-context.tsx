@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 
 export type StudentMajor = "CS" | "SE" | "IS" | "IT" | "AI" | "DA" | "Other";
 export type StudentYear = 1 | 2 | 3 | 4 | 5;
@@ -101,7 +107,8 @@ export interface ChecklistItem {
 const OnboardingContext = createContext<Ctx | null>(null);
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
-  const [profile, setProfileState] = useState<OnboardingProfile>(DEFAULT_PROFILE);
+  const [profile, setProfileState] =
+    useState<OnboardingProfile>(DEFAULT_PROFILE);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -135,14 +142,18 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     {
       id: "interests",
       label: "Chọn năm học & 1-3 định hướng quan tâm",
-      done: !!profile.year && profile.interests.length > 0,
+      done:
+        profile.year !== null &&
+        Number(profile.year) > 0 &&
+        profile.interests.length > 0,
       weight: 15,
       href: "/onboarding/welcome?step=2",
     },
     {
       id: "skills",
-      label: "Khai báo 5 skill mạnh nhất",
-      done: profile.topSkills.length >= 5,
+      label: "Khai báo skill mạnh nhất",
+      // Đổi điều kiện từ >= 5 thành chỉ cần khai báo tối thiểu 1 skill theo UI mới
+      done: profile.topSkills.length >= 1,
       weight: 20,
       href: "/onboarding/welcome?step=3",
     },
@@ -163,7 +174,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     {
       id: "quiz",
       label: "Hoàn thành Career Quiz",
-      done: profile.quizDone,
+      done: profile.quizDone || !!profile.completedAt,
       weight: 20,
       href: "/onboarding/welcome?step=5",
     },
@@ -174,23 +185,22 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     0,
   );
 
-  const isOnboarded = !!profile.completedAt;
+  const isOnboarded =
+    !!profile.completedAt || (!!profile.major && profile.interests.length > 0);
 
-  // 4-stage journey computed from profile data
   const exploreScore =
     (profile.major ? 33 : 0) +
     (profile.interests.length > 0 ? 33 : 0) +
-    (profile.quizDone ? 34 : 0);
+    (profile.quizDone && profile.suggestedPaths.length > 0 ? 34 : 0);
+
   const analyzeScore =
-    (profile.topSkills.length >= 3 ? 50 : profile.topSkills.length * 15) +
-    (profile.hasUploadedCV ? 50 : 0);
+    (profile.topSkills.length >= 1 ? 50 : 0) + (profile.hasUploadedCV ? 50 : 0);
+
   const planScore =
-    (profile.suggestedPaths.length > 0 ? 60 : 0) +
-    (profile.goal ? 40 : 0);
-  const applyScore = Math.min(
-    100,
-    profile.bookmarkedJobIds.length * 20 + profile.appliedJobIds.length * 30,
-  );
+    (profile.suggestedPaths.length > 0 ? 60 : 0) + (profile.goal ? 40 : 0);
+
+  // Đã loại bỏ hoàn toàn các chỉ số liên quan đến appliedJobIds (chỉ giữ lại bookmarkedJobIds)
+  const applyScore = Math.min(100, profile.bookmarkedJobIds.length * 20);
 
   const journey: JourneyStage[] = [
     {
@@ -220,7 +230,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     {
       id: "apply",
       label: "Apply jobs",
-      desc: "Lưu & ứng tuyển job",
+      desc: "Lưu công việc quan tâm",
       done: applyScore >= 100,
       progress: Math.min(100, applyScore),
       href: "/jobs",
@@ -256,6 +266,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
 export function useOnboarding(): Ctx {
   const ctx = useContext(OnboardingContext);
-  if (!ctx) throw new Error("useOnboarding must be used within OnboardingProvider");
+  if (!ctx)
+    throw new Error("useOnboarding must be used within OnboardingProvider");
   return ctx;
 }

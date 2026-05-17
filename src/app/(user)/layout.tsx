@@ -33,7 +33,10 @@ import {
   Settings,
 } from "lucide-react";
 import { paths } from "@/paths";
-import { useOnboarding, type JourneyStage } from "@/contexts/onboarding/onboarding-context";
+import {
+  useOnboarding,
+  type JourneyStage,
+} from "@/contexts/onboarding/onboarding-context";
 import { useTheme } from "@/contexts/theme/theme-context";
 import { useAuth } from "@/contexts/auth/auth-context";
 import { NotificationsDropdown } from "@/components/career-lens/NotificationsDropdown";
@@ -57,8 +60,18 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: "Cá nhân",
     items: [
-      { href: paths.personalDashboard, label: "Personal Dashboard", Icon: LayoutGrid, end: true },
-      { href: paths.cvMatching, label: "CV–JD Matching", Icon: FileText, badge: "Core" },
+      {
+        href: paths.personalDashboard,
+        label: "Personal Dashboard",
+        Icon: LayoutGrid,
+        end: true,
+      },
+      {
+        href: paths.cvMatching,
+        label: "CV–JD Matching",
+        Icon: FileText,
+        badge: "Core",
+      },
       { href: paths.profile.detail, label: "Hồ sơ & CV", Icon: User },
       { href: "/onboarding/welcome", label: "Career Quiz", Icon: Compass },
       { href: paths.skillGap, label: "Skill Gap Analysis", Icon: Target },
@@ -67,7 +80,12 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: "Thị trường",
     items: [
-      { href: paths.dashboard, label: "Market Dashboard", Icon: LayoutDashboard, end: true },
+      {
+        href: paths.dashboard,
+        label: "Market Dashboard",
+        Icon: LayoutDashboard,
+        end: true,
+      },
       { href: paths.jobs.index, label: "Job Search", Icon: Search },
       { href: "/salary-insights", label: "Salary Insights", Icon: DollarSign },
     ],
@@ -75,7 +93,11 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: "Lộ trình hành động",
     items: [
-      { href: paths.recommendations, label: "Recommendations", Icon: BookmarkCheck },
+      {
+        href: paths.recommendations,
+        label: "Recommendations",
+        Icon: BookmarkCheck,
+      },
       { href: paths.roadmap.index, label: "Khoá học & Roadmap", Icon: Map },
     ],
   },
@@ -84,19 +106,52 @@ const navGroups: { title: string; items: NavItem[] }[] = [
 const allItems = navGroups.flatMap((g) => g.items);
 
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
-  [paths.dashboard]: { title: "Market Dashboard", subtitle: "Tổng quan thị trường IT — không cần đăng nhập" },
-  [paths.personalDashboard]: { title: "Personal Dashboard", subtitle: "Insight cá nhân hóa dựa trên hồ sơ & CV của bạn" },
-  [paths.jobs.index]: { title: "Job Search", subtitle: "Tìm việc phù hợp với bạn" },
-  [paths.cvMatching]: { title: "CV–JD Matching", subtitle: "So khớp CV với mô tả việc" },
-  [paths.skillGap]: { title: "Skill Gap Analysis", subtitle: "Khoảng cách kỹ năng so với thị trường" },
-  [paths.recommendations]: { title: "Saved Reports", subtitle: "Lộ trình & gợi ý cho bạn" },
-  [paths.profile.detail]: { title: "Hồ sơ & CV", subtitle: "Thông tin cá nhân và CV của bạn" },
-  "/salary-insights": { title: "Salary Insights", subtitle: "Phân tích lương theo level & vị trí" },
-  [paths.roadmap.index]: { title: "Khoá học & Roadmap", subtitle: "Lộ trình học theo định hướng" },
-  "/onboarding/welcome": { title: "Career Quiz", subtitle: "Khám phá định hướng phù hợp" },
+  [paths.dashboard]: {
+    title: "Market Dashboard",
+    subtitle: "Tổng quan thị trường IT — không cần đăng nhập",
+  },
+  [paths.personalDashboard]: {
+    title: "Personal Dashboard",
+    subtitle: "Insight cá nhân hóa dựa trên hồ sơ & CV của bạn",
+  },
+  [paths.jobs.index]: {
+    title: "Job Search",
+    subtitle: "Tìm việc phù hợp với bạn",
+  },
+  [paths.cvMatching]: {
+    title: "CV–JD Matching",
+    subtitle: "So khớp CV với mô tả việc",
+  },
+  [paths.skillGap]: {
+    title: "Skill Gap Analysis",
+    subtitle: "Khoảng cách kỹ năng so với thị trường",
+  },
+  [paths.recommendations]: {
+    title: "Saved Reports",
+    subtitle: "Lộ trình & gợi ý cho bạn",
+  },
+  [paths.profile.detail]: {
+    title: "Hồ sơ & CV",
+    subtitle: "Thông tin cá nhân và CV của bạn",
+  },
+  "/salary-insights": {
+    title: "Salary Insights",
+    subtitle: "Phân tích lương theo level & vị trí",
+  },
+  [paths.roadmap.index]: {
+    title: "Khoá học & Roadmap",
+    subtitle: "Lộ trình học theo định hướng",
+  },
+  "/onboarding/welcome": {
+    title: "Career Quiz",
+    subtitle: "Khám phá định hướng phù hợp",
+  },
 };
 
-const stageIcons: Record<JourneyStage["id"], React.ComponentType<{ className?: string }>> = {
+const stageIcons: Record<
+  JourneyStage["id"],
+  React.ComponentType<{ className?: string }>
+> = {
   explore: Telescope,
   analyze: Microscope,
   plan: Route,
@@ -106,13 +161,19 @@ const stageIcons: Record<JourneyStage["id"], React.ComponentType<{ className?: s
 function findActive(pathname: string) {
   let best: NavItem | null = null;
   for (const it of allItems) {
-    const matched = it.end ? pathname === it.href : pathname.startsWith(it.href);
+    const matched = it.end
+      ? pathname === it.href
+      : pathname.startsWith(it.href);
     if (matched && (!best || it.href.length > best.href.length)) best = it;
   }
   return best;
 }
 
-export default function UserLayout({ children }: { children: React.ReactNode }) {
+export default function UserLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname() ?? "/";
   const router = useRouter();
   const { profile, strength, checklist, journey } = useOnboarding();
@@ -150,14 +211,110 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
 
   const nextAction = checklist.find((c) => !c.done);
   const groupTitle =
-    navGroups.find((g) => g.items.some((it) => it.href === active?.href))?.title ?? "";
-  const initials = (user?.name || profile.major || "JD")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(-2)
-    .map((s) => s[0])
-    .join("")
-    .toUpperCase() || "U";
+    navGroups.find((g) => g.items.some((it) => it.href === active?.href))
+      ?.title ?? "";
+  const initials =
+    (user?.full_name || profile.major || "JD")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(-2)
+      .map((s) => s[0])
+      .join("")
+      .toUpperCase() || "U";
+
+  const UserAvatar = ({
+    size = "h-8 w-8",
+    text = "text-xs",
+  }: {
+    size?: string;
+    text?: string;
+  }) =>
+    user?.avatarUrl ? (
+      <img
+        src={user.avatarUrl}
+        alt={user.full_name}
+        className={`${size} rounded-full object-cover border border-slate-200 dark:border-slate-700`}
+      />
+    ) : (
+      <div
+        className={`flex ${size} items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 ${text} font-bold text-white shadow`}
+      >
+        {initials}
+      </div>
+    );
+
+  // --- COMPONENT CHUNG CHO DROPDOWN MENU ITEM (ĐỂ TRÁNH TRÙNG LẶP CODE) ---
+  const UserDropdownMenu = () => (
+    <PopoverContent side="top" align="end" className="w-60 p-1.5">
+      <div className="border-b border-slate-100 px-3 py-2 dark:border-slate-800">
+        <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+          {user?.full_name}
+        </p>
+        <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+          {user?.email}
+        </p>
+      </div>
+
+      {/* Nút đổi theme vừa chuyển từ Profile qua */}
+      <button
+        onClick={toggleTheme}
+        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+      >
+        {theme === "dark" ? (
+          <>
+            <Sun className="h-4 w-4 text-amber-400" />
+            <span>Chế độ sáng</span>
+          </>
+        ) : (
+          <>
+            <Moon className="h-4 w-4 text-slate-400" />
+            <span>Chế độ tối</span>
+          </>
+        )}
+      </button>
+
+      <Link
+        href={paths.profile.detail}
+        onClick={() => setMobileOpen(false)}
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+      >
+        <User className="h-4 w-4 text-slate-400" />
+        Hồ sơ của tôi
+      </Link>
+
+      <Link
+        href="/onboarding/welcome"
+        onClick={() => setMobileOpen(false)}
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+      >
+        <Settings className="h-4 w-4 text-slate-400" />
+        Cập nhật onboarding
+      </Link>
+
+      <button
+        onClick={() => {
+          localStorage.removeItem("career-lens.tour.v1");
+          setMobileOpen(false);
+          window.location.reload();
+        }}
+        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+      >
+        <Sparkles className="h-4 w-4 text-slate-400" />
+        Xem lại hướng dẫn
+      </button>
+
+      <button
+        onClick={() => {
+          logout();
+          router.replace("/auth/login");
+        }}
+        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+      >
+        <LogOut className="h-4 w-4" />
+        Đăng xuất
+      </button>
+    </PopoverContent>
+  );
 
   const sidebarInner = (
     <>
@@ -191,7 +348,9 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                     key={item.href}
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
-                    {...(item.href === paths.cvMatching ? { "data-tour": "sidebar-cv-matching" } : {})}
+                    {...(item.href === paths.cvMatching
+                      ? { "data-tour": "sidebar-cv-matching" }
+                      : {})}
                     className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
                       isActive
                         ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
@@ -227,7 +386,10 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       <div className="border-t border-slate-100 p-3 dark:border-slate-800">
         <Popover>
           <PopoverTrigger asChild>
-            <button data-tour="profile-strength" className="mb-3 w-full rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 px-3 py-3 text-left transition-all hover:shadow-sm dark:border-blue-900 dark:from-blue-950/40 dark:to-indigo-950/40">
+            <button
+              data-tour="profile-strength"
+              className="mb-3 w-full rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 px-3 py-3 text-left transition-all hover:shadow-sm dark:border-blue-900 dark:from-blue-950/40 dark:to-indigo-950/40"
+            >
               <div className="mb-2 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 <p className="text-xs font-semibold text-blue-900 dark:text-blue-200">
@@ -279,7 +441,9 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                     ) : (
                       <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
                     )}
-                    <span className={`flex-1 ${c.done ? "line-through" : ""}`}>{c.label}</span>
+                    <span className={`flex-1 ${c.done ? "line-through" : ""}`}>
+                      {c.label}
+                    </span>
                     {!c.done && (
                       <span className="rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
                         +{c.weight}%
@@ -299,9 +463,12 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-xs font-bold text-white shadow">
                   {initials}
                 </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-xs font-bold text-white shadow">
+                  {initials}
+                </div>
                 <div className="min-w-0 flex-1 text-left">
                   <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    {user.name}
+                    {user.full_name}
                   </p>
                   <p className="truncate text-xs text-slate-500 dark:text-slate-400">
                     {user.email}
@@ -313,7 +480,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
             <PopoverContent side="top" align="end" className="w-60 p-1.5">
               <div className="border-b border-slate-100 px-3 py-2 dark:border-slate-800">
                 <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  {user.name}
+                  {user.full_name}
                 </p>
                 <p className="truncate text-xs text-slate-500 dark:text-slate-400">
                   {user.email}
@@ -395,7 +562,9 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 <ChevronRight className="h-3 w-3" />
                 <span>{groupTitle}</span>
                 <ChevronRight className="h-3 w-3" />
-                <span className="font-medium text-slate-600 dark:text-slate-300">{meta.title}</span>
+                <span className="font-medium text-slate-600 dark:text-slate-300">
+                  {meta.title}
+                </span>
               </nav>
             )}
             <h1 className="truncate text-base font-bold leading-tight text-slate-900 dark:text-slate-100">
@@ -427,7 +596,11 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
 
           <button
             onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Chuyển sang light mode" : "Chuyển sang dark mode"}
+            aria-label={
+              theme === "dark"
+                ? "Chuyển sang light mode"
+                : "Chuyển sang dark mode"
+            }
             title={theme === "dark" ? "Light mode" : "Dark mode"}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
           >
@@ -444,11 +617,11 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
             <Popover>
               <PopoverTrigger asChild>
                 <button className="hidden items-center gap-2 rounded-lg border border-transparent py-1 pl-1 pr-3 transition-all hover:border-slate-200 hover:bg-slate-50 sm:flex dark:hover:border-slate-700 dark:hover:bg-slate-800">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-xs font-bold text-white">
-                    {initials}
-                  </div>
+                  <UserAvatar />
                   <span className="hidden text-sm font-medium text-slate-700 lg:block dark:text-slate-300">
-                    {user.name.split(/\s+/).slice(-1)[0]}
+                    {user?.full_name
+                      ? user.full_name.split(/\s+/).slice(-1)[0]
+                      : "Thành viên"}
                   </span>
                   <ChevronDown className="hidden h-4 w-4 text-slate-400 lg:block" />
                 </button>
@@ -456,7 +629,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
               <PopoverContent align="end" className="w-60 p-1.5">
                 <div className="border-b border-slate-100 px-3 py-2 dark:border-slate-800">
                   <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    {user.name}
+                    {user.full_name}
                   </p>
                   <p className="truncate text-xs text-slate-500 dark:text-slate-400">
                     {user.email}
@@ -514,7 +687,10 @@ function JourneyBar({ journey }: { journey: JourneyStage[] }) {
   );
 
   return (
-    <div data-tour="journey-bar" className="border-b border-slate-200 bg-gradient-to-b from-white to-slate-50 px-4 py-3 dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50 md:px-6">
+    <div
+      data-tour="journey-bar"
+      className="border-b border-slate-200 bg-gradient-to-b from-white to-slate-50 px-4 py-3 dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50 md:px-6"
+    >
       <div className="mb-2 flex items-center justify-between">
         <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
           🎯 Hành trình sự nghiệp của bạn
@@ -526,18 +702,26 @@ function JourneyBar({ journey }: { journey: JourneyStage[] }) {
       <div className="flex items-center gap-1 overflow-x-auto md:gap-2">
         {journey.map((stage, idx) => {
           const Icon = stageIcons[stage.id];
-          const isCurrent = !stage.done && journey.findIndex((s) => !s.done) === idx;
+          const isCurrent =
+            !stage.done && journey.findIndex((s) => !s.done) === idx;
           return (
-            <div key={stage.id} className="flex flex-1 items-center gap-1 md:gap-2">
+            <div
+              key={stage.id}
+              className="flex flex-1 items-center gap-1 md:gap-2"
+            >
               <Link
                 href={stage.href}
-                title={isCurrent ? `Bước tiếp theo: ${stage.desc} → Bấm để bắt đầu` : stage.desc}
+                title={
+                  isCurrent
+                    ? `Bước tiếp theo: ${stage.desc} → Bấm để bắt đầu`
+                    : stage.desc
+                }
                 className={`group flex min-w-0 flex-1 items-center gap-2 rounded-lg border px-2.5 py-1.5 transition-all md:px-3 md:py-2 ${
                   stage.done
                     ? "border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/30"
                     : isCurrent
-                    ? "border-blue-300 bg-blue-50 ring-2 ring-blue-100 dark:border-blue-800 dark:bg-blue-950/40 dark:ring-blue-900/40"
-                    : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50"
+                      ? "border-blue-300 bg-blue-50 ring-2 ring-blue-100 dark:border-blue-800 dark:bg-blue-950/40 dark:ring-blue-900/40"
+                      : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50"
                 }`}
               >
                 <div
@@ -545,8 +729,8 @@ function JourneyBar({ journey }: { journey: JourneyStage[] }) {
                     stage.done
                       ? "bg-emerald-500 text-white"
                       : isCurrent
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500"
+                        ? "bg-blue-600 text-white"
+                        : "bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500"
                   }`}
                 >
                   {stage.done ? (
@@ -561,15 +745,16 @@ function JourneyBar({ journey }: { journey: JourneyStage[] }) {
                       stage.done
                         ? "text-emerald-700 dark:text-emerald-300"
                         : isCurrent
-                        ? "text-blue-700 dark:text-blue-300"
-                        : "text-slate-600 dark:text-slate-300"
+                          ? "text-blue-700 dark:text-blue-300"
+                          : "text-slate-600 dark:text-slate-300"
                     }`}
                   >
                     {idx + 1}. {stage.label}
                   </p>
                   {isCurrent ? (
                     <p className="mt-0.5 truncate text-[10px] font-medium text-blue-500 dark:text-blue-400 flex items-center gap-0.5">
-                      <ArrowRight className="h-2.5 w-2.5 shrink-0" />{stage.desc}
+                      <ArrowRight className="h-2.5 w-2.5 shrink-0" />
+                      {stage.desc}
                     </p>
                   ) : (
                     <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">

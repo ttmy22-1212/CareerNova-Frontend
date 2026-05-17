@@ -25,8 +25,15 @@ export interface OnboardingCompleteResponse {
 }
 
 export interface UpdateProfilePayload {
-  name?: string;
-  avatarUrl?: string;
+  full_name?: string;
+  avatar_url?: string;
+  major?: string;
+  school?: string;
+  current_year?: number | null;
+  orientation?: string;
+  objective?: string;
+  target_salary?: number;
+  prefer_remote?: boolean;
 }
 
 export interface ChangePasswordPayload {
@@ -34,25 +41,81 @@ export interface ChangePasswordPayload {
   next: string;
 }
 
+export interface AuthProviderInfo {
+  provider: "password" | "google" | "facebook";
+  last_login_at?: string | null;
+}
+
 export interface UserProfileResponse {
   user: {
     user_id: string;
+    full_name: string;
     email: string;
-    name: string;
-    avatarUrl?: string;
-    provider: "password" | "google" | "facebook";
-    major?: string;
-    school?: string;
-    current_year?: number;
-    orientation?: string;
-    objective?: string;
-    target_salary?: number;
-    prefer_remote?: boolean;
-    createdAt: number;
+    avatar_url: string | null;
+    role: string;
+    major: string | null;
+    school: string | null;
+    current_year: number | null;
+    orientation: string | null;
+    objective: string | null;
+    current_step: number;
+    target_salary: number | null;
+    prefer_remote: boolean;
+    onboarding_completed: boolean;
   };
-  latest_cv?: {
+  auth_providers: AuthProviderInfo[];
+  created_at: number;
+  latest_cv: {
     cv_id: string;
     file_name: string;
+    uploaded_at: string;
   } | null;
-  cv_skills_summary?: string[];
+  cv_skills_summary: string[];
+  latest_match_summary: {
+    match_id: string;
+    cv_id: string;
+    job_id: string;
+    score?: number;
+    job?: {
+      job_id: string;
+      company_id: string;
+      title: string;
+      company: { name: string };
+    } | null;
+  } | null;
+}
+
+export interface CompanyInJob {
+  name: string;
+  url: string | null;
+}
+
+export interface SavedJobItem {
+  job_id: string;
+  company_id: string;
+  title: string;
+  description?: string;
+  location?: string;
+  salary?: string;
+  company: CompanyInJob;
+}
+
+export interface GetSavedJobsResponse {
+  saved_job_id: string | number;
+  created_at: string | Date;
+  job: SavedJobItem | null;
+}
+
+export interface SaveJobPayload {
+  job_id: string;
+}
+
+export interface SaveJobResponse {
+  message: "JOB_SAVED_SUCCESSFULLY";
+  saved_job_id: string | number;
+  job_id: string;
+}
+
+export interface DeleteSavedJobResponse {
+  message: "SAVED_JOB_REMOVED_SUCCESSFULLY";
 }

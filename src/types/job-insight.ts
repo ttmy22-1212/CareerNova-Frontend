@@ -100,15 +100,17 @@ export interface JobDetailResponse {
   benefits: (Benefit & { is_inferred: boolean })[];
   industries: Industry[];
   match_breakdown: MatchBreakdown;
+  is_saved: boolean;
 }
 
 export interface JobListItem extends Job {
   company: {
     company_id: string;
     name: string;
-    logo_url?: string;
+    url?: string;
   };
   salary: Salary | null;
   skills: JobSkill[];
   match_score: number | null;
+  is_saved: boolean;
 }

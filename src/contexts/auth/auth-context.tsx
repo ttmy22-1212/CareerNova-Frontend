@@ -16,14 +16,15 @@ export type AuthProvider = "password" | "google" | "facebook";
 
 export type AuthUser = {
   id: string;
-  name: string;
+  full_name: string;
+  school: string;
   email: string;
   avatarUrl?: string;
   provider: AuthProvider;
   createdAt: number;
+  target_salary: number;
+  prefer_remote: boolean;
 };
-
-type StoredUser = AuthUser & { passwordHash?: string };
 
 type AuthState = {
   user: AuthUser | null;
@@ -32,7 +33,14 @@ type AuthState = {
   register: (name: string, email: string, password: string) => Promise<void>;
   loginWithProvider: (provider: "google" | "facebook") => Promise<void>;
   logout: () => void;
-  updateProfile: (patch: Partial<Pick<AuthUser, "name" | "avatarUrl">>) => void;
+  updateProfile: (
+    patch: Partial<
+      Pick<
+        AuthUser,
+        "full_name" | "avatarUrl" | "target_salary" | "prefer_remote" | "school"
+      >
+    >,
+  ) => Promise<void>;
   changePassword: (
     currentPassword: string,
     newPassword: string,
@@ -68,14 +76,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const profileRes = await ProfileApi.getMe();
 
             if (profileRes.data) {
-              const userData = profileRes.data.user;
+              const rawData = profileRes.data;
+              const userData = rawData.user;
+
+              const rawProvider = rawData.auth_providers?.[0]?.provider;
+              const primaryProvider =
+                (rawProvider as string) === "local"
+                  ? "password"
+                  : (rawProvider as AuthProvider) || "password";
               setUser({
                 id: userData.user_id,
                 email: userData.email,
-                name: userData.name,
-                avatarUrl: userData.avatarUrl,
-                provider: userData.provider as AuthProvider,
-                createdAt: userData.createdAt,
+                full_name: userData.full_name || "Thành viên",
+                avatarUrl: userData.avatar_url || undefined,
+                provider: primaryProvider,
+                createdAt: rawData.created_at,
+                target_salary: userData.target_salary ?? 0,
+                prefer_remote: !!userData.prefer_remote,
+                school: userData.school || "",
               });
             }
           }
@@ -96,23 +114,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const res = await AuthApi.login({ email, password });
 
     if (res.data) {
-      const {
-        access_token,
-        refresh_token,
-        user_id,
-        email: userEmail,
-      } = res.data;
+      const { access_token, refresh_token } = res.data;
 
       CookieHelper.setItem("token", access_token);
       CookieHelper.setItem("refresh_token", refresh_token);
 
-      setUser({
-        id: user_id,
-        email: userEmail || email,
-        name: "",
-        provider: "password",
-        createdAt: Date.now(),
-      });
+      try {
+        const profileRes = await ProfileApi.getMe();
+
+        if (profileRes.data) {
+          const rawData = profileRes.data;
+          const userData = rawData.user;
+          const rawProvider = rawData.auth_providers?.[0]?.provider;
+          const primaryProvider =
+            (rawProvider as string) === "local"
+              ? "password"
+              : (rawProvider as AuthProvider) || "password";
+
+          setUser({
+            id: userData.user_id,
+            email: userData.email,
+            full_name: userData.full_name || "Thành viên",
+            avatarUrl: userData.avatar_url || undefined,
+            provider: primaryProvider,
+            createdAt: rawData.created_at,
+            target_salary: userData.target_salary ?? 0,
+            prefer_remote: !!userData.prefer_remote,
+            school: userData.school || "",
+          });
+        }
+      } catch (profileErr) {
+        console.error(
+          "Đăng nhập thành công nhưng không lấy được profile:",
+          profileErr,
+        );
+        setUser({
+          id: res.data.user_id,
+          email: res.data.email || email,
+          full_name: "Thành viên",
+          provider: "password",
+          createdAt: Date.now(),
+          target_salary: 0,
+          prefer_remote: false,
+          school: "",
+        });
+      }
     } else {
       throw new Error(res.message || "Đăng nhập thất bại");
     }
@@ -156,14 +202,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateProfile = useCallback(
-    async (patch: Partial<Pick<AuthUser, "name" | "avatarUrl">>) => {
+    async (
+      patch: Partial<
+        Pick<
+          AuthUser,
+          | "full_name"
+          | "avatarUrl"
+          | "target_salary"
+          | "prefer_remote"
+          | "school"
+        >
+      >,
+    ) => {
       if (!user) return;
 
-      const ProfileApi = (await import("@/api/profile")).default;
+      const ProfileApiInstance = (await import("@/api/profile")).default;
 
-      const res = await ProfileApi.updateProfile({
-        name: patch.name,
-        avatarUrl: patch.avatarUrl,
+      // Đồng bộ hóa ngược lại cấu trúc snake_case tương ứng dữ liệu thô đẩy lên API
+      const res = await ProfileApiInstance.updateProfile({
+        full_name: patch.full_name,
+        avatar_url: patch.avatarUrl,
+        school: patch.school,
+        target_salary: patch.target_salary,
+        prefer_remote: patch.prefer_remote,
       });
 
       if (res.data) {

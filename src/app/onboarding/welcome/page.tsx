@@ -91,50 +91,6 @@ const goals: { value: Goal; label: string; desc: string; Icon: any }[] = [
   },
 ];
 
-const popularSkills = [
-  "JavaScript",
-  "TypeScript",
-  "Python",
-  "Java",
-  "C++",
-  "C#",
-  "Go",
-  "Rust",
-  "React",
-  "Next.js",
-  "Vue",
-  "Angular",
-  "Node.js",
-  "Express",
-  "Spring Boot",
-  "Django",
-  "FastAPI",
-  "Flask",
-  "Tailwind CSS",
-  "HTML/CSS",
-  "MySQL",
-  "PostgreSQL",
-  "MongoDB",
-  "Redis",
-  "SQL",
-  "Docker",
-  "Kubernetes",
-  "AWS",
-  "Azure",
-  "GCP",
-  "Linux",
-  "Git",
-  "Flutter",
-  "React Native",
-  "Swift",
-  "Kotlin",
-  "TensorFlow",
-  "PyTorch",
-  "Pandas",
-  "NumPy",
-  "Scikit-learn",
-];
-
 const quizQuestions: {
   q: string;
   options: { text: string; tags: CareerInterest[] }[];
@@ -184,7 +140,7 @@ const quizQuestions: {
         text: "Phân tích pattern, viết test reproduce",
         tags: ["qa", "backend"],
       },
-      { text: "Dựng môi trường mô phỏng để cô lập", tags: ["devops"] },
+      { text: "Dựng môi trường môi phỏng để cô lập", tags: ["devops"] },
     ],
   },
   {
@@ -225,12 +181,13 @@ export default function OnboardingWizard() {
   const [skillInput, setSkillInput] = useState("");
   const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
 
-  // Các States bổ sung hỗ trợ quản lý tích hợp API chuyên sâu
   const [dbSkills, setDbSkills] = useState<string[]>([]);
   const [isSearchingSkills, setIsSearchingSkills] = useState(false);
   const [uploadedCvId, setUploadedCvId] = useState<string | null>(null);
   const [isUploadingCv, setIsUploadingCv] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showResult, setShowResult] = useState(false);
+  const [calculatedPaths, setCalculatedPaths] = useState<string[]>([]);
 
   // 1. Kiểm tra trạng thái Onboarding từ database khi vừa tải trang
   useEffect(() => {
@@ -257,6 +214,29 @@ export default function OnboardingWizard() {
     };
     checkOnboardingStatus();
   }, [router]);
+
+  // Tự động tải danh sách kĩ năng ban đầu từ API thực tế khi người dùng bước vào Step 3
+  useEffect(() => {
+    if (step === 3) {
+      const fetchInitialSkills = async () => {
+        try {
+          setIsSearchingSkills(true);
+          const res = await JobApi.getSkills({ q: "" });
+          if (res.data?.data) {
+            const skillNames = res.data.data.map(
+              (s: any) => s.skill_name || s.name,
+            );
+            setDbSkills(skillNames);
+          }
+        } catch (err) {
+          console.error("Lỗi lấy danh sách skill mặc định từ API:", err);
+        } finally {
+          setIsSearchingSkills(false);
+        }
+      };
+      fetchInitialSkills();
+    }
+  }, [step]);
 
   useEffect(() => {
     setStep(initialStep);
@@ -337,17 +317,17 @@ export default function OnboardingWizard() {
         .map(([t]) => t);
 
       setProfile({
-        quizDone: quizAnswers.length === quizQuestions.length,
+        quizDone: true,
         suggestedPaths: suggested,
         completedAt: new Date().toISOString(),
       });
 
       await ProfileApi.completeOnboarding();
 
-      router.push(paths.dashboard);
+      setCalculatedPaths(suggested); // Lưu kết quả vào state để hiện lên UI
+      setShowResult(true); // Bật màn hình hiển thị kết quả
     } catch (error) {
-      console.error("Lỗi hoàn tất onboarding:", error);
-      alert("Không thể hoàn thành khảo sát, vui lòng thử lại.");
+      console.error("Lỗi:", error);
     } finally {
       setIsLoading(false);
     }
@@ -365,18 +345,12 @@ export default function OnboardingWizard() {
 
   const handleSkillInputChange = async (value: string) => {
     setSkillInput(value);
-    if (!value.trim()) {
-      setDbSkills([]);
-      return;
-    }
     try {
       setIsSearchingSkills(true);
-      const res = await JobApi.getSkills({ q: value });
-      if (res.data?.data) {
-        // Map mảng object kỹ năng từ database trả về thành chuỗi string tên kĩ năng
-        const skillNames = res.data.data.map(
-          (s: any) => s.skill_name || s.name,
-        );
+      const res = await JobApi.getSkills({ q: value.trim() });
+
+      if (res.data && Array.isArray(res.data)) {
+        const skillNames = res.data.map((s: any) => s.skill_name || s.name);
         setDbSkills(skillNames);
       }
     } catch (err) {
@@ -386,7 +360,7 @@ export default function OnboardingWizard() {
     }
   };
 
-  const addSkill = (name: string) => {
+  const addSkill = async (name: string) => {
     if (!name.trim()) return;
     if (
       profile.topSkills.find((s) => s.name.toLowerCase() === name.toLowerCase())
@@ -397,7 +371,20 @@ export default function OnboardingWizard() {
       topSkills: [...profile.topSkills, { name: name.trim(), level: 3 }],
     });
     setSkillInput("");
-    setDbSkills([]); // Clear gợi ý cũ sau khi chọn
+
+    // Sau khi add thành công, gọi lại API chuỗi rỗng để khôi phục danh sách gợi ý ban đầu
+    try {
+      setIsSearchingSkills(true);
+      const res = await JobApi.getSkills({ q: "" });
+      if (res.data && Array.isArray(res.data)) {
+        const skillNames = res.data.map((s: any) => s.skill_name || s.name);
+        setDbSkills(skillNames);
+      }
+    } catch (err) {
+      console.error("Lỗi khôi phục danh sách gợi ý:", err);
+    } finally {
+      setIsSearchingSkills(false);
+    }
   };
 
   const removeSkill = (name: string) => {
@@ -412,7 +399,6 @@ export default function OnboardingWizard() {
     });
   };
 
-  // 5. Xử lý tải file CV thực tế lên Cloudinary qua API hệ thống
   const handleCvUpload = async (file: File | null) => {
     if (!file) {
       setProfile({ hasUploadedCV: false, cvFileName: null });
@@ -454,6 +440,41 @@ export default function OnboardingWizard() {
       setIsUploadingCv(false);
     }
   };
+
+  if (showResult) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 px-4 py-10 flex items-center justify-center">
+        <div className="mx-auto max-w-md w-full text-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-200 animate-bounce">
+            <Check className="h-7 w-7 text-white" />
+          </div>
+
+          <h1 className="text-2xl font-bold text-slate-900">Chúc mừng bạn!</h1>
+          <p className="mt-1 text-sm text-slate-500 mb-6">
+            Dựa trên Career Quiz, đây là các định hướng phù hợp nhất với bạn:
+          </p>
+
+          <div className="space-y-2.5 mb-8">
+            {calculatedPaths.map((path) => (
+              <div
+                key={path}
+                className="capitalize py-3 px-4 rounded-xl border border-blue-100 bg-blue-50/50 font-semibold text-blue-700 text-sm tracking-wide shadow-sm"
+              >
+                🚀 {path}
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => router.push(paths.dashboard)}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-blue-300 transition-all hover:opacity-90"
+          >
+            Đi tới Dashboard <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 px-4 py-10">
@@ -530,12 +551,12 @@ export default function OnboardingWizard() {
               hasCV={profile.hasUploadedCV}
               cvName={profile.cvFileName}
               skillInput={skillInput}
-              setSkillInput={handleSkillInputChange} // Gắn hàm gọi API search ở đây
+              setSkillInput={handleSkillInputChange}
               addSkill={addSkill}
               removeSkill={removeSkill}
               updateLevel={updateLevel}
-              onCV={handleCvUpload} // Gắn hàm xử lý tải CV thực tế lên server ở đây
-              dbSkills={dbSkills} // Truyền dữ liệu gợi ý lấy từ DB xuống
+              onCV={handleCvUpload}
+              dbSkills={dbSkills}
             />
           )}
           {step === 4 && (
@@ -735,7 +756,7 @@ function Step3({
   removeSkill,
   updateLevel,
   onCV,
-  dbSkills = [], // Nhận thêm prop để render danh sách từ API
+  dbSkills = [],
 }: {
   skills: { name: string; level: number }[];
   hasCV: boolean;
@@ -748,13 +769,13 @@ function Step3({
   onCV: (file: File | null) => void;
   dbSkills?: string[];
 }) {
-  // Nếu không tìm kiếm trên ô Input, ưu tiên hiển thị gợi ý popularSkills cứng
-  const suggestions =
-    skillInput.trim() === ""
-      ? popularSkills
-          .filter((p) => !skills.find((s) => s.name === p))
-          .slice(0, 6)
-      : dbSkills.filter((p) => !skills.find((s) => s.name === p)).slice(0, 6);
+  // Lọc suggestions dựa trực tiếp vào mảng dbSkills nhận từ API, loại bỏ những kĩ năng đã chọn
+  const suggestions = useMemo(() => {
+    const selectedNames = skills.map((s) => s.name.toLowerCase());
+    return dbSkills
+      .filter((p) => p && !selectedNames.includes(p.toLowerCase()))
+      .slice(0, 6);
+  }, [skills, dbSkills]);
 
   return (
     <div>
@@ -806,47 +827,50 @@ function Step3({
         </span>
       </p>
 
-      <div className="mb-2 flex gap-2">
-        <input
-          value={skillInput}
-          onChange={(e) => setSkillInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addSkill(skillInput);
-            }
-          }}
-          placeholder="Gõ tên skill rồi Enter (vd: React, Python...)"
-          className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-        />
-        <button
-          onClick={() => addSkill(skillInput)}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          Thêm
-        </button>
+      {/* Hộp cô lập cụm ô nhập và bảng gợi ý */}
+      <div className="relative w-full mb-4">
+        <div className="flex gap-2">
+          <input
+            value={skillInput}
+            onChange={(e) => setSkillInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addSkill(skillInput);
+              }
+            }}
+            placeholder="Gõ tên skill rồi Enter (vd: React, Python...)"
+            className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+          />
+          <button
+            onClick={() => addSkill(skillInput)}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            Thêm
+          </button>
+        </div>
+
+        {/* Thanh Suggestions - Cho hiển thị absolute rớt hẳn xuống dưới mà không ảnh hưởng div xung quanh */}
+        {suggestions.length > 0 && skillInput.trim() !== "" && (
+          <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-800">
+            <div className="flex flex-wrap gap-1.5 w-full">
+              {suggestions.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => addSkill(s)}
+                  className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-700 dark:hover:bg-blue-950/40"
+                >
+                  + {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Suggestions */}
-      {suggestions.length > 0 && (
-        <div className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800">
-          <div className="flex flex-wrap gap-1.5">
-            {suggestions.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => addSkill(s)}
-                className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-700 dark:hover:bg-blue-950/40"
-              >
-                + {s}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Selected skills */}
-      <div className="space-y-2">
+      <div className="mt-4 space-y-2 block clear-both">
         {skills.map((s) => (
           <div
             key={s.name}
@@ -855,23 +879,7 @@ function Step3({
             <span className="flex-1 text-sm font-medium text-slate-800">
               {s.name}
             </span>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((lvl) => (
-                <button
-                  key={lvl}
-                  onClick={() => updateLevel(s.name, lvl)}
-                  className={`h-2 w-6 rounded-full transition-all ${
-                    lvl <= s.level
-                      ? "bg-gradient-to-r from-blue-500 to-indigo-500"
-                      : "bg-slate-200"
-                  }`}
-                  title={`Level ${lvl}/5`}
-                />
-              ))}
-            </div>
-            <span className="w-6 text-right text-xs font-semibold text-slate-500">
-              {s.level}/5
-            </span>
+
             <button
               onClick={() => removeSkill(s.name)}
               className="text-xs text-red-500 hover:underline"
