@@ -112,4 +112,20 @@ export default class ProfileApi {
   ): Promise<IBaseResponse<DeleteSavedJobResponse>> {
     return await apiDelete(`/profile/saved-jobs/${jobId}`, {});
   }
+
+  static async setDefaultCv(
+    cv_id: string,
+  ): Promise<IBaseResponse<{ message: string; default_cv_id: string }>> {
+    return await apiPatch("/profile/default-cv", { cv_id });
+  }
+
+  /**
+   * PATCH /profile/default-matching
+   * Thiết lập một kết quả đối sánh làm mặc định hiển thị trên Dashboard
+   */
+  static async setDefaultMatching(
+    match_id: string,
+  ): Promise<IBaseResponse<{ message: string; default_match_id: string }>> {
+    return await apiPatch("/profile/default-matching", { match_id });
+  }
 }

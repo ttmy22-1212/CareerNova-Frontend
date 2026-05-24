@@ -65,6 +65,35 @@ export interface UserProfileResponse {
   };
   auth_providers: AuthProviderInfo[];
   created_at: number;
+  all_cvs: {
+    cv_id: string;
+    file_name: string;
+    file_url: string | null;
+    uploaded_at: string;
+    skills: string[];
+  }[];
+
+  default_cv: {
+    cv_id: string;
+    file_name: string;
+    file_url: string | null;
+    uploaded_at: string;
+    skills: string[];
+  } | null;
+
+  default_match: {
+    match_id: string;
+    cv_id: string;
+    job_id: string | null;
+    match_type: string;
+    search_group: string | null;
+    match_score: number | null;
+    radar_data: Record<string, any>[] | null;
+    gap_report: Record<string, any> | null;
+    model_version: string | null;
+    created_at: string;
+    updated_at: string;
+  } | null;
   latest_cv: {
     cv_id: string;
     file_name: string;

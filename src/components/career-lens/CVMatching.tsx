@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   FileText,
   CheckCircle2,
@@ -14,7 +14,8 @@ import {
   ArrowRight,
   Info,
   RefreshCcw,
-  Loader2, // Thêm icon loading từ lucide-react
+  Loader2,
+  Star,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -26,26 +27,14 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { jobsWithDetails, userProfile } from "@/data/mockData";
-import { calculateJobMatch } from "@/utils/matching";
-import CvApi from "@/api/cv"; // Import API CV của bạn ở đây
+import { userProfile } from "@/data/mockData";
+import CvApi from "@/api/cv";
+import MatchingApi from "@/api/matching";
+import profileApi from "@/api/profile";
+import { MatchedSkillDetail } from "@/types/matching";
+import { CvItemDto } from "@/types/cv";
 
 type InputMode = "upload" | "paste" | "url" | "role";
-
-const benchmarkRoles = [
-  "Frontend Developer",
-  "Full Stack Developer",
-  "Backend Developer",
-  "DevOps Engineer",
-  "Data Engineer",
-  "Machine Learning Engineer",
-  "Mobile Developer",
-  "Cloud Architect",
-];
-
-// Use the first job (Senior React Developer) for demo matching
-const targetJob = jobsWithDetails[0];
-const matchData = calculateJobMatch(targetJob, userProfile);
 
 const getSkillLevel = (proficiency: number | null): string => {
   if (proficiency === null) return "None";
@@ -53,54 +42,6 @@ const getSkillLevel = (proficiency: number | null): string => {
   if (proficiency >= 70) return "Advanced";
   if (proficiency >= 50) return "Intermediate";
   return "Beginner";
-};
-
-const matchResult = {
-  overallScore: matchData.overall_score,
-  jobTitle: targetJob.title,
-  company: targetJob.company.name,
-  analysis: {
-    strongMatches: matchData.skill_matches
-      .filter((sm) => sm.match_level === "strong")
-      .map((sm) => ({
-        skill: sm.skill_name,
-        cvLevel: getSkillLevel(sm.user_proficiency),
-        required: sm.required ? "Required" : "Preferred",
-        match: sm.match_score,
-        years: sm.years_experience || 0,
-      })),
-    partialMatches: matchData.skill_matches
-      .filter((sm) => sm.match_level === "partial")
-      .map((sm) => ({
-        skill: sm.skill_name,
-        cvLevel: getSkillLevel(sm.user_proficiency),
-        required: sm.required ? "Required" : "Preferred",
-        match: sm.match_score,
-        years: sm.years_experience || 0,
-      })),
-    missingSkills: matchData.skill_matches
-      .filter((sm) => sm.match_level === "missing")
-      .map((sm) => ({
-        skill: sm.skill_name,
-        required: sm.required ? "Required" : "Preferred",
-        priority: sm.required ? "Critical" : "Nice to have",
-      })),
-  },
-  experience: {
-    required: targetJob.formatted_experience_level || "3+ years",
-    yours: `${userProfile.experience_years} years`,
-    match: Math.min((userProfile.experience_years / 5) * 100, 100),
-  },
-  education: {
-    required: "Bachelor's in CS or related",
-    yours: userProfile.education_level,
-    match: 100,
-  },
-  radarData: matchData.skill_matches.slice(0, 6).map((sm) => ({
-    subject: sm.skill_name,
-    you: sm.user_proficiency || 0,
-    required: 70,
-  })),
 };
 
 function ScoreRing({ score, size = 96 }: { score: number; size?: number }) {
@@ -144,17 +85,200 @@ function ScoreRing({ score, size = 96 }: { score: number; size?: number }) {
 export function CVMatching() {
   const [mode, setMode] = useState<InputMode>("upload");
   const [selectedRole, setSelectedRole] = useState("Senior React Developer");
+  const [benchmarkRoles, setBenchmarkRoles] = useState<string[]>([
+    "Frontend Developer",
+    "Full Stack Developer",
+    "Backend Developer",
+    "DevOps Engineer",
+    "Data Engineer",
+    "Machine Learning Engineer",
+    "Mobile Developer",
+    "Cloud Architect",
+  ]);
   const [jdUrl, setJdUrl] = useState("");
   const [jdText, setJdText] = useState("");
-  const [analyzed, setAnalyzed] = useState(true);
+  const [analyzed, setAnalyzed] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
-  const cvUploaded = true; // Bên trái giữ nguyên hằng số hiển thị CV mặc định của bạn
+
+  // States quản lý danh sách CV động từ API getMe
+  const [defaultCv, setDefaultCv] = useState<any>(null);
+  const [allCvs, setAllCvs] = useState<any[]>([]);
+  const [activeCv, setActiveCv] = useState<CvItemDto | null>(null);
+
+  // Nhận biết xem người dùng đã thay đổi bất kỳ trường cấu hình nào hay chưa
+  const [isConfigChanged, setIsConfigChanged] = useState<boolean>(false);
+
+  // ── STATES QUẢN LÝ DỮ LIỆU REAL TỪ API ──
+  const [matchResult, setMatchResult] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [isUpdatingDefault, setIsUpdatingDefault] = useState<boolean>(false);
 
   // ── THÊM ĐOẠN QUẢN LÝ UPLOAD CHO Ô BÊN PHẢI (JOB DESCRIPTION SOURCE) ──
   const [rightFile, setRightFile] = useState<File | null>(null);
   const [isUploadingRight, setIsUploadingRight] = useState(false);
   const [rightUploadError, setRightUploadError] = useState("");
   const rightFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Tải thông tin hồ sơ người dùng để phân rã Default CV và Toàn bộ CV
+  const fetchConfigAndProfileData = async () => {
+    try {
+      const rolesRes = await MatchingApi.getJobGroups();
+      if (rolesRes?.data && rolesRes.data.length > 0) {
+        setBenchmarkRoles(rolesRes.data);
+        setSelectedRole(rolesRes.data[0]);
+      }
+
+      const profileRes = await profileApi.getMe();
+      if (profileRes?.data) {
+        const userData = profileRes.data;
+
+        setAllCvs(userData.all_cvs || []);
+        setDefaultCv(userData.default_cv || null);
+
+        if (userData.default_cv) {
+          setActiveCv({
+            cv_id: userData.default_cv.cv_id,
+            file_name: userData.default_cv.file_name,
+            createdAt: userData.default_cv.uploaded_at,
+          });
+        } else if (userData.all_cvs && userData.all_cvs.length > 0) {
+          const firstCv = userData.all_cvs[0];
+          setActiveCv({
+            cv_id: firstCv.cv_id,
+            file_name: firstCv.file_name,
+            createdAt: firstCv.uploaded_at,
+          });
+        }
+
+        if (userData.default_match) {
+          mapAndSetMatchResult(userData.default_match);
+        }
+      }
+    } catch (err) {
+      console.error("Lỗi đồng bộ cấu hình dữ liệu profile:", err);
+      setApiError("Không thể tải thông tin hồ sơ từ hệ thống.");
+    }
+  };
+
+  useEffect(() => {
+    fetchConfigAndProfileData();
+  }, []);
+
+  // Theo dõi sự thay đổi của cấu hình để mở khóa nút bấm chính
+  useEffect(() => {
+    if (analyzed) {
+      setIsConfigChanged(true);
+    }
+  }, [selectedRole, jdUrl, jdText, rightFile, activeCv]);
+
+  // Hàm helper map cấu trúc JSON API sang Object phẳng cho UI Recharts
+  const mapAndSetMatchResult = (backendData: any) => {
+    const allSkillsForRadar = [
+      ...(backendData.radar_data || []),
+      ...(backendData.gap_report?.partially_matched_skills || []),
+      ...(backendData.gap_report?.missing_skills || []),
+    ];
+
+    const mappedResult = {
+      overallScore: Math.round((backendData.match_score || 0) * 100),
+      jobTitle: backendData.search_group || selectedRole,
+      company: "Market Benchmark",
+      analysis: {
+        strongMatches: (backendData.radar_data || [])
+          .filter((s: MatchedSkillDetail) => s.similarity >= 0.7)
+          .map((s: MatchedSkillDetail) => ({
+            skill: s.skill_name,
+            cvLevel: getSkillLevel(s.similarity * 100),
+            required: s.weight >= 0.2 ? "Required" : "Preferred",
+            match: Math.round(s.similarity * 100),
+            years: 1,
+          })),
+        partialMatches: (
+          backendData.gap_report?.partially_matched_skills || []
+        ).map((s: any) => ({
+          skill: s.skill_name,
+          cvLevel: getSkillLevel(s.similarity * 100),
+          required: s.weight >= 0.2 ? "Required" : "Preferred",
+          match: Math.round(s.similarity * 100),
+          years: 0,
+        })),
+        missingSkills: (backendData.gap_report?.missing_skills || []).map(
+          (s: any) => ({
+            skill: s.skill_name,
+            required: s.weight >= 0.2 ? "Required" : "Preferred",
+            priority: s.weight >= 0.2 ? "Critical" : "Nice to have",
+          }),
+        ),
+      },
+      experience: {
+        required: "3+ years",
+        yours: `${userProfile.experience_years} years`,
+        match: Math.min((userProfile.experience_years / 5) * 100, 100),
+      },
+      education: {
+        required: "Bachelor's in CS or related",
+        yours: userProfile.education_level,
+        match: 100,
+      },
+      radarData: allSkillsForRadar.map((s: any) => ({
+        subject: s.skill_name,
+        you: Math.round((s.similarity || 0) * 100),
+        required: Math.round((s.weight || 0) * 100),
+      })),
+    };
+
+    setMatchResult(mappedResult);
+    setAnalyzed(true);
+    setIsConfigChanged(false); // Đóng khóa nút sau khi đã hiển thị kết quả khớp cấu hình hiện tại
+  };
+
+  // HÀM XỬ LÝ GỌI API ĐỐI SÁNH KHI BẤM NÚT ANALYZE & MATCH HOẶC ICON REFRESH
+  const handleAnalyzeAndMatch = async () => {
+    if (!activeCv?.cv_id) {
+      setApiError(
+        "Vui lòng tải lên CV của bạn ở ô bên trái trước khi thực hiện đối sánh.",
+      );
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setApiError(null);
+
+      const res = await MatchingApi.analyzeCv({
+        cv_id: activeCv.cv_id,
+        search_group: selectedRole,
+      });
+
+      if (res?.data) {
+        mapAndSetMatchResult(res.data);
+      }
+    } catch (err) {
+      console.error("Lỗi khi tính toán đối sánh:", err);
+      setApiError(
+        "Không thể hoàn thành phân tích đối sánh. Vui lòng kiểm tra lại hệ thống.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Hàm gọi API thiết lập CV Mặc định cho hệ thống
+  const handleSetDefaultCv = async (cvId: string) => {
+    try {
+      setIsUpdatingDefault(true);
+      const res = await profileApi.setDefaultCv(cvId);
+      if (res) {
+        await fetchConfigAndProfileData(); // Tải lại dữ liệu đồng bộ trạng thái mới
+      }
+    } catch (err) {
+      console.error("Lỗi cập nhật CV mặc định:", err);
+      setApiError("Đặt trạng thái CV mặc định thất bại.");
+    } finally {
+      setIsUpdatingDefault(false);
+    }
+  };
 
   const handleRightFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -163,7 +287,6 @@ export function CVMatching() {
     if (!files || files.length === 0) return;
     const selectedFile = files[0];
 
-    // Validate giống bên file CVUpload.tsx của bạn
     const validTypes = [
       "application/pdf",
       "application/msword",
@@ -184,7 +307,6 @@ export function CVMatching() {
     setIsUploadingRight(true);
 
     try {
-      // Gọi endpoint upload CV thực tế
       const response = await CvApi.uploadCv(selectedFile);
       if (response && response.data) {
         setRightFile(selectedFile);
@@ -200,7 +322,6 @@ export function CVMatching() {
       setIsUploadingRight(false);
     }
   };
-  // ──────────────────────────────────────────────────────────────────
 
   const modeButtons: { key: InputMode; label: string; icon: any }[] = [
     { key: "upload", label: "Upload CV", icon: Upload },
@@ -214,6 +335,14 @@ export function CVMatching() {
 
   return (
     <div className="p-6 space-y-5">
+      {/* Khối thông báo lỗi gọi API nếu có */}
+      {apiError && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-800 text-xs rounded-xl flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+          <span>{apiError}</span>
+        </div>
+      )}
+
       {/* ── Input Panel ── */}
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
         <div className="p-5 border-b border-slate-100">
@@ -226,41 +355,123 @@ export function CVMatching() {
           </p>
         </div>
         <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* CV Upload (Bên Trái - Giữ Nguyên Hoàn Toàn Giao Diện Cũ) */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
-              Your CV / Profile
-            </label>
-            {cvUploaded ? (
-              <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-                <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
-                  <FileText className="w-5 h-5 text-emerald-600" />
+          {/* CỘT BÊN TRÁI: QUẢN LÝ PHÂN TÁCH CV DEFAULT VÀ DANH SÁCH ALL CVS */}
+          <div className="space-y-4">
+            {/* Hàng 1: Hiển thị System Default CV */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
+                System Default CV
+              </label>
+              {defaultCv ? (
+                <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
+                    <Star className="w-4 h-4 text-blue-600 fill-blue-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-800 truncate">
+                      {defaultCv.file_name}
+                    </p>
+                  </div>
+                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-md shrink-0">
+                    Mặc định
+                  </span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 truncate">
-                    Jane_Doe_CV_2026.pdf
-                  </p>
-                  <p className="text-xs text-emerald-700">Uploaded · 142 KB</p>
-                </div>
-                <button className="p-1.5 hover:bg-emerald-100 rounded-lg transition-colors">
-                  <RefreshCcw className="w-3.5 h-3.5 text-emerald-700" />
-                </button>
-              </div>
-            ) : (
-              <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer">
-                <Upload className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm font-medium text-slate-700 mb-0.5">
-                  Drop your CV here
+              ) : (
+                <p className="text-xs text-slate-400 italic pl-1">
+                  Chưa thiết lập CV mặc định.
                 </p>
-                <p className="text-xs text-slate-400">PDF, DOCX up to 5MB</p>
-                <button className="mt-3 px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors">
-                  Browse Files
-                </button>
-              </div>
-            )}
+              )}
+            </div>
+
+            {/* Hàng 2: Hiển thị Active CV để quét và Dropdown chọn All CVs bên dưới */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
+                Active CV for Analysis & All Documents
+              </label>
+              {activeCv ? (
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                    <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
+                      <FileText className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-emerald-700 font-medium">
+                        Đang chọn quét AI
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">
+                        {activeCv.file_name}
+                      </p>
+                    </div>
+                    {/* THAY ĐỔI: Bấm nút này sẽ trực tiếp kích hoạt đối sánh ngay tức thì */}
+                    <button
+                      onClick={handleAnalyzeAndMatch}
+                      disabled={isLoading}
+                      title="Chạy đối sánh nhanh với CV này"
+                      className="p-1.5 hover:bg-emerald-100 rounded-lg transition-colors text-emerald-700 disabled:opacity-40"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCcw className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Dropdown bốc all_cvs và tích hợp nút cài đặt default */}
+                  {allCvs.length > 0 && (
+                    <div className="p-3 border border-slate-100 bg-slate-50/50 rounded-xl flex items-center gap-3 justify-between">
+                      <div className="flex-1">
+                        <select
+                          value={activeCv.cv_id}
+                          onChange={(e) => {
+                            const selected = allCvs.find(
+                              (c) => c.cv_id === e.target.value,
+                            );
+                            if (selected) setActiveCv(selected);
+                          }}
+                          className="w-full bg-white border border-slate-200 px-2.5 py-1.5 text-xs rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 font-medium"
+                        >
+                          {allCvs.map((cv) => (
+                            <option key={cv.cv_id} value={cv.cv_id}>
+                              {cv.file_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={
+                          isUpdatingDefault ||
+                          activeCv.cv_id === defaultCv?.cv_id
+                        }
+                        onClick={() => handleSetDefaultCv(activeCv.cv_id)}
+                        className="px-2.5 py-1.5 border border-slate-200 bg-white text-slate-700 font-semibold rounded-lg text-[11px] hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400 whitespace-nowrap transition-all"
+                      >
+                        {isUpdatingDefault
+                          ? "Processing..."
+                          : activeCv.cv_id === defaultCv?.cv_id
+                            ? "Is Default ⭐"
+                            : "Set Default"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer">
+                  <Upload className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-slate-700 mb-0.5">
+                    Drop your CV here
+                  </p>
+                  <p className="text-xs text-slate-400">PDF, DOCX up to 5MB</p>
+                  <button className="mt-3 px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors">
+                    Browse Files
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* JD Input (Bên Phải - Nơi gắn endpoint upload thực tế vào tab Upload CV) */}
+          {/* JD Input (Bên Phải - Giữ nguyên hoàn toàn cấu trúc giao diện) */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
               Job Description Source
@@ -314,7 +525,6 @@ export function CVMatching() {
               />
             )}
 
-            {/* THAY ĐỔI TẠI ĐÂY: Quản lý click và gọi API thực tế khi chọn tab upload bên phải */}
             {mode === "upload" && (
               <>
                 <input
@@ -367,18 +577,29 @@ export function CVMatching() {
               </>
             )}
 
+            {/* THAY ĐỔI: Thêm điều kiện !isConfigChanged để vô hiệu hóa nút bấm khi mở trang */}
             <button
-              onClick={() => setAnalyzed(true)}
-              className="mt-3 w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md shadow-blue-100 flex items-center justify-center gap-2"
+              onClick={handleAnalyzeAndMatch}
+              disabled={isLoading || !isConfigChanged}
+              className="mt-3 w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md shadow-blue-100 flex items-center justify-center gap-2 disabled:from-slate-200 disabled:to-slate-300 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed"
             >
-              <Sparkles className="w-4 h-4" />
-              Analyze & Match
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Analyze & Match
+                </>
+              )}
             </button>
           </div>
         </div>
       </div>
 
-      {!analyzed ? (
+      {!analyzed || !matchResult ? (
         <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-16 text-center">
           <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <BarChart3 className="w-8 h-8 text-blue-400" />
@@ -402,7 +623,7 @@ export function CVMatching() {
               },
               {
                 label: "Skills Matched",
-                value: `${matchResult.analysis.strongMatches.length}/${matchResult.analysis.strongMatches.length + matchResult.analysis.partialMatches.length}`,
+                value: `${matchResult.analysis.strongMatches.length}/${matchResult.analysis.strongMatches.length + matchResult.analysis.partialMatches.length + matchResult.analysis.missingSkills.length}`,
                 sub: "Core skills fully met",
                 type: "text",
                 color: "text-emerald-600",
@@ -485,7 +706,7 @@ export function CVMatching() {
                 </button>
                 {expandedSection !== "strong" && (
                   <div className="px-5 pb-4 flex flex-wrap gap-2">
-                    {matchResult.analysis.strongMatches.map((item) => (
+                    {matchResult.analysis.strongMatches.map((item: any) => (
                       <span
                         key={item.skill}
                         className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full"
@@ -497,7 +718,7 @@ export function CVMatching() {
                 )}
                 {expandedSection === "strong" && (
                   <div className="border-t border-slate-100 divide-y divide-slate-50">
-                    {matchResult.analysis.strongMatches.map((item) => (
+                    {matchResult.analysis.strongMatches.map((item: any) => (
                       <div
                         key={item.skill}
                         className="px-5 py-3 flex items-center gap-4"
@@ -508,7 +729,7 @@ export function CVMatching() {
                               {item.skill}
                             </span>
                             <span className="text-xs font-bold text-emerald-600">
-                              100% Match
+                              {item.match}% Match
                             </span>
                           </div>
                           <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -566,7 +787,7 @@ export function CVMatching() {
                 </button>
                 {expandedSection !== "partial" && (
                   <div className="px-5 pb-4 flex flex-wrap gap-2">
-                    {matchResult.analysis.partialMatches.map((item) => (
+                    {matchResult.analysis.partialMatches.map((item: any) => (
                       <span
                         key={item.skill}
                         className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full"
@@ -578,7 +799,7 @@ export function CVMatching() {
                 )}
                 {expandedSection === "partial" && (
                   <div className="border-t border-slate-100 divide-y divide-slate-50">
-                    {matchResult.analysis.partialMatches.map((item) => (
+                    {matchResult.analysis.partialMatches.map((item: any) => (
                       <div key={item.skill} className="px-5 py-3">
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-sm font-semibold text-slate-900">
@@ -610,7 +831,7 @@ export function CVMatching() {
                         </div>
                         <div className="mt-2 flex items-start gap-1.5 p-2 bg-amber-50 rounded-lg">
                           <Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                          <p className="text-[11px] text-amber-700">
+                          <p className="text-[11px] text-amber-700 font-medium">
                             Consider upskilling to reach the required level
                           </p>
                         </div>
@@ -650,7 +871,7 @@ export function CVMatching() {
                 </button>
                 {expandedSection !== "missing" && (
                   <div className="px-5 pb-4 flex flex-wrap gap-2">
-                    {matchResult.analysis.missingSkills.map((item) => (
+                    {matchResult.analysis.missingSkills.map((item: any) => (
                       <span
                         key={item.skill}
                         className="px-3 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded-full border border-red-200"
@@ -662,7 +883,7 @@ export function CVMatching() {
                 )}
                 {expandedSection === "missing" && (
                   <div className="border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3 p-4">
-                    {matchResult.analysis.missingSkills.map((item) => (
+                    {matchResult.analysis.missingSkills.map((item: any) => (
                       <div
                         key={item.skill}
                         className="p-3 bg-red-50 border border-red-100 rounded-xl"
