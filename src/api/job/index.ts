@@ -52,4 +52,8 @@ export default class JobApi {
   }): Promise<IBaseResponse<GetSkillsResponse>> {
     return await apiGet("/jobs/skills", query);
   }
+
+  static async getCategories(): Promise<string[]> {
+    return await apiGet("/jobs/categories");
+  }
 }

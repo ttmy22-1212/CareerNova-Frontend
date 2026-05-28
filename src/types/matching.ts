@@ -55,3 +55,5 @@ export type CheckHistoryResponse = IBaseResponse<CheckHistoryResponseDto>;
 export type AnalyzeCvResponse = IBaseResponse<CvJobMatchResultDto>;
 
 export type GetMatchDetailResponse = IBaseResponse<CvJobMatchResultDto>;
+
+export type GetAllMatchesResponse = IBaseResponse<CvJobMatchResultDto[]>;

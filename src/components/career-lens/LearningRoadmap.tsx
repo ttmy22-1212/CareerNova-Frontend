@@ -1,197 +1,130 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Clock, Users, Star, ArrowRight, Zap } from "lucide-react";
-
-interface Course {
-  id: string;
-  title: string;
-  provider: string;
-  duration: string;
-  level: "Beginner" | "Intermediate" | "Advanced";
-  rating: number;
-  learners: number;
-  progress: number;
-  skills: string[];
-  price: string;
-  image: string;
-  source_url?: string;
-}
-
-interface LearningPath {
-  id: string;
-  title: string;
-  description: string;
-  duration: string;
-  progress: number;
-  courses: Course[];
-  icon: string;
-  color: string;
-  difficulty: string;
-  skill_key?: string;
-}
+import { Clock, Users, Star, ArrowRight, BookmarkPlus } from "lucide-react";
+import LearningRoadmapApi from "@/api/learning-roadmap";
+import { CourseItemDto, LearningPathDto } from "@/types/learning-roadmap";
 
 interface LearningRoadmapProps {
   selectedSkillFromDB?: string;
 }
 
 export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
-  const [masterLearningPaths, setMasterLearningPaths] = useState<
-    LearningPath[]
-  >([]);
-  const [masterRecommendedCourses, setMasterRecommendedCourses] = useState<
-    Course[]
-  >([]);
-
-  const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
-  const [recommendedCourses, setRecommendedCourses] = useState<Course[]>([]);
+  // Quản lý dữ liệu trả về từ API Backend
+  const [learningPaths, setLearningPaths] = useState<LearningPathDto[]>([]);
+  const [recommendedCourses, setRecommendedCourses] = useState<CourseItemDto[]>(
+    [],
+  );
 
   const [loading, setLoading] = useState<boolean>(true);
-
   const [expandedPath, setExpandedPath] = useState<string | null>(null);
+
+  // Trạng thái các bộ lọc trực tiếp
   const [selectedLevel, setSelectedLevel] = useState<
     "All" | "Beginner" | "Intermediate" | "Advanced"
   >("All");
-
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   useEffect(() => {
-    fetch("/course-data.json")
+    setLoading(true);
+
+    const filters = {
+      skill: selectedSkillFromDB || undefined,
+      level: selectedLevel !== "All" ? selectedLevel : undefined,
+    };
+
+    LearningRoadmapApi.getRoadmap(filters)
       .then((res) => {
-        if (!res.ok) throw new Error("Không thể tải file dữ liệu");
-        return res.json();
-      })
-      .then((data) => {
-        const gradients = [
-          "from-violet-500 to-purple-600",
-          "from-blue-500 to-cyan-600",
-          "from-orange-500 to-red-600",
-          "from-emerald-500 to-teal-600",
-        ];
+        console.log("ROADMAP RESPONSE:", res);
 
-        const getPathIcon = (iconText: string) => {
-          switch (iconText?.toLowerCase()) {
-            case "rocket":
-              return "🚀";
-            case "brain":
-              return "🧠";
-            case "laptop":
-              return "💻";
-            case "database":
-              return "🗄️";
-            default:
-              return "📊";
-          }
-        };
+        if (!res) {
+          setLearningPaths([]);
+          setRecommendedCourses([]);
+          setLoading(false);
+          return;
+        }
 
-        let rawPaths = data.learning_paths || [];
+        const rawPaths: LearningPathDto[] = res?.learning_paths || [];
+        const rawRecs: CourseItemDto[] = res?.recommended_courses || [];
 
-        if (selectedSkillFromDB) {
-          rawPaths = rawPaths.filter((p: any) =>
-            p.skill_key
-              ?.toLowerCase()
-              .includes(selectedSkillFromDB.toLowerCase()),
+        let displayPaths = [...rawPaths];
+        let displayRecs = [...rawRecs];
+
+        // Logic xử lý Search cục bộ giữ nguyên
+        if (searchQuery.trim() !== "") {
+          const lowerQuery = searchQuery.toLowerCase();
+
+          displayPaths = displayPaths.filter(
+            (path) =>
+              path.title.toLowerCase().includes(lowerQuery) ||
+              path.courses.some((c) =>
+                c.skills.some((s) => s.toLowerCase().includes(lowerQuery)),
+              ),
           );
+
+          displayRecs = displayRecs.filter(
+            (course) =>
+              course.title.toLowerCase().includes(lowerQuery) ||
+              course.skills.some((s) => s.toLowerCase().includes(lowerQuery)),
+          );
+        } else {
+          // Giới hạn hiển thị 6 phần tử ban đầu khi không tìm kiếm
+          displayPaths = displayPaths.slice(0, 6);
+          displayRecs = displayRecs.slice(0, 6);
         }
 
-        const mappedPaths: LearningPath[] = rawPaths.map(
-          (path: any, index: number) => ({
-            id: path.path_id,
-            title: path.path_title,
-            description: path.path_description,
-            duration: path.estimated_duration_months || "2 months",
-            progress: path.path_progress_percent || 0,
-            difficulty: path.path_level || "Advanced",
-            icon: getPathIcon(path.path_icon),
-            color: gradients[index % gradients.length],
-            courses: (path.courses_in_path || []).map((course: any) => ({
-              id: course.course_id,
-              title: course.course_title,
-              provider: course.provider_name,
-              duration: `${course.duration_hours}h`,
-              level: "Intermediate",
-              rating: course.rating || 4.5,
-              learners: 85000,
-              progress: course.user_course_progress || 0,
-              skills: course.skills_tags || [],
-              price: `$${course.price || "Free"}`,
-              image: course.provider_name === "Coursera" ? "⚛️" : "🟢",
-              source_url: course.source_url,
-            })),
-          }),
-        );
+        // Cập nhật lại state cho UI render
+        setLearningPaths(displayPaths);
+        setRecommendedCourses(displayRecs);
 
-        const rawRecs = data.recommended_courses || [];
-        const mappedRecs: Course[] = rawRecs.map((course: any) => {
-          let learnersNum = 45000;
-          if (typeof course.total_learners === "string") {
-            learnersNum =
-              parseFloat(course.total_learners.replace("K", "")) * 1000;
-          } else if (typeof course.total_learners === "number") {
-            learnersNum = course.total_learners;
-          }
-
-          return {
-            id: course.course_id,
-            title: course.course_title,
-            provider: course.provider_name,
-            duration: `${course.duration_hours}h`,
-            level: "Intermediate",
-            rating: course.rating || 4.5,
-            learners: learnersNum,
-            progress: 0,
-            skills: course.skills_tags || [],
-            price: course.price ? `$${course.price}` : "Free",
-            image: course.thumbnail_icon === "triangle" ? "📘" : "▲",
-            source_url: course.source_url,
-          };
-        });
-
-        setMasterLearningPaths(mappedPaths);
-        setMasterRecommendedCourses(mappedRecs);
-
-        setLearningPaths(mappedPaths.slice(0, 6));
-        setRecommendedCourses(mappedRecs.slice(0, 6));
-        if (mappedPaths.length > 0) {
-          setExpandedPath(mappedPaths[0].id);
+        if (displayPaths.length > 0) {
+          setExpandedPath(displayPaths[0].id);
         }
+
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Lỗi fetch dữ liệu:", err);
+        console.error("Lỗi fetch dữ liệu roadmap từ API:", err);
+        setLearningPaths([]);
+        setRecommendedCourses([]);
         setLoading(false);
       });
-  }, [selectedSkillFromDB]);
+  }, [selectedSkillFromDB, selectedLevel, searchQuery]);
 
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setLearningPaths(masterLearningPaths.slice(0, 6));
-      setRecommendedCourses(masterRecommendedCourses.slice(0, 6));
-    } else {
-      const lowerQuery = searchQuery.toLowerCase();
+  // 2. Hàm xử lý Bookmark (Lưu / Hủy lưu khóa học)
+  const handleToggleSave = async (courseId: string) => {
+    try {
+      const res = await LearningRoadmapApi.toggleSaveCourse({
+        course_id: courseId,
+      });
+      if (res) {
+        const isSavedNewStatus = res.is_saved;
 
-      const filteredPaths = masterLearningPaths.filter(
-        (path) =>
-          path.title.toLowerCase().includes(lowerQuery) ||
-          path.courses.some((c) =>
-            c.skills.some((s) => s.toLowerCase().includes(lowerQuery)),
-          ),
-      );
+        // Cập nhật trực tiếp trạng thái trên UI để không cần phải load lại toàn bộ trang
+        const updateCourseStatus = (courses: CourseItemDto[]) =>
+          courses.map((c) =>
+            c.id === courseId
+              ? {
+                  ...c,
+                  is_saved: isSavedNewStatus,
+                  progress: isSavedNewStatus ? 100 : 0,
+                }
+              : c,
+          );
 
-      const filteredRecs = masterRecommendedCourses.filter(
-        (course) =>
-          course.title.toLowerCase().includes(lowerQuery) ||
-          course.skills.some((s) => s.toLowerCase().includes(lowerQuery)),
-      );
+        setLearningPaths((prev) =>
+          prev.map((path) => ({
+            ...path,
+            courses: updateCourseStatus(path.courses),
+          })),
+        );
 
-      setLearningPaths(filteredPaths);
-      setRecommendedCourses(filteredRecs);
+        setRecommendedCourses((prev) => updateCourseStatus(prev));
+      }
+    } catch (err) {
+      console.error("Lỗi khi thay đổi trạng thái lưu khóa học:", err);
     }
-  }, [searchQuery, masterLearningPaths, masterRecommendedCourses]);
-
-  const filteredRecommended = recommendedCourses.filter((course) =>
-    selectedLevel === "All" ? true : course.level === selectedLevel,
-  );
+  };
 
   if (loading) {
     return (
@@ -284,7 +217,7 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
                   </div>
                 </div>
 
-                {/* Courses Preview/List */}
+                {/* Courses List */}
                 <div
                   className="border-t border-slate-200 dark:border-slate-800"
                   onClick={(e) => e.stopPropagation()}
@@ -335,16 +268,29 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
                                 {course.progress}%
                               </span>
                             </div>
-                            {course.source_url && (
+                            <div className="mt-3 flex items-center gap-4">
+                              {course.source_url && (
+                                <button
+                                  onClick={() =>
+                                    window.open(course.source_url, "_blank")
+                                  }
+                                  className="text-xs text-violet-600 hover:underline font-medium"
+                                >
+                                  Go to course website →
+                                </button>
+                              )}
                               <button
-                                onClick={() =>
-                                  window.open(course.source_url, "_blank")
+                                onClick={() => handleToggleSave(course.id)} // Giữ nguyên hàm cũ của bạn
+                                className={`px-3 py-2 border rounded-lg transition-all ${course.is_saved ? "border-amber-500 text-amber-500 bg-amber-50" : "border-slate-300 text-slate-600"}`} // Sửa class màu trái tim (đỏ) thành màu của Job (hổ phách)
+                                title={
+                                  course.is_saved ? "Unsave" : "Save Course"
                                 }
-                                className="mt-3 text-xs text-violet-600 hover:underline font-medium block"
                               >
-                                Go to course website →
+                                <BookmarkPlus
+                                  className={`w-4 h-4 ${course.is_saved ? "fill-amber-500 text-amber-500" : ""}`}
+                                />
                               </button>
-                            )}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -382,21 +328,21 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
               onChange={(e) => setSelectedLevel(e.target.value as any)}
               className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-900 hover:border-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:hover:border-slate-500"
             >
-              <option>All</option>
-              <option>Beginner</option>
-              <option>Intermediate</option>
-              <option>Advanced</option>
+              <option value="All">All</option>
+              <option value="Beginner">Beginner</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Advanced">Advanced</option>
             </select>
           </div>
         </div>
 
-        {filteredRecommended.length === 0 ? (
+        {recommendedCourses.length === 0 ? (
           <p className="text-sm text-slate-500 dark:text-slate-400 py-4">
             No matching recommended courses found.
           </p>
         ) : (
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full min-w-0">
-            {filteredRecommended.map((course) => (
+            {recommendedCourses.map((course) => (
               <div
                 key={course.id}
                 className="overflow-hidden rounded-lg border border-slate-200 bg-white transition-all hover:border-slate-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 w-full min-w-0"
@@ -441,15 +387,27 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
                       </span>
                     ))}
                   </div>
-                  <button
-                    onClick={() =>
-                      course.source_url &&
-                      window.open(course.source_url, "_blank")
-                    }
-                    className="w-full rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 dark:hover:bg-violet-500"
-                  >
-                    Start Learning • {course.price}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() =>
+                        course.source_url &&
+                        window.open(course.source_url, "_blank")
+                      }
+                      className="flex-1 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 dark:hover:bg-violet-500"
+                    >
+                      Start Learning •{" "}
+                      {course.price > 0 ? `$${course.price}` : "Free"}
+                    </button>
+                    <button
+                      onClick={() => handleToggleSave(course.id)}
+                      className={`px-3 py-2 border rounded-lg transition-all ${course.is_saved ? "border-amber-500 text-amber-500 bg-amber-50" : "border-slate-300 text-slate-600"}`}
+                      title={course.is_saved ? "Unsave" : "Save Course"}
+                    >
+                      <BookmarkPlus
+                        className={`w-4 h-4 ${course.is_saved ? "fill-amber-500 text-amber-500" : ""}`}
+                      />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

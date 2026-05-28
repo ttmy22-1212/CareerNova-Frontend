@@ -1,5 +1,6 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Sparkles,
@@ -33,62 +34,12 @@ import {
   formatSalary,
 } from "@/utils/matching";
 import { useOnboarding } from "@/contexts/onboarding/onboarding-context";
+import RecommendationApi from "@/api/recommendation";
+import ProfileApi from "@/api/profile";
+import { RecommendedJob, SavedReportItem } from "@/types/recommendation";
 
 const matchedJobs = getMatchedJobs(jobsWithDetails, userProfile);
 const gapAnalysis = analyzeSkillGaps(jobsWithDetails, userProfile);
-
-const savedReports = [
-  {
-    id: 1,
-    type: "cv-match",
-    title: `CV Match — ${matchedJobs[0].job.title}`,
-    subtitle: matchedJobs[0].job.company.name,
-    score: matchedJobs[0].overall_score,
-    date: "Apr 18, 2026",
-    tags: matchedJobs[0].skill_matches
-      .filter((sm) => sm.match_level === "strong")
-      .slice(0, 3)
-      .map((sm) => sm.skill_name),
-    status: matchedJobs[0].overall_score >= 80 ? "strong" : "moderate",
-  },
-  {
-    id: 2,
-    type: "gap",
-    title: "Skill Gap Report — Full Stack Path",
-    subtitle: "Role Benchmark",
-    score: 68,
-    date: "Apr 15, 2026",
-    tags: gapAnalysis
-      .filter((g) => g.priority === "critical" || g.priority === "high")
-      .slice(0, 3)
-      .map((g) => g.skill_name),
-    status: "moderate",
-  },
-];
-
-const topJobMatches = matchedJobs.slice(0, 3).map((m, idx) => {
-  const topSkills = m.skill_matches
-    .filter((sm) => sm.match_level === "strong")
-    .slice(0, 2)
-    .map((sm) => sm.skill_name);
-
-  const skillText =
-    topSkills.length > 0
-      ? `Strong match with your ${topSkills.join(" and ")} skills`
-      : "Good overall alignment with your profile";
-
-  return {
-    id: m.job.job_id,
-    title: m.job.title,
-    company: m.job.company.name,
-    match: m.overall_score,
-    reason: skillText,
-    salary: formatSalary(m.job.salary?.min_salary, m.job.salary?.max_salary),
-    location: m.job.location || "Remote",
-    type: m.job.work_type || "Full-time",
-    hot: idx === 0 && m.overall_score >= 85,
-  };
-});
 
 const skillsToDevelop = gapAnalysis
   .filter((g) => g.priority === "critical" || g.priority === "high")
@@ -241,26 +192,197 @@ export function Recommendations() {
     "overview" | "saved" | "resources"
   >("overview");
   const { profile, toggleBookmark } = useOnboarding();
+  const router = useRouter(); // Nhớ import useRouter từ "next/navigation"
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // Build kanban columns from job data + bookmarks
+  // ── HOOKS GỌI API THỰC TẾ TRUYỀN DỮ LIỆU ĐỘNG ──
+  const [apiJobs, setApiJobs] = useState<RecommendedJob[]>([]);
+  const [apiReports, setApiReports] = useState<SavedReportItem[]>([]);
+  const [savedJobsFromProfile, setSavedJobsFromProfile] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchApiData = async () => {
+      try {
+        const [jobsRes, reportsRes] = await Promise.all([
+          RecommendationApi.getTopJobs(),
+          RecommendationApi.getSavedReports(),
+        ]);
+        if (jobsRes?.data) setApiJobs(jobsRes.data);
+        if (reportsRes?.data) setApiReports(reportsRes.data);
+      } catch (error) {
+        console.error("Failed to sync recommendations api:", error);
+      }
+    };
+
+    const fetchSavedJobsFromProfile = async () => {
+      try {
+        const res = await ProfileApi.getSavedJobs();
+        if (res.data) {
+          setSavedJobsFromProfile(res.data);
+        }
+      } catch (error) {
+        console.error(
+          "Lỗi khi đồng bộ danh sách job đã lưu từ Profile:",
+          error,
+        );
+      }
+    };
+    fetchApiData();
+    fetchSavedJobsFromProfile();
+  }, []);
+
+  // Thay thế mảng matchedJobs cục bộ bằng cách map dữ liệu API về đúng Schema UI gốc của bạn
+  const dynamicMatchedJobs = useMemo(() => {
+    if (apiJobs.length === 0) return matchedJobs;
+    return apiJobs.map((job) => ({
+      job: {
+        job_id: job.job_id,
+        title: job.title,
+        company: { name: job.company_name },
+        location: job.location,
+        work_type: "Full-time",
+        salary: { min_salary: job.salary_text, max_salary: "" },
+      },
+      overall_score: parseInt(job.match_rate) || 85,
+      skill_matches: [{ skill_name: "Core Skill", match_level: "strong" }],
+    })) as any;
+  }, [apiJobs]);
+
+  // Thay thế mảng topJobMatches bằng cách map dữ liệu API về đúng cấu trúc render gốc
+  // Thay thế mảng topJobMatches bằng cách map dữ liệu API về đúng cấu trúc render gốc
+  const topJobMatches = useMemo(() => {
+    return dynamicMatchedJobs.slice(0, 3).map((m: any, idx: number) => {
+      const topSkills =
+        m.skill_matches
+          ?.filter((sm: any) => sm.match_level === "strong")
+          .slice(0, 2)
+          .map((sm: any) => sm.skill_name) || [];
+
+      const skillText =
+        topSkills.length > 0
+          ? `Strong match with your ${topSkills.join(" and ")} skills`
+          : "Good overall alignment with your profile";
+
+      const salaryStr = String(m.job.salary?.min_salary || "");
+
+      return {
+        id: m.job.job_id,
+        title: m.job.title,
+        company: m.job.company.name,
+        match: m.overall_score,
+        reason: skillText,
+        salary:
+          salaryStr.includes("match") ||
+          salaryStr.includes("Thỏa") ||
+          salaryStr.includes("-")
+            ? m.job.salary.min_salary
+            : formatSalary(m.job.salary?.min_salary, m.job.salary?.max_salary),
+        location: m.job.location || "Remote",
+        type: m.job.work_type || "Full-time",
+        hot: idx === 0 && m.overall_score >= 85,
+      };
+    });
+  }, [dynamicMatchedJobs]);
+
+  // Thay thế mảng savedReports bằng cách map dữ liệu API báo cáo thực tế
+  // Thay thế mảng savedReports bằng cách map dữ liệu API báo cáo thực tế
+  const savedReports = useMemo(() => {
+    if (apiReports.length === 0)
+      return [
+        {
+          id: 1,
+          type: "cv-match",
+          title: `CV Match — ${dynamicMatchedJobs[0]?.job?.title || "Frontend"}`,
+          subtitle: "TechCorp Solutions",
+          score: 85,
+          date: "Apr 18, 2026",
+          tags: ["React"],
+          status: "strong",
+          onViewReport: () => router.push("/skill-gap"),
+        },
+      ];
+
+    return apiReports.map((report, idx) => ({
+      id: idx + 1,
+      type: report.match_type === "cv_job" ? "cv-match" : "gap",
+      title: report.report_name,
+      subtitle:
+        report.match_type === "cv_job"
+          ? "Job-Specific Analysis"
+          : "Role Benchmark",
+      score: report.match_score,
+      date: report.created_at
+        ? new Date(report.created_at).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })
+        : "N/A",
+      tags: ["Verified Stack"],
+      status: report.match_score >= 80 ? "strong" : "moderate",
+
+      // Hàm xử lý kích hoạt khi bấm nút "View Report"
+      onViewReport: async () => {
+        try {
+          setIsRedirecting(true);
+
+          // 1. Gọi API đặt CV này làm Default (Thay bằng hàm API thực tế của dự án bạn)
+          if (report.cv_id) {
+            await ProfileApi.setDefaultCv(report.cv_id);
+          }
+
+          // 2. Chốt chặn an toàn: Nếu Backend KHÔNG tự động set đúng lượt match bạn muốn,
+          // giải nén dòng dưới đây để ép tuần tự. Nếu Backend đã tự set rồi thì BỎ QUA dòng này.
+          // await RecommendationApi.updateDefaultMatch(report.match_id);
+
+          // 3. Chuyển hướng sang trang phân tích kỹ năng sau khi DB đã cập nhật xong ổn định
+          router.push("/skill-gap");
+        } catch (err) {
+          console.error("Lỗi khi thiết lập báo cáo mặc định:", err);
+          setIsRedirecting(false);
+        }
+      },
+    }));
+  }, [apiReports, dynamicMatchedJobs, router]);
+
+  // Build kanban columns from job data + bookmarks (Giữ nguyên gốc)
+  // Tái cấu trúc Kanban Column: Lấy dữ liệu động đối chiếu trực tiếp với API Profile đã lưu
+  // Tái cấu trúc Kanban Column: Lấy dữ liệu động từ API và bọc đúng Schema cấu trúc để UI không bị crash
   const kanbanColumns = useMemo(() => {
-    const bookmarkSet = new Set(profile.bookmarkedJobIds);
-    const appliedSet = new Set(profile.appliedJobIds);
-    const recent = matchedJobs.slice(0, 8);
+    // 1. Gom tất cả ID của những công việc mà user đã bấm lưu thực tế trong DB từ Profile
+    const profileSavedJobIds = new Set(
+      savedJobsFromProfile.map((item) => String(item.job?.job_id)),
+    );
+
+    // 2. Chuyển đổi mảng apiJobs phẳng thành cấu trúc lồng nhau m.job.... chuẩn theo UI gốc yêu cầu
+    const structuredApiJobs = apiJobs.map((job) => ({
+      job: {
+        job_id: job.job_id,
+        title: job.title,
+        company: { name: job.company_name },
+        location: job.location,
+        work_type: "Full-time",
+        salary: { min_salary: job.salary_text, max_salary: "" },
+      },
+      overall_score: parseInt(job.match_rate) || 85,
+    }));
 
     return {
-      viewing: recent
-        .filter(
-          (m) =>
-            !bookmarkSet.has(String(m.job.job_id)) &&
-            !appliedSet.has(String(m.job.job_id)),
-        )
-        .slice(0, 3),
-      bookmarked: recent.filter((m) => bookmarkSet.has(String(m.job.job_id))),
-      learning: recent.slice(3, 5),
-      applied: recent.filter((m) => appliedSet.has(String(m.job.job_id))),
+      // Cột Đang xem: Những công việc gợi ý trong tháng mà USER CHƯA BẤM LƯU thực tế
+      viewing: structuredApiJobs.filter(
+        (m) => !profileSavedJobIds.has(String(m.job.job_id)),
+      ),
+
+      // Cột Quan tâm: Những công việc gợi ý trong tháng mà USER ĐÃ BẤM LƯU thực tế
+      bookmarked: structuredApiJobs.filter((m) =>
+        profileSavedJobIds.has(String(m.job.job_id)),
+      ),
+
+      // Giữ nguyên các nhánh fallback trống để khớp logic gọi mảng của bạn
+      learning: [],
+      applied: [],
     };
-  }, [profile.bookmarkedJobIds, profile.appliedJobIds]);
+  }, [savedJobsFromProfile, apiJobs]);
 
   const kanbanStages = [
     {
@@ -276,20 +398,6 @@ export function Recommendations() {
       Icon: Heart,
       color: "rose",
       desc: "Đã lưu để xem lại",
-    },
-    {
-      key: "learning" as const,
-      label: "Đang học skill",
-      Icon: GraduationCap,
-      color: "amber",
-      desc: "Học skill để đủ điều kiện",
-    },
-    {
-      key: "applied" as const,
-      label: "Đã apply",
-      Icon: CheckCircle2,
-      color: "emerald",
-      desc: "Đã gửi CV",
     },
   ];
 
@@ -387,7 +495,7 @@ export function Recommendations() {
             Thêm job <Plus className="h-3.5 w-3.5" />
           </Link>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-2">
           {kanbanStages.map((stage) => {
             const items = kanbanColumns[stage.key];
             const c = colorMap[stage.color];
@@ -420,7 +528,7 @@ export function Recommendations() {
                       Trống — bấm + Thêm job
                     </p>
                   ) : (
-                    items.map((m) => (
+                    items.map((m: any) => (
                       <div
                         key={m.job.job_id}
                         className="rounded-lg bg-white border border-slate-200 p-2.5 shadow-sm dark:bg-slate-900 dark:border-slate-700"
@@ -446,20 +554,6 @@ export function Recommendations() {
                           >
                             {m.overall_score}%
                           </span>
-                          {stage.key !== "applied" && (
-                            <button
-                              onClick={() =>
-                                toggleBookmark(String(m.job.job_id))
-                              }
-                              className="text-xs font-medium text-blue-600 hover:underline"
-                            >
-                              {profile.bookmarkedJobIds.includes(
-                                String(m.job.job_id),
-                              )
-                                ? "✓ saved"
-                                : "+ save"}
-                            </button>
-                          )}
                         </div>
                       </div>
                     ))
@@ -810,13 +904,13 @@ export function Recommendations() {
                 </div>
               </div>
               <div className="flex gap-2 mt-4 border-t border-slate-50 pt-3">
-                <button className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                <button
+                  onClick={() => report.onViewReport()}
+                  disabled={isRedirecting}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  View Report
-                </button>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-                  <Download className="w-3.5 h-3.5" />
-                  Export PDF
+                  {isRedirecting ? "Connecting..." : "View Report"}
                 </button>
               </div>
             </div>

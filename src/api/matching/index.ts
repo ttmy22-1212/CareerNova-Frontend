@@ -4,6 +4,7 @@ import {
   AnalyzeCvDto,
   CheckHistoryResponseDto,
   CvJobMatchResultDto,
+  GetAllMatchesResponse,
 } from "@/types/matching";
 
 export default class MatchingApi {
@@ -19,6 +20,10 @@ export default class MatchingApi {
     dto: AnalyzeCvDto,
   ): Promise<IBaseResponse<CvJobMatchResultDto>> {
     return await apiPost("/matching/analyze", dto);
+  }
+
+  static async getAllMatches(): Promise<GetAllMatchesResponse> {
+    return await apiGet("/matching/history");
   }
 
   static async getMatchDetail(
