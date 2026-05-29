@@ -181,8 +181,7 @@ export function MarketDashboard({
           MarketDashboardApi.getInDemandSkills(payload),
           MarketDashboardApi.getRisingSkills(payload),
         ]);
-        console.log("Response chi tiết của hot job:", resHotJobs.data);
-        console.log("Response chi tiết của salary ranges:", resSalary.data);
+
         if (resStats?.data) {
           const statsData = (resStats.data as any).data || resStats.data;
           setStats(statsData);
@@ -229,7 +228,7 @@ export function MarketDashboard({
     }
 
     fetchDashboardData();
-  }, [region, timePeriod, jobType, filterOptions]);
+  }, [region, timePeriod, jobType]);
 
   // Kiểu dữ liệu Insight cá nhân (Dành cho user đã đăng nhập)
   const personalMatched = isLoggedIn ? getMatchedJobs([], userProfile) : [];

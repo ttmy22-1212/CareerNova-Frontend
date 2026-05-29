@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 
 type Theme = "light" | "dark";
 
@@ -21,7 +27,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const saved = localStorage.getItem(STORAGE_KEY) as Theme | null;
       const initial: Theme =
         saved ??
-        (window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        (window.matchMedia?.("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light");
       setThemeState(initial);
     } catch {
       // ignore
@@ -31,8 +39,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
-    if (theme === "dark") root.classList.add("dark");
-    else root.classList.remove("dark");
+    if (theme === "dark") {
+      root.classList.add("dark");
+      root.style.colorScheme = "dark"; // Thêm dòng này để fix scrollbar
+    } else {
+      root.classList.remove("dark");
+      root.style.colorScheme = "light"; // Trả về light khi đổi chế độ
+    }
     try {
       localStorage.setItem(STORAGE_KEY, theme);
     } catch {

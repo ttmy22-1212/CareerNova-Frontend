@@ -67,9 +67,9 @@ const AuthRegisterContent = () => {
     onSubmit: async (values) => {
       const { email, password, name } = values;
       try {
-        const result = await register({ email, password, name });
+        await register({ email, password, name });
 
-        router.push(paths.dashboard);
+        router.push(`/auth/verify-request?email=${encodeURIComponent(email)}`);
       } catch (error) {
         console.error("Đăng ký thất bại:", error);
         showSnackbarError(error);
@@ -268,7 +268,7 @@ const AuthRegisterContent = () => {
                 {...formik.getFieldProps("confirmPassword")}
                 error={Boolean(
                   formik.touched.confirmPassword &&
-                    formik.errors.confirmPassword,
+                  formik.errors.confirmPassword,
                 )}
                 helperText={
                   formik.touched.confirmPassword &&

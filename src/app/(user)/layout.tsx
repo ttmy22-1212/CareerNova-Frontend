@@ -180,6 +180,9 @@ export default function UserLayout({
   const { theme, toggle: toggleTheme } = useTheme();
   const { user, ready: authReady, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
 
   // Market Dashboard is publicly accessible (no login required)
   const PUBLIC_PATHS = [paths.dashboard];
@@ -244,7 +247,11 @@ export default function UserLayout({
     );
 
   // --- COMPONENT CHUNG CHO DROPDOWN MENU ITEM (ĐỂ TRÁNH TRÙNG LẶP CODE) ---
-  const UserDropdownMenu = () => (
+  const UserDropdownMenu = ({
+    closeDropdown,
+  }: {
+    closeDropdown: () => void;
+  }) => (
     <PopoverContent side="top" align="end" className="w-60 p-1.5">
       <div className="border-b border-slate-100 px-3 py-2 dark:border-slate-800">
         <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -255,9 +262,11 @@ export default function UserLayout({
         </p>
       </div>
 
-      {/* Nút đổi theme vừa chuyển từ Profile qua */}
       <button
-        onClick={toggleTheme}
+        onClick={() => {
+          toggleTheme();
+          closeDropdown();
+        }}
         className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         {theme === "dark" ? (
@@ -275,7 +284,10 @@ export default function UserLayout({
 
       <Link
         href={paths.profile.detail}
-        onClick={() => setMobileOpen(false)}
+        onClick={() => {
+          setMobileOpen(false);
+          closeDropdown(); // Đóng dropdown lập tức khi chuyển trang
+        }}
         className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         <User className="h-4 w-4 text-slate-400" />
@@ -284,7 +296,10 @@ export default function UserLayout({
 
       <Link
         href="/onboarding/welcome"
-        onClick={() => setMobileOpen(false)}
+        onClick={() => {
+          setMobileOpen(false);
+          closeDropdown(); // Đóng dropdown lập tức khi chuyển trang
+        }}
         className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         <Settings className="h-4 w-4 text-slate-400" />
@@ -295,6 +310,7 @@ export default function UserLayout({
         onClick={() => {
           localStorage.removeItem("career-lens.tour.v1");
           setMobileOpen(false);
+          closeDropdown();
           window.location.reload();
         }}
         className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
@@ -305,6 +321,7 @@ export default function UserLayout({
 
       <button
         onClick={() => {
+          closeDropdown();
           logout();
           router.replace("/auth/login");
         }}
@@ -318,26 +335,50 @@ export default function UserLayout({
 
   const sidebarInner = (
     <>
-      <div className="flex h-16 items-center gap-3 border-b border-slate-100 px-5 dark:border-slate-800">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-md shadow-blue-200">
-          <TrendingUp className="h-5 w-5 text-white" />
+      <div className="flex h-16 items-center border-b border-slate-100 px-4 dark:border-slate-800">
+        {/* Nếu đang collapsed, bấm thẳng vào vùng logo này sẽ mở to Sidebar ra lại */}
+        <div
+          onClick={() => collapsed && setCollapsed(false)}
+          className={`flex items-center overflow-hidden ${
+            collapsed
+              ? "justify-center w-full cursor-pointer hover:scale-105 transition-transform"
+              : "gap-3"
+          }`}
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-md shadow-blue-200">
+            <TrendingUp className="h-5 w-5 text-white" />
+          </div>
+
+          {!collapsed && (
+            <div className="whitespace-nowrap">
+              <p className="text-sm font-bold leading-tight text-slate-900 dark:text-slate-100">
+                Career Insight
+              </p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Platform
+              </p>
+            </div>
+          )}
         </div>
-        <div>
-          <p className="text-sm font-bold leading-tight text-slate-900 dark:text-slate-100">
-            Career Insight
-          </p>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-            Platform
-          </p>
-        </div>
+
+        {!collapsed && (
+          <button
+            onClick={() => setCollapsed(true)}
+            className="ml-auto hidden rounded-lg p-2 hover:bg-slate-100 md:block dark:hover:bg-slate-800"
+          >
+            <ChevronRight className="h-4 w-4 rotate-180" />
+          </button>
+        )}
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
         {navGroups.map((group) => (
           <div key={group.title}>
-            <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
-              {group.title}
-            </p>
+            {!collapsed && (
+              <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                {group.title}
+              </p>
+            )}
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 const isActive = item.end
@@ -351,7 +392,9 @@ export default function UserLayout({
                     {...(item.href === paths.cvMatching
                       ? { "data-tour": "sidebar-cv-matching" }
                       : {})}
-                    className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
+                    className={`group flex items-center rounded-lg py-2 text-sm font-medium transition-all duration-150 ${
+                      collapsed ? "justify-center px-2" : "gap-3 px-3"
+                    } ${
                       isActive
                         ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-100"
@@ -366,13 +409,13 @@ export default function UserLayout({
                     >
                       <item.Icon className="h-3.5 w-3.5" />
                     </span>
-                    <span>{item.label}</span>
-                    {item.badge && !isActive && (
+                    {!collapsed && <span>{item.label}</span>}
+                    {item.badge && !isActive && !collapsed && (
                       <span className="ml-auto rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
                         {item.badge}
                       </span>
                     )}
-                    {isActive && (
+                    {isActive && !collapsed && (
                       <span className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-600" />
                     )}
                   </Link>
@@ -384,146 +427,109 @@ export default function UserLayout({
       </nav>
 
       <div className="border-t border-slate-100 p-3 dark:border-slate-800">
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              data-tour="profile-strength"
-              className="mb-3 w-full rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 px-3 py-3 text-left transition-all hover:shadow-sm dark:border-blue-900 dark:from-blue-950/40 dark:to-indigo-950/40"
-            >
-              <div className="mb-2 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <p className="text-xs font-semibold text-blue-900 dark:text-blue-200">
-                  Profile Strength
-                </p>
-                <ChevronRight className="ml-auto h-3.5 w-3.5 text-blue-500" />
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-blue-100 dark:bg-blue-900">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all"
-                    style={{ width: `${strength}%` }}
-                  />
-                </div>
-                <span className="text-xs font-bold text-blue-700 dark:text-blue-300">
-                  {strength}%
-                </span>
-              </div>
-              <p className="mt-1.5 text-xs text-blue-600 dark:text-blue-400">
-                {strength === 100
-                  ? "Hoàn hảo! Hồ sơ đã đầy đủ"
-                  : `Bấm để xem ${checklist.filter((c) => !c.done).length} bước còn thiếu`}
-              </p>
-            </button>
-          </PopoverTrigger>
-          <PopoverContent side="right" align="end" className="w-80">
-            <div className="mb-3">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                Hoàn thiện hồ sơ
-              </p>
-              <p className="text-xs text-slate-500">
-                Càng đầy đủ, gợi ý job & lộ trình càng chính xác.
-              </p>
-            </div>
-            <ul className="space-y-1">
-              {checklist.map((c) => (
-                <li key={c.id}>
-                  <Link
-                    href={c.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-start gap-2.5 rounded-lg px-2 py-2 text-sm transition-colors ${
-                      c.done
-                        ? "text-slate-400"
-                        : "text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
-                    }`}
-                  >
-                    {c.done ? (
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                    ) : (
-                      <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
-                    )}
-                    <span className={`flex-1 ${c.done ? "line-through" : ""}`}>
-                      {c.label}
-                    </span>
-                    {!c.done && (
-                      <span className="rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
-                        +{c.weight}%
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </PopoverContent>
-        </Popover>
-
-        {user && (
+        {!collapsed && (
           <Popover>
             <PopoverTrigger asChild>
-              <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-xs font-bold text-white shadow">
-                  {initials}
-                </div>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-xs font-bold text-white shadow">
-                  {initials}
-                </div>
-                <div className="min-w-0 flex-1 text-left">
-                  <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    {user.full_name}
+              <button
+                data-tour="profile-strength"
+                className="mb-3 w-full rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 px-3 py-3 text-left transition-all hover:shadow-sm dark:border-blue-900 dark:from-blue-950/40 dark:to-indigo-950/40"
+              >
+                <div className="mb-2 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <p className="text-xs font-semibold text-blue-900 dark:text-blue-200">
+                    Profile Strength
                   </p>
-                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                    {user.email}
-                  </p>
+                  <ChevronRight className="ml-auto h-3.5 w-3.5 text-blue-500" />
                 </div>
-                <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+                <div className="flex items-center gap-2">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-blue-100 dark:bg-blue-900">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all"
+                      style={{ width: `${strength}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-blue-700 dark:text-blue-300">
+                    {strength}%
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs text-blue-600 dark:text-blue-400">
+                  {strength === 100
+                    ? "Hoàn hảo! Hồ sơ đã đầy đủ"
+                    : `Bấm để xem ${checklist.filter((c) => !c.done).length} bước còn thiếu`}
+                </p>
               </button>
             </PopoverTrigger>
-            <PopoverContent side="top" align="end" className="w-60 p-1.5">
-              <div className="border-b border-slate-100 px-3 py-2 dark:border-slate-800">
-                <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  {user.full_name}
+            <PopoverContent side="right" align="end" className="w-80">
+              <div className="mb-3">
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  Hoàn thiện hồ sơ
                 </p>
-                <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                  {user.email}
+                <p className="text-xs text-slate-500">
+                  Càng đầy đủ, gợi ý job & lộ trình càng chính xác.
                 </p>
               </div>
-              <Link
-                href={paths.profile.detail}
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
-              >
-                <User className="h-4 w-4 text-slate-400" />
-                Hồ sơ của tôi
-              </Link>
-              <Link
-                href="/onboarding/welcome"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
-              >
-                <Settings className="h-4 w-4 text-slate-400" />
-                Cập nhật onboarding
-              </Link>
-              <button
-                onClick={() => {
-                  localStorage.removeItem("career-lens.tour.v1");
-                  setMobileOpen(false);
-                  window.location.reload();
-                }}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
-              >
-                <Sparkles className="h-4 w-4 text-slate-400" />
-                Xem lại hướng dẫn
-              </button>
-              <button
-                onClick={() => {
-                  logout();
-                  router.replace("/auth/login");
-                }}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
-              >
-                <LogOut className="h-4 w-4" />
-                Đăng xuất
-              </button>
+              <ul className="space-y-1">
+                {checklist.map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      href={c.href}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-start gap-2.5 rounded-lg px-2 py-2 text-sm transition-colors ${
+                        c.done
+                          ? "text-slate-400"
+                          : "text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                      }`}
+                    >
+                      {c.done ? (
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                      ) : (
+                        <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
+                      )}
+                      <span
+                        className={`flex-1 ${c.done ? "line-through" : ""}`}
+                      >
+                        {c.label}
+                      </span>
+                      {!c.done && (
+                        <span className="rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                          +{c.weight}%
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </PopoverContent>
+          </Popover>
+        )}
+
+        {user && (
+          <Popover open={dropdownOpen} onOpenChange={setDropdownOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className={`flex w-full items-center rounded-lg py-2.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
+                  collapsed ? "justify-center px-2" : "gap-3 px-3"
+                }`}
+              >
+                <UserAvatar />
+
+                {!collapsed && (
+                  <>
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {user.full_name}
+                      </p>
+                      <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                        {user.email}
+                      </p>
+                    </div>
+
+                    <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+                  </>
+                )}
+              </button>
+            </PopoverTrigger>
+            <UserDropdownMenu closeDropdown={() => setDropdownOpen(false)} />
           </Popover>
         )}
       </div>
@@ -532,7 +538,11 @@ export default function UserLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
-      <aside className="z-20 hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white md:flex dark:border-slate-800 dark:bg-slate-900">
+      <aside
+        className={`z-20 hidden shrink-0 flex-col border-r border-slate-200 bg-white transition-all duration-300 md:flex dark:border-slate-800 dark:bg-slate-900 ${
+          collapsed ? "w-20" : "w-64"
+        }`}
+      >
         {sidebarInner}
       </aside>
 
@@ -614,7 +624,10 @@ export default function UserLayout({
           <NotificationsDropdown />
 
           {user && (
-            <Popover>
+            <Popover
+              open={headerDropdownOpen}
+              onOpenChange={setHeaderDropdownOpen}
+            >
               <PopoverTrigger asChild>
                 <button className="hidden items-center gap-2 rounded-lg border border-transparent py-1 pl-1 pr-3 transition-all hover:border-slate-200 hover:bg-slate-50 sm:flex dark:hover:border-slate-700 dark:hover:bg-slate-800">
                   <UserAvatar />
@@ -626,43 +639,9 @@ export default function UserLayout({
                   <ChevronDown className="hidden h-4 w-4 text-slate-400 lg:block" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-60 p-1.5">
-                <div className="border-b border-slate-100 px-3 py-2 dark:border-slate-800">
-                  <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    {user.full_name}
-                  </p>
-                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                    {user.email}
-                  </p>
-                </div>
-                <Link
-                  href={paths.profile.detail}
-                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
-                >
-                  <User className="h-4 w-4 text-slate-400" />
-                  Hồ sơ của tôi
-                </Link>
-                <button
-                  onClick={() => {
-                    localStorage.removeItem("career-lens.tour.v1");
-                    window.location.reload();
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
-                >
-                  <Sparkles className="h-4 w-4 text-slate-400" />
-                  Xem lại hướng dẫn
-                </button>
-                <button
-                  onClick={() => {
-                    logout();
-                    router.replace("/auth/login");
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Đăng xuất
-                </button>
-              </PopoverContent>
+              <UserDropdownMenu
+                closeDropdown={() => setHeaderDropdownOpen(false)}
+              />
             </Popover>
           )}
         </header>

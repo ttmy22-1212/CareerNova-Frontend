@@ -32,6 +32,8 @@ import {
   Eye,
   EyeOff,
   AlertTriangle,
+  Clock,
+  Star,
 } from "lucide-react";
 import {
   CareerInterest,
@@ -52,8 +54,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { GetSavedJobsResponse } from "@/types/profile";
+import { GetSavedJobsResponse, GetSavedCoursesResponse } from "@/types/profile";
 import ProfileApi from "@/api/profile";
+import LearningRoadmapApi from "@/api/learning-roadmap";
 
 const interestLabels: Record<string, string> = {
   frontend: "Frontend",
@@ -125,6 +128,11 @@ export default function ProfilePage() {
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [savedJobs, setSavedJobs] = useState<GetSavedJobsResponse[]>([]);
   const [loadingSavedJobs, setLoadingSavedJobs] = useState<boolean>(false);
+  const [savedCourses, setSavedCourses] = useState<GetSavedCoursesResponse[]>(
+    [],
+  );
+  const [loadingSavedCourses, setLoadingSavedCourses] =
+    useState<boolean>(false);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -171,6 +179,7 @@ export default function ProfilePage() {
               : null,
           });
           fetchSavedJobs();
+          fetchSavedCourses();
         }
       } catch (err) {
         console.error("Lỗi lấy thông tin profile từ API thực tế:", err);
@@ -179,6 +188,22 @@ export default function ProfilePage() {
 
     fetchProfileData();
   }, []);
+
+  const fetchSavedCourses = async () => {
+    try {
+      setLoadingSavedCourses(true);
+
+      const res = await ProfileApi.getSavedCourses();
+
+      if (res.data) {
+        setSavedCourses(res.data);
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách khóa học đã lưu:", error);
+    } finally {
+      setLoadingSavedCourses(false);
+    }
+  };
 
   const fetchSavedJobs = async () => {
     try {
@@ -191,6 +216,24 @@ export default function ProfilePage() {
       console.error("Lỗi khi lấy danh sách job đã lưu:", error);
     } finally {
       setLoadingSavedJobs(false);
+    }
+  };
+
+  const handleUnsaveCourse = async (courseId: string) => {
+    try {
+      const res = await LearningRoadmapApi.toggleSaveCourse({
+        course_id: courseId,
+      });
+
+      if (res) {
+        setSavedCourses((prev) =>
+          prev.filter(
+            (item) => String(item.course?.course_id) !== String(courseId),
+          ),
+        );
+      }
+    } catch (error) {
+      console.error("Lỗi khi hủy lưu khóa học:", error);
     }
   };
 
@@ -300,8 +343,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Quick stats strip - Đã gỡ Đã Apply, chia Grid 3 đều đặn */}
-          <div className="mt-5 grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-3 sm:gap-0 dark:border-slate-800 dark:bg-slate-900">
+          <div className="mt-5 grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-4 sm:gap-0 dark:border-slate-800 dark:bg-slate-900">
             <Stat
               icon={TrendingUp}
               label="Hoàn thiện"
@@ -316,8 +358,14 @@ export default function ProfilePage() {
             />
             <Stat
               icon={Bookmark}
-              label="Đã lưu"
+              label="Công việc đã lưu"
               value={savedJobs.length}
+              tone="text-amber-600"
+            />
+            <Stat
+              icon={Bookmark}
+              label="Khóa học đã lưu"
+              value={savedCourses.length}
               tone="text-amber-600"
             />
           </div>
@@ -567,109 +615,251 @@ export default function ProfilePage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="activity" className="space-y-6">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-              <h3 className="mb-1 text-lg font-bold text-slate-900 dark:text-white">
-                Công việc đã lưu
-              </h3>
-              <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">
-                Xem lại các cơ hội việc làm bạn đã đánh dấu quan tâm.
-              </p>
-
-              {/* Logic hiển thị trạng thái loading / trống / danh sách */}
-              {loadingSavedJobs ? (
-                <div className="flex items-center justify-center py-8">
-                  <RefreshCw className="h-6 w-6 animate-spin text-slate-500" />
-                  <span className="ml-2 text-sm text-slate-500">
-                    Đang tải danh sách...
-                  </span>
-                </div>
-              ) : savedJobs.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-                  <Bookmark className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-700 mb-3" />
-                  <p className="text-slate-500 dark:text-slate-400">
-                    Bạn chưa lưu công việc nào.
+          <TabsContent value="activity" className="mt-5">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* CỘT 1: CÔNG VIỆC ĐÃ LƯU */}
+              <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+                <div className="mb-2">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Công việc đã lưu ({savedJobs.length})
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Xem lại các cơ hội việc làm bạn đã đánh dấu quan tâm.
                   </p>
                 </div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {savedJobs.map((item) => {
-                    const job = item.job;
-                    if (!job) return null;
 
-                    return (
-                      <div
-                        key={item.saved_job_id}
-                        className="relative flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
-                      >
-                        <div>
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                              {job.company?.url ? (
-                                <img
-                                  src={job.company.url}
-                                  alt={job.company.name}
-                                  className="h-12 w-12 rounded-lg object-cover border border-slate-100 dark:border-slate-800"
-                                />
-                              ) : (
-                                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500">
-                                  <Building2 className="h-6 w-6" />
+                <div className="mt-4 space-y-4">
+                  {loadingSavedJobs ? (
+                    <div className="flex items-center justify-center py-8">
+                      <RefreshCw className="h-5 w-5 animate-spin text-slate-500" />
+                      <span className="ml-2 text-xs text-slate-500">
+                        Đang tải danh sách...
+                      </span>
+                    </div>
+                  ) : savedJobs.length === 0 ? (
+                    <div className="text-center py-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                      <Bookmark className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-700 mb-2" />
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Bạn chưa lưu công việc nào.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {savedJobs.map((item) => {
+                        const job = item.job;
+                        if (!job) return null;
+
+                        return (
+                          <div
+                            key={item.saved_job_id}
+                            className="relative flex flex-col justify-between rounded-xl border border-slate-100 bg-white p-4 shadow-sm transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-2.5">
+                                  {job.company?.url ? (
+                                    <img
+                                      src={job.company.url}
+                                      alt={job.company.name}
+                                      className="h-10 w-10 rounded-lg object-cover border border-slate-100 dark:border-slate-800"
+                                    />
+                                  ) : (
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500">
+                                      <Building2 className="h-5 w-5" />
+                                    </div>
+                                  )}
+                                  <div className="min-w-0">
+                                    <h4 className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1">
+                                      {job.title}
+                                    </h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                      {job.company?.name}
+                                    </p>
+                                  </div>
                                 </div>
-                              )}
-                              <div>
-                                <h4 className="font-semibold text-slate-900 dark:text-white line-clamp-1">
-                                  {job.title}
-                                </h4>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">
-                                  {job.company?.name}
-                                </p>
+
+                                <button
+                                  onClick={() => handleUnsaveJob(job.job_id)}
+                                  className="rounded-full p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition shrink-0"
+                                  title="Hủy lưu công việc"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+
+                              <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                                {job.location && (
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />{" "}
+                                    {job.location}
+                                  </span>
+                                )}
+                                {job.salary && (
+                                  <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                                    {job.salary}
+                                  </span>
+                                )}
                               </div>
                             </div>
 
-                            {/* Nút Hủy lưu */}
-                            <button
-                              onClick={() => handleUnsaveJob(job.job_id)}
-                              className="rounded-full p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
-                              title="Hủy lưu công việc"
-                            >
-                              <Trash2 className="h-5 w-5" />
-                            </button>
-                          </div>
-
-                          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
-                            {job.location && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-3.5 w-3.5" />{" "}
-                                {job.location}
+                            <div className="mt-3 flex items-center justify-between border-t border-slate-50 pt-2 dark:border-slate-800 text-[11px] text-slate-400">
+                              <span>
+                                Đã lưu:{" "}
+                                {new Date(item.created_at).toLocaleDateString(
+                                  "vi-VN",
+                                )}
                               </span>
-                            )}
-                            {job.salary && (
-                              <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
-                                {job.salary}
-                              </span>
-                            )}
+                              <Link
+                                href={`/jobs/${job.job_id}`}
+                                className="flex items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
+                              >
+                                Chi tiết <ExternalLink className="h-3 w-3" />
+                              </Link>
+                            </div>
                           </div>
-                        </div>
-
-                        <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800 text-xs text-slate-400">
-                          <span>
-                            Đã lưu:{" "}
-                            {new Date(item.created_at).toLocaleDateString(
-                              "vi-VN",
-                            )}
-                          </span>
-                          <Link
-                            href={`/jobs/${job.job_id}`}
-                            className="flex items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
-                          >
-                            Xem chi tiết <ExternalLink className="h-3 w-3" />
-                          </Link>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* CỘT 2: KHÓA HỌC ĐÃ LƯU */}
+              <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+                <div className="mb-2">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Khóa học đã lưu ({savedCourses.length})
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Theo dõi lộ trình học tập và các kiến thức nâng cao kỹ năng.
+                  </p>
+                </div>
+
+                <div className="mt-4 space-y-4">
+                  {loadingSavedCourses ? (
+                    <div className="flex items-center justify-center py-8">
+                      <RefreshCw className="h-5 w-5 animate-spin text-slate-500" />
+                      <span className="ml-2 text-xs text-slate-500">
+                        Đang tải danh sách...
+                      </span>
+                    </div>
+                  ) : savedCourses.length === 0 ? (
+                    <div className="text-center py-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                      <GraduationCap className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-700 mb-2" />
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Bạn chưa lưu khóa học nào.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {savedCourses.map((item) => {
+                        const course = item.course;
+                        if (!course) return null;
+
+                        return (
+                          <div
+                            key={item.course_id}
+                            className="relative flex flex-col justify-between rounded-xl border border-slate-100 bg-white p-4 shadow-sm transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-2.5">
+                                  {course.thumbnail_icon ? (
+                                    <img
+                                      src={course.thumbnail_icon}
+                                      alt={course.course_title}
+                                      className="h-10 w-10 rounded-lg object-cover border border-slate-100 dark:border-slate-800"
+                                    />
+                                  ) : (
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500">
+                                      <GraduationCap className="h-5 w-5" />
+                                    </div>
+                                  )}
+                                  <div className="min-w-0">
+                                    <h4
+                                      className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1"
+                                      title={course.course_title}
+                                    >
+                                      {course.course_title}
+                                    </h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                      {course.provider_name}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <button
+                                  onClick={() =>
+                                    handleUnsaveCourse(course.course_id)
+                                  }
+                                  className="rounded-full p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition shrink-0"
+                                  title="Hủy lưu khóa học"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+
+                              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                                {course.duration_hours && (
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />{" "}
+                                    {course.duration_hours} giờ
+                                  </span>
+                                )}
+                                {course.rating > 0 && (
+                                  <span className="flex items-center gap-0.5 text-amber-500 font-medium">
+                                    <Star className="h-3 w-3 fill-current" />{" "}
+                                    {course.rating}
+                                  </span>
+                                )}
+                                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                                  {course.price === 0
+                                    ? "Miễn phí"
+                                    : `${course.price.toLocaleString()} ${course.currency || "đ"}`}
+                                </span>
+                              </div>
+
+                              {course.skills_tags &&
+                                course.skills_tags.length > 0 && (
+                                  <div className="mt-2 flex flex-wrap gap-1">
+                                    {course.skills_tags
+                                      .slice(0, 3)
+                                      .map((tag, idx) => (
+                                        <span
+                                          key={idx}
+                                          className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded"
+                                        >
+                                          {tag}
+                                        </span>
+                                      ))}
+                                  </div>
+                                )}
+                            </div>
+
+                            <div className="mt-3 flex items-center justify-between border-t border-slate-50 pt-2 dark:border-slate-800 text-[11px] text-slate-400">
+                              <span>
+                                Đã lưu:{" "}
+                                {new Date(
+                                  item.saved_at || Date.now(),
+                                ).toLocaleDateString("vi-VN")}
+                              </span>
+                              <a
+                                href={course.source_url!}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
+                              >
+                                Xem bài học
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
@@ -876,6 +1066,7 @@ export default function ProfilePage() {
                       full_name: updatedUser.data.full_name,
                       target_salary: updatedUser.data.target_salary,
                       prefer_remote: updatedUser.data.prefer_remote,
+                      avatarUrl: user?.avatarUrl,
                     });
 
                     // Hàm cập nhật thông tin học vấn từ context useOnboarding của bạn
@@ -1097,6 +1288,12 @@ function EditAvatarDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState(currentUrl ?? "");
+  const [uploading, setUploading] = useState(false);
+
+  // State quản lý link preview tạm thời dưới máy client
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // State lưu trữ file thực tế để đợi khi bấm "Lưu" mới tiến hành upload (hoặc upload trước tùy bạn, ở đây tối ưu upload trước)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const presets = useMemo(() => {
     const styles = ["initials", "thumbs", "bottts", "lorelei", "notionists"];
@@ -1110,6 +1307,54 @@ function EditAvatarDialog({
     );
   }, []);
 
+  useEffect(() => {
+    if (!open) {
+      // Thu hồi bộ nhớ của ObjectURL cũ để tránh rò rỉ bộ nhớ
+      if (previewUrl && previewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setPreviewUrl(null);
+      setSelectedFile(null);
+    } else {
+      // Chỉ set ban đầu khi MỞ POPUP lên để đảm bảo bốc đúng ảnh hiện tại
+      setUrl(currentUrl ?? "");
+    }
+  }, [open]);
+
+  // 1. Xử lý hiển thị Preview ngay khi vừa chọn file
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Kích thước ảnh không được vượt quá 5MB");
+      return;
+    }
+
+    // Tạo đường dẫn tạm blob:http://... để hiển thị preview ngay lập tức
+    const localPreview = URL.createObjectURL(file);
+    setPreviewUrl(localPreview);
+    setSelectedFile(file);
+
+    // Kích hoạt upload lên Cloudinary ngay để lấy link xịn
+    try {
+      setUploading(true);
+      const res = await ProfileApi.uploadAvatar(file);
+      if (res && res.data?.url) {
+        // 1. Lưu link Cloudinary thực tế vào state ẩn của dialog để làm preview/mẫu
+        setUrl(res.data.url);
+
+        // 2. ĐỒNG BỘ NGAY: Đẩy URL mới này ra ngoài để cập nhật State Auth của user liền lập tức
+        onSave(res.data.url);
+      }
+    } catch (error) {
+      console.error("Lỗi khi upload ảnh đại diện:", error);
+      alert("Tải ảnh lên Cloudinary thất bại, vui lòng thử lại!");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -1120,58 +1365,125 @@ function EditAvatarDialog({
           <Camera className="h-3.5 w-3.5" />
         </button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Đổi ảnh đại diện</DialogTitle>
           <DialogDescription>
-            Chọn avatar có sẵn hoặc dán URL ảnh của bạn.
+            Tải ảnh lên từ thiết bị, chọn avatar có sẵn hoặc dán URL ảnh của
+            bạn.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-5 gap-2">
-          {presets.map((p) => (
-            <button
-              key={p}
-              onClick={() => setUrl(p)}
-              className={`overflow-hidden rounded-lg border-2 p-1 transition-all ${
-                url === p
-                  ? "border-blue-500 ring-2 ring-blue-200"
-                  : "border-slate-200 hover:border-slate-300 dark:border-slate-700"
-              }`}
+
+        {/* Khu vực Tải file trực tiếp & Hiển thị PREVIEW to rõ ràng */}
+        <div className="space-y-3 border-b border-slate-100 pb-4 dark:border-slate-800">
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+            Tải ảnh lên từ thiết bị
+          </label>
+          <div className="flex items-center gap-4">
+            <label
+              className={`flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700/50 ${uploading ? "opacity-60 cursor-not-allowed" : ""}`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p} alt="avatar" className="h-12 w-12 rounded-md" />
-            </button>
-          ))}
+              <Camera className="h-4 w-4 text-slate-500" />
+              {uploading ? "Đang xử lý ảnh..." : "Chọn tệp ảnh"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+                disabled={uploading}
+              />
+            </label>
+
+            {/* Vùng hiển thị ảnh Preview hoành tráng */}
+            {(previewUrl || url) && (
+              <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-1.5 pr-4 dark:border-slate-800 dark:bg-slate-900">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewUrl || url}
+                  alt="Avatar Preview"
+                  className={`h-12 w-12 rounded-lg object-cover ring-2 ring-blue-500/20 ${uploading ? "animate-pulse opacity-50" : ""}`}
+                />
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    {previewUrl ? "Ảnh xem trước" : "Ảnh hiện tại"}
+                  </span>
+                  <span className="text-[10px] text-slate-400 max-w-[120px] truncate">
+                    {uploading
+                      ? "Đang đồng bộ Cloudinary..."
+                      : "Sẵn sàng áp dụng"}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
-            Hoặc dán URL ảnh
+
+        {/* Khu vực Chọn từ danh sách ảnh mẫu (Presets) */}
+        <div className="space-y-2">
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+            Hoặc chọn nhanh avatar mẫu
+          </label>
+          <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto p-1 border border-slate-100 rounded-lg dark:border-slate-800">
+            {presets.map((p) => (
+              <button
+                key={p}
+                onClick={() => {
+                  setPreviewUrl(null); // Xóa bộ nhớ preview local nếu chuyển sang chọn mẫu có sẵn
+                  setUrl(p);
+                }}
+                disabled={uploading}
+                className={`overflow-hidden rounded-lg border-2 p-1 transition-all ${
+                  url === p && !previewUrl
+                    ? "border-blue-500 ring-2 ring-blue-200"
+                    : "border-slate-200 hover:border-slate-300 dark:border-slate-700"
+                }`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p} alt="avatar" className="h-12 w-12 rounded-md" />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Khu vực Dán link ảnh thủ công */}
+        <div className="space-y-1">
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+            Hoặc dán trực tiếp URL ảnh bất kỳ
           </label>
           <input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            value={previewUrl ? "" : url}
+            onChange={(e) => {
+              setPreviewUrl(null);
+              setUrl(e.target.value);
+            }}
+            disabled={uploading}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 disabled:opacity-60"
             placeholder="https://..."
           />
         </div>
-        <DialogFooter>
+
+        <DialogFooter className="gap-2 sm:gap-0">
           <button
             onClick={() => {
               onSave("");
+              setUrl("");
               setOpen(false);
             }}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            disabled={uploading}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 disabled:opacity-50"
           >
             Bỏ avatar
           </button>
           <button
             onClick={() => {
+              // Thực thi truyền URL mới ra ngoài component cha để lưu vào context của useAuth()
               onSave(url);
               setOpen(false);
             }}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            disabled={uploading || (!url && !previewUrl)}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm disabled:opacity-50"
           >
-            Lưu
+            Lưu thay đổi
           </button>
         </DialogFooter>
       </DialogContent>

@@ -12,6 +12,7 @@ import {
   SaveJobPayload,
   SaveJobResponse,
   DeleteSavedJobResponse,
+  GetSavedCoursesResponse,
 } from "@/types/profile";
 
 export default class ProfileApi {
@@ -127,5 +128,23 @@ export default class ProfileApi {
     match_id: string,
   ): Promise<IBaseResponse<{ message: string; default_match_id: string }>> {
     return await apiPatch("/profile/default-matching", { match_id });
+  }
+
+  /**
+   * GET /profile/saved-courses
+   * Lấy danh sách khóa học đã lưu
+   */
+  static async getSavedCourses(): Promise<
+    IBaseResponse<GetSavedCoursesResponse[]>
+  > {
+    return await apiGet("/profile/saved-courses");
+  }
+
+  static async uploadAvatar(
+    file: File,
+  ): Promise<IBaseResponse<{ message: string; url: string }>> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return await apiPost("/profile/avatar", formData);
   }
 }

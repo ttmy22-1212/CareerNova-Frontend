@@ -148,3 +148,33 @@ export interface SaveJobResponse {
 export interface DeleteSavedJobResponse {
   message: "SAVED_JOB_REMOVED_SUCCESSFULLY";
 }
+
+export interface LearningPathItem {
+  path_id: string;
+  path_title: string;
+  path_level: string;
+  skill_key: string;
+}
+
+export interface SavedCourseItem {
+  course_id: string;
+  course_title: string;
+  provider_name: string;
+  source_url: string | null;
+  thumbnail_icon: string | null;
+  duration_hours: number;
+  rating: number;
+  total_learners: string;
+  price: number;
+  currency: string;
+  skills_tags: string[];
+  is_recommended: boolean;
+  learning_paths: LearningPathItem[];
+}
+
+export interface GetSavedCoursesResponse {
+  course_id: string;
+  saved_at: string;
+  status: string;
+  course: SavedCourseItem;
+}

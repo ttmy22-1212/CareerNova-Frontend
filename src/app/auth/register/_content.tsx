@@ -41,7 +41,7 @@ export function RegisterContent() {
     setLoading(true);
     try {
       await register(name, email, password);
-      router.replace(next);
+      router.push(`/auth/verify-request?email=${encodeURIComponent(email)}`);
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Đăng ký thất bại");
     } finally {
