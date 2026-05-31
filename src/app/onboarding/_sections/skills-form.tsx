@@ -26,14 +26,14 @@ const SkillsForm = ({ formik }: SkillsFormProps) => {
   const { getSkillsApi } = useMainContext();
   const [newSkill, setNewSkill] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<
-    { id: string; name: string }[]
+    { id: number; name: string }[]
   >([]);
 
   const skills = useMemo(() => getSkillsApi.data || [], [getSkillsApi.data]);
 
   const handleAddSkill = useCallback(() => {
     if (newSkill.trim()) {
-      const newSkillObj = { id: `custom-${Date.now()}`, name: newSkill.trim() };
+      const newSkillObj = { id: Date.now(), name: newSkill.trim() };
       const updatedSkills = [...selectedSkills, newSkillObj];
       setSelectedSkills(updatedSkills);
       formik.setFieldValue("skills_have", updatedSkills);
@@ -42,7 +42,7 @@ const SkillsForm = ({ formik }: SkillsFormProps) => {
   }, [formik, newSkill, selectedSkills]);
 
   const handleSkillSelect = useCallback(
-    (event: any, values: { id: string; name: string }[]) => {
+    (event: any, values: { id: number; name: string }[]) => {
       setSelectedSkills(values);
       formik.setFieldValue("skills_have", values);
     },

@@ -1,8 +1,8 @@
 import { apiGet } from "@/utils/api-request";
-import { Skill } from "@/types/skill";
+import { SkillItem } from "@/types/skill";
 
 export class SkillApi {
-  static async getSkills(): Promise<Skill[]> {
+  static async getSkills(): Promise<SkillItem[]> {
     return await apiGet("/skills");
   }
 }

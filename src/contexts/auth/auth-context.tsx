@@ -12,6 +12,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { RegisterResponse } from "@/types/auth";
 
 export type AuthProvider = "password" | "google" | "facebook";
 
@@ -31,7 +32,11 @@ type AuthState = {
   user: AuthUser | null;
   ready: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+  ) => Promise<RegisterResponse>;
   loginWithProvider: (provider: "google" | "facebook") => Promise<void>;
   logout: () => void;
   updateProfile: (

@@ -280,7 +280,7 @@ export function CVMatching() {
       setApiError(null);
 
       const res = await MatchingApi.analyzeCv({
-        cv_id: targetCvId,
+        cv_id: targetCvId!,
         search_group: selectedRole,
       });
 

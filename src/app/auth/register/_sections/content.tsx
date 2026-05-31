@@ -67,7 +67,7 @@ const AuthRegisterContent = () => {
     onSubmit: async (values) => {
       const { email, password, name } = values;
       try {
-        await register({ email, password, name });
+        await register({ email, password, full_name: name });
 
         router.push(`/auth/verify-request?email=${encodeURIComponent(email)}`);
       } catch (error) {

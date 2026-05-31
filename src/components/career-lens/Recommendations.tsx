@@ -38,6 +38,18 @@ import RecommendationApi from "@/api/recommendation";
 import ProfileApi from "@/api/profile";
 import { RecommendedJob, SavedReportItem } from "@/types/recommendation";
 
+type TopJobMatch = {
+  id: string;
+  title: string;
+  company: string;
+  match: number;
+  reason: string;
+  salary: string;
+  location: string;
+  type: string;
+  hot: boolean;
+};
+
 const matchedJobs = getMatchedJobs(jobsWithDetails, userProfile);
 const gapAnalysis = analyzeSkillGaps(jobsWithDetails, userProfile);
 
@@ -248,9 +260,7 @@ export function Recommendations() {
     })) as any;
   }, [apiJobs]);
 
-  // Thay thế mảng topJobMatches bằng cách map dữ liệu API về đúng cấu trúc render gốc
-  // Thay thế mảng topJobMatches bằng cách map dữ liệu API về đúng cấu trúc render gốc
-  const topJobMatches = useMemo(() => {
+  const topJobMatches = useMemo<TopJobMatch[]>(() => {
     return dynamicMatchedJobs.slice(0, 3).map((m: any, idx: number) => {
       const topSkills =
         m.skill_matches

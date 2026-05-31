@@ -1,6 +1,6 @@
 export interface SkillItem {
-  skill_id: number;
-  skill_name: string;
+  id: number;
+  name: string;
 }
 
 export interface GetSkillsResponse {

@@ -33,7 +33,7 @@ import UsersApi from "@/api/users";
 import useAppSnackbar from "@/hooks/use-app-snackbar";
 import { errorMap, firebaseApp } from "@/libs/firebase";
 import { paths } from "@/paths";
-import { RegisterValues } from "@/types/auth";
+import { RegisterDto } from "@/types/auth";
 import type { User, UserOnboarding } from "@/types/user";
 import {
   clearAuthData,
@@ -127,7 +127,7 @@ const reducer = (state: State, action: Action): State =>
 // Context Types
 export interface AuthContextType extends State {
   issuer: Issuer.Firebase;
-  register: (value: RegisterValues) => Promise<any>;
+  register: (value: RegisterDto) => Promise<any>;
   changePassword: (
     currentPassword: string,
     newPassword: string,
@@ -478,8 +478,8 @@ export const AuthProvider: FC<AuthProviderProps> = (props) => {
   /**
    * Register a new user
    */
-  const register = useCallback(async (value: RegisterValues) => {
-    const { email, password, name } = value;
+  const register = useCallback(async (value: RegisterDto) => {
+    const { email, password, full_name } = value;
     try {
       // Create a user record without password
       const userCredential = await createUserWithEmailAndPassword(
@@ -488,7 +488,7 @@ export const AuthProvider: FC<AuthProviderProps> = (props) => {
         password,
       );
       const user = userCredential.user;
-      await updateProfile(user, { displayName: name });
+      await updateProfile(user, { displayName: full_name });
       await getToken(user);
       // await sendEmailVerification(user, {
       //   url: window.location.origin + paths.auth.login,

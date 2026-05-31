@@ -1,5 +1,5 @@
 import * as Yup from "yup";
-import { Skill } from "./skill";
+import { SkillItem } from "./skill";
 
 export interface User {
   id: string;
@@ -33,7 +33,7 @@ export interface UserOnboarding {
   major: string | null;
   school: string | null;
   current_goal: string | null;
-  skills_have: Skill[];
+  skills_have: SkillItem[];
   experience?: {
     job_title: string;
     field: string;

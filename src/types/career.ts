@@ -1,4 +1,4 @@
-import { Skill } from "./skill";
+import { SkillItem } from "./skill";
 import { Topic } from "./topic";
 
 export interface Career {
@@ -8,7 +8,7 @@ export interface Career {
   average_salary: number;
   growth_rate: number;
   topic_id: Topic | null | string;
-  skills: Skill[];
+  skills: SkillItem[];
   topics: Topic[];
 }
 

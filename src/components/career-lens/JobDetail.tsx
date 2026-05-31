@@ -169,7 +169,7 @@ export function JobDetail() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-900 mb-1">
-                  {job.title}
+                  {job!.title}
                 </h1>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-slate-600 font-medium">
@@ -187,11 +187,11 @@ export function JobDetail() {
                 <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
                   <span className="flex items-center gap-1.5">
                     <MapPin className="w-4 h-4 text-slate-400" />
-                    {job.location || "Remote"}
+                    {job!.location || "Remote"}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Briefcase className="w-4 h-4 text-slate-400" />
-                    {job.work_type}
+                    {job!.work_type}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <DollarSign className="w-4 h-4 text-slate-400" />
@@ -199,12 +199,12 @@ export function JobDetail() {
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Clock className="w-4 h-4 text-slate-400" />
-                    Posted {new Date(job.listed_time!).toLocaleDateString()}
+                    Posted {new Date(job!.listed_time!).toLocaleDateString()}
                   </span>
                   <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${typeColors[job.work_type!] || "bg-slate-100 text-slate-600"}`}
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${typeColors[job!.work_type!] || "bg-slate-100 text-slate-600"}`}
                   >
-                    {job.work_type}
+                    {job!.work_type}
                   </span>
                 </div>
               </div>
@@ -294,7 +294,7 @@ export function JobDetail() {
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
             <h2 className="font-bold text-slate-900 mb-3">Job Description</h2>
             <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-              {job.description}
+              {job!.description}
             </p>
           </div>
 
@@ -327,10 +327,10 @@ export function JobDetail() {
                   {item}
                 </li>
               ))}
-              {job.skills_desc && (
+              {job!.skills_desc && (
                 <li className="flex items-start gap-3 text-sm text-slate-700">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                  {job.skills_desc}
+                  {job!.skills_desc}
                 </li>
               )}
             </ul>
@@ -360,8 +360,8 @@ export function JobDetail() {
               <span className="flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" />
                 Apply by{" "}
-                {job.expiry_time
-                  ? new Date(job.expiry_time).toLocaleDateString()
+                {job!.expiry_time
+                  ? new Date(job!.expiry_time).toLocaleDateString()
                   : "May 31, 2026"}
               </span>
             </div>
