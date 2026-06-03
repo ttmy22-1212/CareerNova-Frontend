@@ -15,7 +15,7 @@ export default function Page() {
   useEffect(() => {
     if (!authReady || !onboardingReady) return;
     if (user) {
-      // Always land on Personal Dashboard; onboarding banner handles first-time setup
+      // Always land on Tổng quan Cá nhân; onboarding banner handles first-time setup
       router.replace(paths.personalDashboard);
     }
   }, [authReady, onboardingReady, user, router]);

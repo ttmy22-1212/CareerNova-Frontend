@@ -22,26 +22,39 @@ export interface JobMatchResult {
 /**
  * Calculate match score between user skills and a job
  */
-export function calculateJobMatch(job: JobWithDetails, userProfile: UserProfile): JobMatchResult {
+export function calculateJobMatch(
+  job: JobWithDetails,
+  userProfile: UserProfile,
+): JobMatchResult {
   const skillMatches: SkillMatch[] = [];
 
   // Get required skills (non-inferred are required, inferred are nice-to-have)
-  const requiredSkills = job.skills.filter(s => !s.is_inferred);
-  const preferredSkills = job.skills.filter(s => s.is_inferred);
+  const requiredSkills = job.skills.filter((s) => !s.is_inferred);
+  const preferredSkills = job.skills.filter((s) => s.is_inferred);
 
   // Process required skills
   for (const jobSkill of requiredSkills) {
-    const userSkill = userProfile.skills.find(us => us.skill_id === jobSkill.skill_id);
+    const userSkill = userProfile.skills.find(
+      (us) => us.skill_id === jobSkill.skill_id,
+    );
 
     if (userSkill) {
-      const matchScore = calculateSkillMatchScore(userSkill.proficiency_level, userSkill.years_experience);
+      const matchScore = calculateSkillMatchScore(
+        userSkill.proficiency_level,
+        userSkill.years_experience,
+      );
       skillMatches.push({
         skill_name: jobSkill.skill_name,
         skill_id: jobSkill.skill_id,
         required: true,
         user_proficiency: userSkill.proficiency_level,
         years_experience: userSkill.years_experience,
-        match_level: matchScore >= 80 ? "strong" : matchScore >= 50 ? "partial" : "missing",
+        match_level:
+          matchScore >= 80
+            ? "strong"
+            : matchScore >= 50
+              ? "partial"
+              : "missing",
         match_score: matchScore,
       });
     } else {
@@ -59,10 +72,15 @@ export function calculateJobMatch(job: JobWithDetails, userProfile: UserProfile)
 
   // Process preferred skills
   for (const jobSkill of preferredSkills) {
-    const userSkill = userProfile.skills.find(us => us.skill_id === jobSkill.skill_id);
+    const userSkill = userProfile.skills.find(
+      (us) => us.skill_id === jobSkill.skill_id,
+    );
 
     if (userSkill) {
-      const matchScore = calculateSkillMatchScore(userSkill.proficiency_level, userSkill.years_experience);
+      const matchScore = calculateSkillMatchScore(
+        userSkill.proficiency_level,
+        userSkill.years_experience,
+      );
       skillMatches.push({
         skill_name: jobSkill.skill_name,
         skill_id: jobSkill.skill_id,
@@ -86,23 +104,29 @@ export function calculateJobMatch(job: JobWithDetails, userProfile: UserProfile)
   }
 
   // Calculate overall score
-  const requiredMatches = skillMatches.filter(sm => sm.required);
-  const requiredScore = requiredMatches.length > 0
-    ? requiredMatches.reduce((sum, sm) => sum + sm.match_score, 0) / requiredMatches.length
-    : 0;
+  const requiredMatches = skillMatches.filter((sm) => sm.required);
+  const requiredScore =
+    requiredMatches.length > 0
+      ? requiredMatches.reduce((sum, sm) => sum + sm.match_score, 0) /
+        requiredMatches.length
+      : 0;
 
-  const preferredMatches = skillMatches.filter(sm => !sm.required);
-  const preferredScore = preferredMatches.length > 0
-    ? preferredMatches.reduce((sum, sm) => sum + sm.match_score, 0) / preferredMatches.length
-    : 0;
+  const preferredMatches = skillMatches.filter((sm) => !sm.required);
+  const preferredScore =
+    preferredMatches.length > 0
+      ? preferredMatches.reduce((sum, sm) => sum + sm.match_score, 0) /
+        preferredMatches.length
+      : 0;
 
   // Weight: 80% required, 20% preferred
   const overall_score = Math.round(requiredScore * 0.8 + preferredScore * 0.2);
 
-  const matched_skills_count = skillMatches.filter(sm => sm.match_level !== "missing").length;
+  const matched_skills_count = skillMatches.filter(
+    (sm) => sm.match_level !== "missing",
+  ).length;
   const missing_critical_skills = skillMatches
-    .filter(sm => sm.required && sm.match_level === "missing")
-    .map(sm => sm.skill_name);
+    .filter((sm) => sm.required && sm.match_level === "missing")
+    .map((sm) => sm.skill_name);
 
   return {
     job,
@@ -117,7 +141,10 @@ export function calculateJobMatch(job: JobWithDetails, userProfile: UserProfile)
 /**
  * Calculate a skill match score based on proficiency and experience
  */
-function calculateSkillMatchScore(proficiency: number, yearsExperience: number): number {
+function calculateSkillMatchScore(
+  proficiency: number,
+  yearsExperience: number,
+): number {
   // Weight: 70% proficiency, 30% experience (capped at 5 years = 100%)
   const proficiencyScore = proficiency;
   const experienceScore = Math.min((yearsExperience / 5) * 100, 100);
@@ -127,17 +154,31 @@ function calculateSkillMatchScore(proficiency: number, yearsExperience: number):
 /**
  * Get all jobs with match scores, sorted by match score
  */
-export function getMatchedJobs(jobs: JobWithDetails[], userProfile: UserProfile): JobMatchResult[] {
+export function getMatchedJobs(
+  jobs: JobWithDetails[],
+  userProfile: UserProfile,
+): JobMatchResult[] {
   return jobs
-    .map(job => calculateJobMatch(job, userProfile))
+    .map((job) => calculateJobMatch(job, userProfile))
     .sort((a, b) => b.overall_score - a.overall_score);
 }
 
 /**
- * Get skill gap analysis across all jobs in target roles
+ * Get Phân tích kỹ năng across all jobs in target roles
  */
-export function analyzeSkillGaps(jobs: JobWithDetails[], userProfile: UserProfile) {
-  const skillFrequency = new Map<number, { skill_name: string; count: number; category: string | null; type: string | null }>();
+export function analyzeSkillGaps(
+  jobs: JobWithDetails[],
+  userProfile: UserProfile,
+) {
+  const skillFrequency = new Map<
+    number,
+    {
+      skill_name: string;
+      count: number;
+      category: string | null;
+      type: string | null;
+    }
+  >();
 
   // Count skill frequency across all jobs
   for (const job of jobs) {
@@ -170,7 +211,7 @@ export function analyzeSkillGaps(jobs: JobWithDetails[], userProfile: UserProfil
 
   skillFrequency.forEach((data, skillId) => {
     const demandPercentage = (data.count / jobs.length) * 100;
-    const userSkill = userProfile.skills.find(us => us.skill_id === skillId);
+    const userSkill = userProfile.skills.find((us) => us.skill_id === skillId);
     const userHas = !!userSkill;
     const userProficiency = userSkill?.proficiency_level ?? null;
 
@@ -178,7 +219,8 @@ export function analyzeSkillGaps(jobs: JobWithDetails[], userProfile: UserProfil
     let priority: "critical" | "high" | "medium" | "low";
     if (!userHas && demandPercentage >= 60) priority = "critical";
     else if (!userHas && demandPercentage >= 40) priority = "high";
-    else if (userProficiency && userProficiency < 60 && demandPercentage >= 40) priority = "high";
+    else if (userProficiency && userProficiency < 60 && demandPercentage >= 40)
+      priority = "high";
     else if (!userHas) priority = "medium";
     else priority = "low";
 
@@ -208,7 +250,11 @@ export function analyzeSkillGaps(jobs: JobWithDetails[], userProfile: UserProfil
 /**
  * Format salary for display
  */
-export function formatSalary(min: number | null | undefined, max: number | null | undefined, currency = "USD"): string {
+export function formatSalary(
+  min: number | null | undefined,
+  max: number | null | undefined,
+  currency = "USD",
+): string {
   if (!min && !max) return "Not specified";
 
   const formatNum = (n: number) => {

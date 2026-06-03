@@ -11,8 +11,8 @@ import { CheckCircle2, ChevronLeft, ChevronRight, X, Zap } from "lucide-react";
 import { useAuth } from "@/contexts/auth/auth-context";
 
 const TOUR_KEY = "career-lens.tour.v1";
-const TW = 312;   // tooltip width  (px)
-const PAD = 8;    // spotlight padding (px)
+const TW = 312; // tooltip width  (px)
+const PAD = 8; // spotlight padding (px)
 
 // ── Step definitions ───────────────────────────────────────────────
 interface Step {
@@ -39,14 +39,14 @@ const STEPS: Step[] = [
   },
   {
     target: "sidebar-cv-matching",
-    title: "📄 CV–JD Matching — Bắt đầu từ đây",
-    desc: "Upload CV rồi paste mô tả job bất kỳ. Hệ thống tính ngay điểm match (0–100%) và chỉ ra đúng kỹ năng nào bạn còn thiếu so với yêu cầu tuyển dụng.",
+    title: "📄 So khớp CV — Bắt đầu từ đây",
+    desc: "Tải CV rồi paste mô tả job bất kỳ. Hệ thống tính ngay điểm match (0–100%) và chỉ ra đúng kỹ năng nào bạn còn thiếu so với yêu cầu tuyển dụng.",
     placement: "right",
     tip: "Đây là bước quan trọng nhất — làm ngay nhé!",
   },
   {
     target: "profile-strength",
-    title: "💪 Profile Strength",
+    title: "💪 Độ hoàn thiện hồ sơ",
     desc: "Mỗi bước hoàn thiện hồ sơ tăng thêm %. Càng cao, gợi ý job và lộ trình học càng chính xác hơn. Bấm để xem checklist các bước còn thiếu.",
     placement: "top",
     tip: "Mục tiêu: đạt ít nhất 50% để mở insight",
@@ -54,7 +54,7 @@ const STEPS: Step[] = [
   {
     target: "welcome-banner",
     title: "📊 Tổng kết cá nhân của bạn",
-    desc: "Sau khi upload CV, banner này hiện số jobs khớp với hồ sơ và điểm match trung bình. Dữ liệu tự cập nhật khi bạn thêm thông tin vào hồ sơ.",
+    desc: "Sau khi Tải CV, banner này hiện số jobs khớp với hồ sơ và điểm match trung bình. Dữ liệu tự cập nhật khi bạn thêm thông tin vào hồ sơ.",
     placement: "bottom",
     tip: "Số liệu cập nhật tự động theo hồ sơ",
   },
@@ -68,15 +68,28 @@ const STEPS: Step[] = [
 ];
 
 // ── Geometry helpers ───────────────────────────────────────────────
-interface Rect { top: number; left: number; width: number; height: number }
+interface Rect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
 
 function getSpot(el: Element): Rect {
   const r = el.getBoundingClientRect();
-  return { top: r.top - PAD, left: r.left - PAD, width: r.width + PAD * 2, height: r.height + PAD * 2 };
+  return {
+    top: r.top - PAD,
+    left: r.left - PAD,
+    width: r.width + PAD * 2,
+    height: r.height + PAD * 2,
+  };
 }
 
-function tooltipPos(sp: Rect, placement: Step["placement"]): { top: number; left: number } {
-  const g  = 14;
+function tooltipPos(
+  sp: Rect,
+  placement: Step["placement"],
+): { top: number; left: number } {
+  const g = 14;
   const iw = window.innerWidth;
   const ih = window.innerHeight;
   const th = 210; // estimated tooltip height
@@ -84,20 +97,30 @@ function tooltipPos(sp: Rect, placement: Step["placement"]): { top: number; left
   const cx = (x: number) => Math.max(12, Math.min(x, iw - TW - 12));
   const cy = (y: number) => Math.max(12, Math.min(y, ih - th - 12));
 
-  if (placement === "bottom") return { top: cy(sp.top + sp.height + g), left: cx(sp.left + sp.width / 2 - TW / 2) };
-  if (placement === "top")    return { top: cy(sp.top - th - g),        left: cx(sp.left + sp.width / 2 - TW / 2) };
-  if (placement === "right")  return { top: cy(sp.top),                  left: cx(sp.left + sp.width + g) };
-  if (placement === "left")   return { top: cy(sp.top),                  left: cx(sp.left - TW - g) };
+  if (placement === "bottom")
+    return {
+      top: cy(sp.top + sp.height + g),
+      left: cx(sp.left + sp.width / 2 - TW / 2),
+    };
+  if (placement === "top")
+    return {
+      top: cy(sp.top - th - g),
+      left: cx(sp.left + sp.width / 2 - TW / 2),
+    };
+  if (placement === "right")
+    return { top: cy(sp.top), left: cx(sp.left + sp.width + g) };
+  if (placement === "left")
+    return { top: cy(sp.top), left: cx(sp.left - TW - g) };
   return { top: ih / 2 - th / 2, left: iw / 2 - TW / 2 };
 }
 
 // ── Component ──────────────────────────────────────────────────────
 export function SpotlightTour() {
   const { user, ready } = useAuth();
-  const [open, setOpen]     = useState(false);
-  const [step, setStep]     = useState(0);
-  const [spot, setSpot]     = useState<Rect | null>(null);
-  const [vp,   setVp]       = useState({ w: 1280, h: 800 });
+  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState(0);
+  const [spot, setSpot] = useState<Rect | null>(null);
+  const [vp, setVp] = useState({ w: 1280, h: 800 });
 
   // Sync viewport
   useEffect(() => {
@@ -120,7 +143,10 @@ export function SpotlightTour() {
   // Resolve spotlight for current step
   const resolveSpot = useCallback((idx: number) => {
     const target = STEPS[idx].target;
-    if (!target) { setSpot(null); return; }
+    if (!target) {
+      setSpot(null);
+      return;
+    }
 
     let tries = 0;
     const find = () => {
@@ -138,7 +164,9 @@ export function SpotlightTour() {
     find();
   }, []);
 
-  useEffect(() => { if (open) resolveSpot(step); }, [step, open, resolveSpot]);
+  useEffect(() => {
+    if (open) resolveSpot(step);
+  }, [step, open, resolveSpot]);
 
   // Live-update spotlight on resize
   useEffect(() => {
@@ -158,17 +186,22 @@ export function SpotlightTour() {
     setOpen(false);
     setSpot(null);
   }
-  function goNext() { step < STEPS.length - 1 ? setStep(s => s + 1) : dismiss(); }
-  function goPrev() { if (step > 0) setStep(s => s - 1); }
+  function goNext() {
+    step < STEPS.length - 1 ? setStep((s) => s + 1) : dismiss();
+  }
+  function goPrev() {
+    if (step > 0) setStep((s) => s - 1);
+  }
 
   if (!open) return null;
 
-  const cur    = STEPS[step];
+  const cur = STEPS[step];
   const isLast = step === STEPS.length - 1;
   const isCenter = !cur.target || !spot;
-  const tPos   = spot && cur.placement
-    ? tooltipPos(spot, cur.placement)
-    : { top: vp.h / 2 - 105, left: vp.w / 2 - TW / 2 };
+  const tPos =
+    spot && cur.placement
+      ? tooltipPos(spot, cur.placement)
+      : { top: vp.h / 2 - 105, left: vp.w / 2 - TW / 2 };
 
   return (
     <>
@@ -176,7 +209,10 @@ export function SpotlightTour() {
       {isCenter ? (
         <div
           className="fixed inset-0 z-[9998]"
-          style={{ background: "rgba(15,23,42,0.72)", backdropFilter: "blur(3px)" }}
+          style={{
+            background: "rgba(15,23,42,0.72)",
+            backdropFilter: "blur(3px)",
+          }}
         />
       ) : (
         spot && (
@@ -195,7 +231,8 @@ export function SpotlightTour() {
               outlineOffset: 3,
               zIndex: 9998,
               pointerEvents: "none",
-              transition: "top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease",
+              transition:
+                "top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease",
             }}
           />
         )
@@ -227,8 +264,8 @@ export function SpotlightTour() {
                 i === step
                   ? "h-1.5 w-5 bg-indigo-600"
                   : i < step
-                  ? "h-1.5 w-1.5 bg-indigo-300"
-                  : "h-1.5 w-1.5 bg-slate-200 dark:bg-slate-700"
+                    ? "h-1.5 w-1.5 bg-indigo-300"
+                    : "h-1.5 w-1.5 bg-slate-200 dark:bg-slate-700"
               }`}
             />
           ))}
@@ -290,9 +327,13 @@ export function SpotlightTour() {
             }`}
           >
             {isLast ? (
-              <><CheckCircle2 className="h-3.5 w-3.5" /> Bắt đầu ngay!</>
+              <>
+                <CheckCircle2 className="h-3.5 w-3.5" /> Bắt đầu ngay!
+              </>
             ) : (
-              <>Tiếp theo <ChevronRight className="h-3.5 w-3.5" /></>
+              <>
+                Tiếp theo <ChevronRight className="h-3.5 w-3.5" />
+              </>
             )}
           </button>
         </div>

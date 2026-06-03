@@ -222,7 +222,7 @@ export function Recommendations() {
         if (jobsRes?.data) setApiJobs(jobsRes.data);
         if (reportsRes?.data) setApiReports(reportsRes.data);
       } catch (error) {
-        console.error("Failed to sync recommendations api:", error);
+        console.error("Failed to sync Đề xuất api:", error);
       }
     };
 
@@ -443,7 +443,7 @@ export function Recommendations() {
 
   const tabs = [
     { key: "overview" as const, label: "Career Overview", icon: Sparkles },
-    { key: "saved" as const, label: "Saved Reports", icon: BookmarkCheck },
+    { key: "saved" as const, label: "Đề xuất", icon: BookmarkCheck },
     { key: "resources" as const, label: "Resources", icon: BookOpen },
   ];
 
@@ -469,13 +469,13 @@ export function Recommendations() {
             </p>
             <div className="flex flex-wrap gap-2 mt-3">
               <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
-                85% Profile Strength
+                85% Độ hoàn thiện hồ sơ
               </span>
               <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
                 234 Matching Jobs
               </span>
               <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
-                3 Saved Reports
+                3 Đề xuất
               </span>
             </div>
           </div>
@@ -729,9 +729,7 @@ export function Recommendations() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Award className="w-5 h-5 text-violet-600" />
-              <h2 className="font-bold text-slate-900">
-                Career Path Recommendations
-              </h2>
+              <h2 className="font-bold text-slate-900">Career Path Đề xuất</h2>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {careerPaths.map((path) => (
@@ -842,12 +840,12 @@ export function Recommendations() {
         </div>
       )}
 
-      {/* ── Saved Reports Tab ── */}
+      {/* ── Đề xuất Tab ── */}
       {activeTab === "saved" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-slate-600">
-              {savedReports.length} saved reports
+              {savedReports.length} Đề xuất
             </p>
             <button className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
               <Filter className="w-3.5 h-3.5" />

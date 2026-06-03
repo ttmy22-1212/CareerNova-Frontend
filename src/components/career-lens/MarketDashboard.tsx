@@ -256,7 +256,7 @@ export function MarketDashboard({
               </span>
             </div>
             <h1 className="text-white text-2xl font-bold mb-1">
-              IT Job Market Dashboard
+              IT Job Thông tin Thị trường
             </h1>
             <p className="text-slate-300 text-sm max-w-lg">
               Cập nhật thời gian thực về xu hướng tuyển dụng, mức lương và kỹ
@@ -801,7 +801,7 @@ export function MarketDashboard({
               Xem insight cá nhân của bạn
             </h3>
             <p className="text-blue-200 text-sm mb-4 max-w-md mx-auto">
-              Đăng nhập và upload CV để biết chính xác bao nhiêu job phù hợp với
+              Đăng nhập và Tải CV để biết chính xác bao nhiêu job phù hợp với
               bạn, kỹ năng nào đang thiếu, và lộ trình phát triển cụ thể.
             </p>
             <div className="flex items-center justify-center gap-3">

@@ -3,7 +3,6 @@ import {
   format,
   getDate,
   getDaysInMonth,
-  Locale,
   startOfWeek,
   subDays,
   subMonths,
@@ -31,7 +30,7 @@ export const getCurrentDayRange = () => {
     now.getDate(),
     0,
     0,
-    0
+    0,
   );
   const endOfDay = new Date(
     now.getFullYear(),
@@ -39,7 +38,7 @@ export const getCurrentDayRange = () => {
     now.getDate(),
     23,
     59,
-    59
+    59,
   );
 
   return {
@@ -86,7 +85,7 @@ export const endMonth = (d: Date): Date => {
     return new Date(new Date(d.getFullYear() + 1, 0, 1).getTime() - 1);
   } else {
     return new Date(
-      new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime() - 1
+      new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime() - 1,
     );
   }
 };

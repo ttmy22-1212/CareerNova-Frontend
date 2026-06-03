@@ -451,7 +451,8 @@ export default function OnboardingWizard() {
 
           <h1 className="text-2xl font-bold text-slate-900">Chúc mừng bạn!</h1>
           <p className="mt-1 text-sm text-slate-500 mb-6">
-            Dựa trên Career Quiz, đây là các định hướng phù hợp nhất với bạn:
+            Dựa trên Kiểm tra hướng nghiệp, đây là các định hướng phù hợp nhất
+            với bạn:
           </p>
 
           <div className="space-y-2.5 mb-8">
@@ -485,7 +486,7 @@ export default function OnboardingWizard() {
             <Sparkles className="h-6 w-6 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">
-            Chào mừng đến Career Insight
+            Chào mừng đến Career Nova
           </h1>
           <p className="mt-1 text-sm text-slate-600">
             5 bước (~5 phút) để nhận gợi ý cá nhân hóa cho riêng bạn
@@ -783,7 +784,7 @@ function Step3({
         Skill & CV của bạn
       </h2>
       <p className="mb-5 text-sm text-slate-500">
-        Khai báo 3-8 skill mạnh nhất + level. Upload CV để chúng tôi phân tích
+        Khai báo 3-8 skill mạnh nhất + level. Tải CV để chúng tôi phân tích
         chính xác hơn (tùy chọn).
       </p>
 
@@ -804,7 +805,7 @@ function Step3({
           <label className="flex cursor-pointer flex-col items-center gap-1.5">
             <Upload className="h-6 w-6 text-slate-400" />
             <span className="text-sm font-semibold text-slate-700">
-              Bấm để upload CV (PDF/DOCX)
+              Bấm để Tải CV (PDF/DOCX)
             </span>
             <span className="text-[11px] text-slate-500">
               Tối đa 5MB. Tùy chọn.
@@ -1008,7 +1009,9 @@ function Step5({
 
   return (
     <div>
-      <h2 className="mb-1 text-xl font-bold text-slate-900">Career Quiz</h2>
+      <h2 className="mb-1 text-xl font-bold text-slate-900">
+        Kiểm tra hướng nghiệp
+      </h2>
       <p className="mb-5 text-sm text-slate-500">
         5 câu hỏi nhanh để tìm 2-3 hướng phù hợp nhất. ({completed}/
         {quizQuestions.length})

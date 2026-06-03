@@ -167,7 +167,7 @@ export function PersonalDashboard() {
     {
       href: "/skill-gap",
       icon: Target,
-      title: "Xem Skill Gap Analysis",
+      title: "Xem Phân tích kỹ năng",
       desc: `${statistics?.missing_skills_count ?? 0} kỹ năng cần cải thiện khẩn`,
       color: "from-violet-500 to-violet-600",
       badge: "Khẩn",
@@ -291,7 +291,7 @@ export function PersonalDashboard() {
                 </>
               ) : (
                 <>
-                  Upload CV để hệ thống phân tích và gợi ý{" "}
+                  Tải CV để hệ thống phân tích và gợi ý{" "}
                   <span className="text-white font-bold">
                     job phù hợp chính xác
                   </span>{" "}
@@ -307,7 +307,7 @@ export function PersonalDashboard() {
                 className="flex items-center gap-2 px-5 py-2.5 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-colors shadow-lg"
               >
                 <Upload className="w-4 h-4" />
-                Upload CV ngay
+                Tải CV ngay
               </Link>
             ) : (
               <Link
@@ -338,15 +338,15 @@ export function PersonalDashboard() {
               Chưa có CV — Gợi ý chưa được cá nhân hóa
             </p>
             <p className="text-xs text-amber-700 mt-0.5">
-              Upload CV (PDF/DOCX) để hệ thống tính toán điểm match chính xác
-              với từng job.
+              Tải CV (PDF/DOCX) để hệ thống tính toán điểm match chính xác với
+              từng job.
             </p>
           </div>
           <Link
             href="/cv-matching"
             className="shrink-0 px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 transition-colors"
           >
-            Upload CV
+            Tải CV
           </Link>
         </div>
       )}
@@ -366,7 +366,7 @@ export function PersonalDashboard() {
           },
           {
             icon: AlertCircle,
-            label: "Skill Gaps",
+            label: "Thiếu hụt kỹ năng",
             value: (statistics?.missing_skills_count ?? 0).toString(),
             sub: "Kỹ năng cần cải thiện",
             color: "from-orange-500 to-orange-600",
@@ -376,7 +376,7 @@ export function PersonalDashboard() {
           },
           {
             icon: Award,
-            label: "Profile Strength",
+            label: "Độ hoàn thiện hồ sơ",
             value: `${strength}%`,
             sub:
               incompleteTasks.length > 0
@@ -679,7 +679,7 @@ export function PersonalDashboard() {
                 className="mt-3 flex items-center justify-center gap-2 py-2.5 w-full bg-violet-50 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-100 transition-colors"
               >
                 <Zap className="w-4 h-4" />
-                Xem full Skill Gap Analysis
+                Xem full Phân tích kỹ năng
               </Link>
             </div>
           </div>
@@ -852,7 +852,7 @@ export function PersonalDashboard() {
           href="/dashboard"
           className="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors"
         >
-          Market Dashboard <ArrowRight className="w-4 h-4" />
+          Thông tin Thị trường <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
     </div>

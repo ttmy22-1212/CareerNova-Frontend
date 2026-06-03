@@ -159,7 +159,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     },
     {
       id: "cv",
-      label: "Upload CV để phân tích chính xác hơn",
+      label: "Tải CV để phân tích chính xác hơn",
       done: profile.hasUploadedCV,
       weight: 25,
       href: "/onboarding/welcome?step=3",
@@ -173,7 +173,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     },
     {
       id: "quiz",
-      label: "Hoàn thành Career Quiz",
+      label: "Hoàn thành Kiểm tra hướng nghiệp",
       done: profile.quizDone || !!profile.completedAt,
       weight: 20,
       href: "/onboarding/welcome?step=5",

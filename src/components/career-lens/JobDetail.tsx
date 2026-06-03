@@ -157,7 +157,7 @@ export function JobDetail() {
         className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-blue-700 mb-5 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to Job Search
+        Back to Tìm kiếm việc làm
       </Link>
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm mb-5 overflow-hidden">

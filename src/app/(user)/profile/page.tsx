@@ -370,7 +370,7 @@ export default function ProfilePage() {
             />
           </div>
 
-          {/* Profile strength banner if < 100 */}
+          {/* Độ hoàn thiện hồ sơ banner if < 100 */}
           {strength < 100 && (
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/30">
               <div className="flex items-center gap-2.5">
@@ -603,7 +603,7 @@ export default function ProfilePage() {
                     </Link>
                   </div>
                 ) : (
-                  <Empty href="/cv-matching" label="Upload CV (PDF/DOCX)" />
+                  <Empty href="/cv-matching" label="Tải CV (PDF/DOCX)" />
                 )}
 
                 {profile.lastAnalysisAt && (

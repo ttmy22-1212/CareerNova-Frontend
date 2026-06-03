@@ -39,7 +39,6 @@ import {
 } from "@/contexts/onboarding/onboarding-context";
 import { useTheme } from "@/contexts/theme/theme-context";
 import { useAuth } from "@/contexts/auth/auth-context";
-import { NotificationsDropdown } from "@/components/career-lens/NotificationsDropdown";
 import { SpotlightTour } from "@/components/career-lens/SpotlightTour";
 import {
   Popover,
@@ -62,19 +61,23 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       {
         href: paths.personalDashboard,
-        label: "Personal Dashboard",
+        label: "Tổng quan Cá nhân",
         Icon: LayoutGrid,
         end: true,
       },
       {
         href: paths.cvMatching,
-        label: "CV–JD Matching",
+        label: "So khớp CV",
         Icon: FileText,
         badge: "Core",
       },
-      { href: paths.profile.detail, label: "Hồ sơ & CV", Icon: User },
-      { href: "/onboarding/welcome", label: "Career Quiz", Icon: Compass },
-      { href: paths.skillGap, label: "Skill Gap Analysis", Icon: Target },
+      { href: paths.profile.detail, label: "Hồ sơ Người dùng", Icon: User },
+      {
+        href: "/onboarding/welcome",
+        label: "Kiểm tra hướng nghiệp",
+        Icon: Compass,
+      },
+      { href: paths.skillGap, label: "Phân tích kỹ năng", Icon: Target },
     ],
   },
   {
@@ -82,12 +85,11 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       {
         href: paths.dashboard,
-        label: "Market Dashboard",
+        label: "Thông tin Thị trường",
         Icon: LayoutDashboard,
         end: true,
       },
-      { href: paths.jobs.index, label: "Job Search", Icon: Search },
-      { href: "/salary-insights", label: "Salary Insights", Icon: DollarSign },
+      { href: paths.jobs.index, label: "Tìm kiếm việc làm", Icon: Search },
     ],
   },
   {
@@ -95,10 +97,10 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       {
         href: paths.recommendations,
-        label: "Recommendations",
+        label: "Đề xuất",
         Icon: BookmarkCheck,
       },
-      { href: paths.roadmap.index, label: "Khoá học & Roadmap", Icon: Map },
+      { href: paths.roadmap.index, label: "Khoá học & Lộ trình", Icon: Map },
     ],
   },
 ];
@@ -107,43 +109,39 @@ const allItems = navGroups.flatMap((g) => g.items);
 
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
   [paths.dashboard]: {
-    title: "Market Dashboard",
+    title: "Thông tin Thị trường",
     subtitle: "Tổng quan thị trường IT — không cần đăng nhập",
   },
   [paths.personalDashboard]: {
-    title: "Personal Dashboard",
-    subtitle: "Insight cá nhân hóa dựa trên hồ sơ & CV của bạn",
+    title: "Tổng quan Cá nhân",
+    subtitle: "Insight cá nhân hóa dựa trên Hồ sơ Người dùng của bạn",
   },
   [paths.jobs.index]: {
-    title: "Job Search",
+    title: "Tìm kiếm việc làm",
     subtitle: "Tìm việc phù hợp với bạn",
   },
   [paths.cvMatching]: {
-    title: "CV–JD Matching",
+    title: "So khớp CV",
     subtitle: "So khớp CV với mô tả việc",
   },
   [paths.skillGap]: {
-    title: "Skill Gap Analysis",
+    title: "Phân tích kỹ năng",
     subtitle: "Khoảng cách kỹ năng so với thị trường",
   },
   [paths.recommendations]: {
-    title: "Saved Reports",
+    title: "Đề xuất",
     subtitle: "Lộ trình & gợi ý cho bạn",
   },
   [paths.profile.detail]: {
-    title: "Hồ sơ & CV",
+    title: "Hồ sơ Người dùng",
     subtitle: "Thông tin cá nhân và CV của bạn",
   },
-  "/salary-insights": {
-    title: "Salary Insights",
-    subtitle: "Phân tích lương theo level & vị trí",
-  },
   [paths.roadmap.index]: {
-    title: "Khoá học & Roadmap",
+    title: "Khoá học & Lộ trình",
     subtitle: "Lộ trình học theo định hướng",
   },
   "/onboarding/welcome": {
-    title: "Career Quiz",
+    title: "Kiểm tra hướng nghiệp",
     subtitle: "Khám phá định hướng phù hợp",
   },
 };
@@ -184,7 +182,7 @@ export default function UserLayout({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
 
-  // Market Dashboard is publicly accessible (no login required)
+  // Thông tin Thị trường is publicly accessible (no login required)
   const PUBLIC_PATHS = [paths.dashboard];
   const isPublicPage = PUBLIC_PATHS.some((p) => pathname === p);
 
@@ -208,7 +206,7 @@ export default function UserLayout({
 
   const active = findActive(pathname);
   const meta = (active && pageMeta[active.href]) ?? {
-    title: "Career Insight",
+    title: "Career Nova",
     subtitle: "",
   };
 
@@ -352,7 +350,7 @@ export default function UserLayout({
           {!collapsed && (
             <div className="whitespace-nowrap">
               <p className="text-sm font-bold leading-tight text-slate-900 dark:text-slate-100">
-                Career Insight
+                Career Nova
               </p>
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Platform
@@ -437,7 +435,7 @@ export default function UserLayout({
                 <div className="mb-2 flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   <p className="text-xs font-semibold text-blue-900 dark:text-blue-200">
-                    Profile Strength
+                    Độ hoàn thiện hồ sơ
                   </p>
                   <ChevronRight className="ml-auto h-3.5 w-3.5 text-blue-500" />
                 </div>
@@ -567,7 +565,7 @@ export default function UserLayout({
             {groupTitle && (
               <nav className="hidden items-center gap-1 text-xs text-slate-400 md:flex">
                 <Link href={paths.dashboard} className="hover:text-slate-600">
-                  Career Insight
+                  Career Nova
                 </Link>
                 <ChevronRight className="h-3 w-3" />
                 <span>{groupTitle}</span>
@@ -620,8 +618,6 @@ export default function UserLayout({
               <Moon className="h-4 w-4 text-slate-600" />
             )}
           </button>
-
-          <NotificationsDropdown />
 
           {user && (
             <Popover

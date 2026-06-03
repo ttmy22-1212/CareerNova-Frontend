@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { TrendingUp, Sparkles, Target, BarChart3, Shield } from "lucide-react";
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <div className="grid min-h-screen lg:grid-cols-2">
@@ -17,7 +21,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                 <TrendingUp className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-base font-bold text-white">Career Insight</p>
+                <p className="text-base font-bold text-white">Career Nova</p>
                 <p className="text-xs font-medium uppercase tracking-wider text-white/70">
                   Platform
                 </p>
@@ -44,11 +48,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
             <ul className="space-y-3">
               {[
-                { Icon: Target, text: "Skill Gap Analysis theo career path" },
-                { Icon: BarChart3, text: "Market Dashboard & Salary Insights" },
+                { Icon: Target, text: "Phân tích kỹ năng theo career path" },
+                { Icon: BarChart3, text: "Thông tin Thị trường" },
                 { Icon: Shield, text: "Bảo mật — dữ liệu thuộc về bạn" },
               ].map(({ Icon, text }) => (
-                <li key={text} className="flex items-center gap-3 text-sm text-white/90">
+                <li
+                  key={text}
+                  className="flex items-center gap-3 text-sm text-white/90"
+                >
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
                     <Icon className="h-4 w-4 text-white" />
                   </span>
@@ -85,7 +92,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                 <TrendingUp className="h-4 w-4 text-white" />
               </div>
               <p className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Career Insight
+                Career Nova
               </p>
             </Link>
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
@@ -93,11 +100,17 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             </div>
             <p className="mt-4 text-center text-xs text-slate-400">
               Bằng việc tiếp tục, bạn đồng ý với{" "}
-              <a href="#" className="hover:text-slate-600 hover:underline dark:hover:text-slate-300">
+              <a
+                href="#"
+                className="hover:text-slate-600 hover:underline dark:hover:text-slate-300"
+              >
                 Điều khoản
               </a>{" "}
               và{" "}
-              <a href="#" className="hover:text-slate-600 hover:underline dark:hover:text-slate-300">
+              <a
+                href="#"
+                className="hover:text-slate-600 hover:underline dark:hover:text-slate-300"
+              >
                 Chính sách bảo mật
               </a>
               .

@@ -38,11 +38,11 @@ import { CvItemDto } from "@/types/cv";
 type InputMode = "role" | "url";
 
 const getSkillLevel = (proficiency: number | null): string => {
-  if (proficiency === null) return "None";
-  if (proficiency >= 85) return "Expert";
-  if (proficiency >= 70) return "Advanced";
-  if (proficiency >= 50) return "Intermediate";
-  return "Beginner";
+  if (proficiency === null) return "Không có";
+  if (proficiency >= 85) return "Chuyên gia";
+  if (proficiency >= 70) return "Nâng cao";
+  if (proficiency >= 50) return "Trung bình";
+  return "Người mới";
 };
 
 function ScoreRing({ score, size = 96 }: { score: number; size?: number }) {
@@ -394,7 +394,7 @@ export function CVMatching() {
         );
       }
     } catch (error: any) {
-      console.error("Lỗi khi upload CV bên phải:", error);
+      console.error("Lỗi khi Tải CV bên phải:", error);
       setRightUploadError(error?.message || "Có lỗi hệ thống xảy ra.");
     } finally {
       setIsUploadingRight(false);
@@ -429,11 +429,11 @@ export function CVMatching() {
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
         <div className="p-5 border-b border-slate-100">
           <h2 className="font-bold text-slate-900 mb-0.5">
-            Configure Analysis
+            Cấu hình phân tích
           </h2>
           <p className="text-xs text-slate-500">
-            Upload your CV and provide a job description or benchmark role to
-            start the comparison.
+            Tải lên CV của bạn và cung cấp mô tả công việc hoặc vị trí so sánh
+            để bắt đầu so sánh.
           </p>
         </div>
 
@@ -445,7 +445,7 @@ export function CVMatching() {
               {/* Hàng 1: Hiển thị System Default CV */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
-                  System Default CV
+                  CV Mặc định của bạn
                 </label>
                 {defaultCv ? (
                   <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
@@ -471,7 +471,7 @@ export function CVMatching() {
               {/* Hàng 2: Hiển thị Active CV để quét và Dropdown chọn All CVs bên dưới */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
-                  Select CV for Analysis
+                  Chọn CV để phân tích
                 </label>
                 {activeCv ? (
                   <div className="space-y-2.5">
@@ -559,7 +559,7 @@ export function CVMatching() {
               {/* Hàng 1: Khối Upload tài liệu JD độc lập */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
-                  Upload JD Document
+                  Tải Mô tả công việc (JD)
                 </label>
                 <input
                   type="file"
