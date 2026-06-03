@@ -365,14 +365,10 @@ export function CVMatching() {
     if (!files || files.length === 0) return;
     const selectedFile = files[0];
 
-    const validTypes = [
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
+    const validTypes = ["application/pdf", "image/jpeg", "image/png"];
     if (!validTypes.includes(selectedFile.type)) {
       setRightUploadError(
-        "Please upload a PDF or Word document (.pdf, .doc, .docx)",
+        "Vui lòng tải lên tài liệu định dạng PDF hoặc Ảnh (.pdf, .jpg, .jpeg, .png)",
       );
       return;
     }
@@ -565,7 +561,7 @@ export function CVMatching() {
                   type="file"
                   ref={rightFileInputRef}
                   onChange={handleRightFileChange}
-                  accept=".pdf,.doc,.docx"
+                  accept=".pdf,.jpg,.jpeg,.png"
                   className="hidden"
                 />
                 <div
@@ -595,7 +591,7 @@ export function CVMatching() {
                     <div className="flex items-center gap-2 text-slate-500">
                       <Upload className="w-4 h-4 text-slate-400" />
                       <p className="text-xs font-medium">
-                        Upload JD document (.pdf, .docx)
+                        Tải lên CV của bạn (.pdf, .jpg, .png)
                       </p>
                     </div>
                   )}
