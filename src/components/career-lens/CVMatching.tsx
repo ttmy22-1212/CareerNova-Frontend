@@ -126,6 +126,13 @@ export function CVMatching() {
 
   const [showResultModal, setShowResultModal] = useState(false);
   const [analyzeResult, setAnalyzeResult] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const filteredRoles = benchmarkRoles.filter((role) =>
+    role.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
 
   // Tải thông tin hồ sơ người dùng để phân rã Default CV và Toàn bộ CV
   const fetchConfigAndProfileData = async () => {
@@ -178,6 +185,19 @@ export function CVMatching() {
     fetchConfigAndProfileData();
   }, []);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Gọi API lấy danh sách matchings bằng hàm /matching/history mới bổ sung
   const fetchMatchingsForCv = async () => {
     try {
@@ -213,8 +233,8 @@ export function CVMatching() {
       overallScore: Math.round(
         (parseFloat(backendData.match_score) || 0) * 100,
       ),
-      jobTitle: backendData.search_group || selectedRole,
-      company: "Market Benchmark",
+      jobTitle: backendData.job_title || backendData.search_group || "",
+      company: backendData.company_name || "",
       analysis: {
         strongMatches: (backendData.radar_data || [])
           .filter((s: MatchedSkillDetail) => s.similarity >= 0.7)
@@ -265,7 +285,7 @@ export function CVMatching() {
   };
 
   const handleAnalyzeAndMatch = async () => {
-    // Luồng kiểm soát: Nếu vừa có file upload mới vừa có cv select sẵn, ưu tiên lấy thông tin cv upload mới
+    // Luồng kiểm soát: Ưu tiên lấy thông tin cv hoạt động
     const targetCvId = activeCv?.cv_id;
 
     if (!targetCvId && !rightFile) {
@@ -279,19 +299,22 @@ export function CVMatching() {
       setIsLoading(true);
       setApiError(null);
 
-      const res = await MatchingApi.analyzeCv({
+      const payload: any = {
         cv_id: targetCvId!,
-        search_group: selectedRole,
-      });
+        search_group: mode === "url" ? "" : selectedRole || "",
+      };
+
+      if (mode === "url") {
+        payload.job_url = jdUrl.trim();
+      }
+
+      const res = await MatchingApi.analyzeCv(payload);
 
       if (res?.data) {
-        // 1. Lưu kết quả phân tích mới vào state riêng của Popup, KHÔNG gọi mapAndSetMatchResult để giữ nguyên trang chính ở dưới
         setAnalyzeResult(res.data);
 
-        // 2. Luôn luôn mở Popup kết quả đè lên trang
         setShowResultModal(true);
 
-        // 3. Cập nhật lại danh sách lịch sử đối sánh ở thanh dropdown dưới cùng
         await fetchMatchingsForCv();
       }
     } catch (err) {
@@ -307,10 +330,8 @@ export function CVMatching() {
   const handleSetDefaultFromModal = async () => {
     if (!activeCv?.cv_id) return;
     try {
-      // Gọi API set default CV (Backend tự động set match cao nhất của CV này)
       await profileApi.setDefaultCv(activeCv.cv_id);
 
-      // Đã set default thành công -> Lúc này mới tải lại toàn bộ trang để giao diện chính cập nhật theo data mới
       await fetchConfigAndProfileData();
       await fetchMatchingsForCv();
 
@@ -627,17 +648,66 @@ export function CVMatching() {
                   </div>
 
                   {mode === "role" && (
-                    <select
-                      value={selectedRole}
-                      onChange={(e) => setSelectedRole(e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 font-medium h-[34px]"
-                    >
-                      {benchmarkRoles.map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative w-full" ref={dropdownRef}>
+                      {/* Nút bấm giả lập hiển thị Role đang chọn */}
+                      <button
+                        type="button"
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 font-medium h-[34px] flex items-center justify-between text-left shadow-sm hover:bg-slate-100/50 transition-all"
+                      >
+                        <span className="truncate">
+                          {selectedRole || "Chọn vị trí tuyển dụng..."}
+                        </span>
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isDropdownOpen ? "transform rotate-180" : ""}`}
+                        />
+                      </button>
+
+                      {/* Khung tìm kiếm và danh sách lựa chọn */}
+                      {isDropdownOpen && (
+                        <div className="absolute z-30 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-1 duration-150">
+                          {/* Ô nhập từ khóa tìm kiếm */}
+                          <div className="p-2 border-b border-slate-100 bg-slate-50/50">
+                            <input
+                              type="text"
+                              placeholder="Tìm kiếm vị trí..."
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              autoFocus
+                              className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400 text-slate-700"
+                            />
+                          </div>
+
+                          {/* Danh sách kết quả cuộn động */}
+                          <div className="overflow-y-auto flex-1 divide-y divide-slate-50">
+                            {filteredRoles.length > 0 ? (
+                              filteredRoles.map((role) => (
+                                <button
+                                  key={role}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedRole(role);
+                                    setIsDropdownOpen(false);
+                                    setSearchTerm(""); // Reset từ khóa sau khi chọn
+                                  }}
+                                  className={`w-full text-left px-3 py-2 text-xs font-medium transition-colors block truncate ${
+                                    selectedRole === role
+                                      ? "bg-blue-50 text-blue-700 font-bold"
+                                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                  }`}
+                                >
+                                  {role}
+                                </button>
+                              ))
+                            ) : (
+                              <p className="text-xs text-slate-400 italic p-3 text-center">
+                                Không tìm thấy vị trí phù hợp
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                   {mode === "url" && (
                     <input
