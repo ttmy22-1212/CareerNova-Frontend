@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      allowedOrigins: ["146.190.109.180", "146.190.109.180:80"],
+      allowedOrigins: ["152.42.218.141", "152.42.218.141:80"],
     },
   },
 };

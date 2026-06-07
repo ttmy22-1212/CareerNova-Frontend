@@ -32,10 +32,116 @@ import { userProfile } from "@/data/mockData";
 import CvApi from "@/api/cv";
 import MatchingApi from "@/api/matching";
 import profileApi from "@/api/profile";
-import { MatchedSkillDetail } from "@/types/matching";
+import {
+  MatchedSkillDetail,
+  GetMatchCategoriesApiResponse,
+  MatchCategoryResponse,
+} from "@/types/matching";
 import { CvItemDto } from "@/types/cv";
 
 type InputMode = "role" | "url";
+
+function CategoryDropdown({
+  categories,
+  selected,
+  onSelect,
+  isLoading,
+}: {
+  categories: MatchCategoryResponse[];
+  selected: string;
+  onSelect: (cat: string) => void;
+  isLoading: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const dropdownRef = useRef(null);
+
+  const filtered = categories.filter((c) =>
+    (c.category || "").toLowerCase().includes(search.toLowerCase()),
+  );
+
+  return (
+    <div ref={dropdownRef} className="relative w-full">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-all"
+      >
+        <span className="truncate">
+          {selected === "All" ? "Tất cả nhóm kỹ năng" : selected}
+        </span>
+
+        {isLoading ? (
+          <Loader2 className="w-3.5 h-3.5 text-slate-400 animate-spin" />
+        ) : (
+          <ChevronDown
+            className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-40 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="p-2 border-b border-slate-100 bg-slate-50/50">
+            <input
+              type="text"
+              placeholder="Tìm kiếm nhóm kỹ năng..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoFocus
+              className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400 text-slate-700"
+            />
+          </div>
+
+          <div className="overflow-y-auto flex-1 divide-y divide-slate-50">
+            <button
+              onClick={() => {
+                onSelect("All");
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2 text-xs hover:bg-slate-50 transition-colors ${
+                selected === "All"
+                  ? "text-blue-600 font-bold bg-blue-50"
+                  : "text-slate-700"
+              }`}
+            >
+              Tất cả kỹ năng
+            </button>
+            {filtered.map((cat) => (
+              <button
+                key={cat.category}
+                onClick={() => {
+                  onSelect(cat.category);
+                  setIsOpen(false);
+                }}
+                className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-all
+                  ${
+                    selected === cat.category
+                      ? "text-blue-600 font-bold bg-blue-50"
+                      : "text-slate-700"
+                  }
+                  ${
+                    !cat.is_matched
+                      ? "opacity-30 cursor-not-allowed bg-slate-50/50"
+                      : "hover:bg-slate-50"
+                  }
+                `}
+              >
+                {cat.category}
+                {!cat.is_matched && (
+                  <span className="text-[10px] text-slate-400 ml-1">
+                    (No match)
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const getSkillLevel = (proficiency: number | null): string => {
   if (proficiency === null) return "Không có";
@@ -130,6 +236,22 @@ export function CVMatching() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const [categories, setCategories] = useState<MatchCategoryResponse[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [isCategoryLoading, setIsCategoryLoading] = useState(false);
+
+  const [modalCategories, setModalCategories] = useState<
+    MatchCategoryResponse[]
+  >([]);
+  const [selectedModalCategory, setSelectedModalCategory] = useState("All");
+  const [modalRadarDataFiltered, setModalRadarDataFiltered] = useState<any[]>(
+    [],
+  );
+  const [originalRadarData, setOriginalRadarData] = useState<any[]>([]);
+  const [originalModalRadarData, setOriginalModalRadarData] = useState<any[]>(
+    [],
+  );
+
   const filteredRoles = benchmarkRoles.filter((role) =>
     role.toLowerCase().includes(searchTerm.toLowerCase()),
   );
@@ -221,6 +343,25 @@ export function CVMatching() {
     setIsConfigChanged(true);
   }, [selectedRole, jdUrl, rightFile, activeCv]);
 
+  // --- CẬP NHẬT KHI MỞ MODAL VỚI KẾT QUẢ PHÂN TÍCH ---
+  useEffect(() => {
+    if (showResultModal && analyzeResult?.match_id) {
+      fetchCategories(analyzeResult.match_id, true);
+      setSelectedModalCategory("All");
+      // Khởi tạo data radar "All" cho Modal
+      const allData = [
+        ...(analyzeResult.radar_data || []),
+        ...(analyzeResult.gap_report?.partially_matched_skills || []),
+        ...(analyzeResult.gap_report?.missing_skills || []),
+      ].map((s: any) => ({
+        subject: s.skill_name,
+        you: Math.round((s.similarity || 0) * 100),
+        required: Math.round((s.weight || 0) * 100),
+      }));
+      setModalRadarDataFiltered(allData);
+    }
+  }, [showResultModal, analyzeResult]);
+
   // Hàm helper map cấu trúc JSON API sang Object phẳng cho UI Recharts
   const mapAndSetMatchResult = (backendData: any) => {
     const allSkillsForRadar = [
@@ -282,6 +423,73 @@ export function CVMatching() {
     setMatchResult(mappedResult);
     setAnalyzed(true);
     setIsConfigChanged(false);
+  };
+
+  const fetchCategories = async (matchId: string, isModal = false) => {
+    try {
+      const res = await MatchingApi.getMatchCategories(matchId);
+      if (res) {
+        if (isModal) setModalCategories(res.data);
+        else setCategories(res.data);
+      }
+    } catch (err) {
+      console.error("Lỗi lấy danh sách categories:", err);
+    }
+  };
+
+  const handleCategoryChange = async (
+    matchId: string,
+    category: string,
+    isModal = false,
+  ) => {
+    if (isModal) setSelectedModalCategory(category);
+    else setSelectedCategory(category);
+
+    if (category === "All") {
+      if (isModal) {
+        setModalRadarDataFiltered(originalRadarData);
+      } else {
+        setMatchResult((prev: any) => ({
+          ...prev,
+          radarData: originalRadarData,
+        }));
+      }
+      return;
+    }
+
+    try {
+      setIsCategoryLoading(true);
+      const res = await MatchingApi.getRadarByCategory(matchId, category);
+
+      // Bóc đúng 3 tầng .data theo log console thực tế
+      const skillArray = res?.data;
+
+      if (skillArray && Array.isArray(skillArray)) {
+        const formattedData = skillArray.map((s: any) => ({
+          subject: s.skill_name || s.subject,
+          you: Math.round((s.similarity || 0) * 100),
+          required: Math.round((s.weight || 0) * 100),
+        }));
+
+        if (isModal) {
+          setModalRadarDataFiltered(formattedData);
+        } else {
+          setMatchResult((prev: any) => ({
+            ...prev,
+            radarData: formattedData,
+          }));
+        }
+      } else {
+        console.warn(
+          "Không tìm thấy mảng kỹ năng hợp lệ trong RadarCategoryResponseDto:",
+          res,
+        );
+      }
+    } catch (err) {
+      console.error("Lỗi lọc radar theo category:", err);
+    } finally {
+      setIsCategoryLoading(false);
+    }
   };
 
   const handleAnalyzeAndMatch = async () => {
@@ -352,6 +560,8 @@ export function CVMatching() {
       const res = await MatchingApi.getMatchDetail(matchId);
       if (res?.data) {
         mapAndSetMatchResult(res.data);
+        fetchCategories(matchId); // Thêm dòng này
+        setSelectedCategory("All"); // Reset filter
       }
     } catch (err) {
       console.error("Lỗi khi tải chi tiết lịch sử đối sánh:", err);
@@ -1083,6 +1293,21 @@ export function CVMatching() {
                 <p className="text-xs text-slate-500 mb-4">
                   You vs. Requirements
                 </p>
+
+                {/* Chèn Dropdown vào đây */}
+                {categories.length > 0 && (
+                  <div className="mb-4">
+                    <CategoryDropdown
+                      categories={categories}
+                      selected={selectedCategory}
+                      onSelect={(cat) =>
+                        handleCategoryChange(selectedMatchingId, cat)
+                      }
+                      isLoading={isCategoryLoading}
+                    />
+                  </div>
+                )}
+
                 <ResponsiveContainer width="100%" height={220}>
                   <RadarChart
                     data={matchResult.radarData}
@@ -1303,9 +1528,42 @@ export function CVMatching() {
                     <p className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide self-start">
                       Skills Radar Graph
                     </p>
+
+                    {/* Chèn Dropdown vào Modal */}
+                    {modalCategories.length > 0 && (
+                      <div className="w-full mb-3">
+                        <CategoryDropdown
+                          categories={modalCategories}
+                          selected={selectedModalCategory}
+                          onSelect={(cat) =>
+                            handleCategoryChange(
+                              analyzeResult.match_id,
+                              cat,
+                              true,
+                            )
+                          }
+                          isLoading={isCategoryLoading}
+                        />
+                      </div>
+                    )}
+
                     <ResponsiveContainer width="100%" height={240}>
                       <RadarChart
-                        data={modalRadarData}
+                        data={
+                          modalRadarDataFiltered.length > 0
+                            ? modalRadarDataFiltered
+                            : [
+                                ...(analyzeResult.radar_data || []),
+                                ...(analyzeResult.gap_report
+                                  ?.partially_matched_skills || []),
+                                ...(analyzeResult.gap_report?.missing_skills ||
+                                  []),
+                              ].map((s: any) => ({
+                                subject: s.skill_name,
+                                you: Math.round((s.similarity || 0) * 100),
+                                required: Math.round((s.weight || 0) * 100),
+                              }))
+                        }
                         margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
                       >
                         <PolarGrid stroke="#e2e8f0" />

@@ -5,6 +5,8 @@ import {
   CheckHistoryResponseDto,
   CvJobMatchResultDto,
   GetAllMatchesResponse,
+  GetMatchCategoriesApiResponse,
+  GetRadarByCategoryApiResponse,
 } from "@/types/matching";
 
 export default class MatchingApi {
@@ -30,5 +32,22 @@ export default class MatchingApi {
     matchId: string,
   ): Promise<IBaseResponse<CvJobMatchResultDto>> {
     return await apiGet(`/matching/history/${matchId}`);
+  }
+
+  static async getMatchCategories(
+    matchId: string,
+  ): Promise<GetMatchCategoriesApiResponse> {
+    return await apiGet(`/matching/history/${matchId}/categories`);
+  }
+
+  static async getRadarByCategory(
+    matchId: string,
+    category: string,
+  ): Promise<GetRadarByCategoryApiResponse> {
+    return await apiGet(
+      `/matching/history/${matchId}/radar?category=${encodeURIComponent(
+        category,
+      )}`,
+    );
   }
 }

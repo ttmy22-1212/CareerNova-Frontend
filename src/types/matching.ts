@@ -57,3 +57,28 @@ export type AnalyzeCvResponse = IBaseResponse<CvJobMatchResultDto>;
 export type GetMatchDetailResponse = IBaseResponse<CvJobMatchResultDto>;
 
 export type GetAllMatchesResponse = IBaseResponse<CvJobMatchResultDto[]>;
+
+export interface GetRadarCategoryQuery {
+  category: string;
+}
+
+export interface MatchCategoryResponse {
+  category: string;
+  is_matched: boolean;
+}
+
+export interface MatchedSkillDetail {
+  skill_id: number;
+  skill_name: string;
+  weight: number;
+  similarity: number;
+  contribution: number;
+}
+
+export interface GetMatchCategoriesApiResponse {
+  data: MatchCategoryResponse[];
+}
+
+export interface GetRadarByCategoryApiResponse {
+  data: MatchedSkillDetail[];
+}
