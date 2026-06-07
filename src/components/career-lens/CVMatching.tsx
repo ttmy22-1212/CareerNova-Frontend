@@ -17,6 +17,7 @@ import {
   Loader2,
   Star,
   History,
+  Eye,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -32,11 +33,7 @@ import { userProfile } from "@/data/mockData";
 import CvApi from "@/api/cv";
 import MatchingApi from "@/api/matching";
 import profileApi from "@/api/profile";
-import {
-  MatchedSkillDetail,
-  GetMatchCategoriesApiResponse,
-  MatchCategoryResponse,
-} from "@/types/matching";
+import { MatchedSkillDetail, MatchCategoryResponse } from "@/types/matching";
 import { CvItemDto } from "@/types/cv";
 
 type InputMode = "role" | "url";
@@ -95,19 +92,6 @@ function CategoryDropdown({
           </div>
 
           <div className="overflow-y-auto flex-1 divide-y divide-slate-50">
-            <button
-              onClick={() => {
-                onSelect("All");
-                setIsOpen(false);
-              }}
-              className={`w-full text-left px-3 py-2 text-xs hover:bg-slate-50 transition-colors ${
-                selected === "All"
-                  ? "text-blue-600 font-bold bg-blue-50"
-                  : "text-slate-700"
-              }`}
-            >
-              Tất cả kỹ năng
-            </button>
             {filtered.map((cat) => (
               <button
                 key={cat.category}
@@ -131,7 +115,7 @@ function CategoryDropdown({
                 {cat.category}
                 {!cat.is_matched && (
                   <span className="text-[10px] text-slate-400 ml-1">
-                    (No match)
+                    (Không khớp)
                   </span>
                 )}
               </button>
@@ -188,6 +172,27 @@ function ScoreRing({ score, size = 96 }: { score: number; size?: number }) {
     </div>
   );
 }
+
+const CustomRadarTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-white p-3 border border-slate-200 shadow-xl rounded-lg text-xs font-medium">
+        <p className="text-slate-900 font-semibold mb-1 flex items-center gap-1">
+          <span>{data.subject}</span>
+          {data.matchedVia && (
+            <span className="text-violet-500 font-normal text-[11px] bg-violet-50 px-1.5 py-0.5 rounded">
+              (khớp qua {data.matchedVia})
+            </span>
+          )}
+        </p>
+        <p className="text-blue-600">Bạn có: {data.you}%</p>
+        <p className="text-emerald-600">Yêu cầu: {data.required}%</p>
+      </div>
+    );
+  }
+  return null;
+};
 
 export function CVMatching() {
   const [mode, setMode] = useState<InputMode>("role");
@@ -256,6 +261,10 @@ export function CVMatching() {
     role.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
+  // State quản lý CV nào đang được chọn để xem chi tiết trong Popup
+  const [viewingCvUrl, setViewingCvUrl] = useState<string | null>(null);
+  const [viewingCvName, setViewingCvName] = useState<string>("");
+
   // Tải thông tin hồ sơ người dùng để phân rã Default CV và Toàn bộ CV
   const fetchConfigAndProfileData = async () => {
     try {
@@ -277,6 +286,7 @@ export function CVMatching() {
           currentCv = {
             cv_id: userData.default_cv.cv_id,
             file_name: userData.default_cv.file_name,
+            file_url: userData.default_cv.file_url || "",
             createdAt: userData.default_cv.uploaded_at,
           };
         } else if (userData.all_cvs && userData.all_cvs.length > 0) {
@@ -284,16 +294,17 @@ export function CVMatching() {
           currentCv = {
             cv_id: firstCv.cv_id,
             file_name: firstCv.file_name,
+            file_url: firstCv.file_url || "",
             createdAt: firstCv.uploaded_at,
           };
         }
         setActiveCv(currentCv);
 
-        // Đổ dữ liệu match mặc định có sẵn trong getMe ra UI ngay khi load trang
         if (userData.default_match) {
           mapAndSetMatchResult(userData.default_match);
           if (userData.default_match.match_id) {
             setSelectedMatchingId(userData.default_match.match_id);
+            fetchCategories(userData.default_match.match_id);
           }
         }
       }
@@ -320,7 +331,6 @@ export function CVMatching() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Gọi API lấy danh sách matchings bằng hàm /matching/history mới bổ sung
   const fetchMatchingsForCv = async () => {
     try {
       const res = await MatchingApi.getAllMatches();
@@ -343,12 +353,11 @@ export function CVMatching() {
     setIsConfigChanged(true);
   }, [selectedRole, jdUrl, rightFile, activeCv]);
 
-  // --- CẬP NHẬT KHI MỞ MODAL VỚI KẾT QUẢ PHÂN TÍCH ---
   useEffect(() => {
     if (showResultModal && analyzeResult?.match_id) {
       fetchCategories(analyzeResult.match_id, true);
       setSelectedModalCategory("All");
-      // Khởi tạo data radar "All" cho Modal
+
       const allData = [
         ...(analyzeResult.radar_data || []),
         ...(analyzeResult.gap_report?.partially_matched_skills || []),
@@ -356,13 +365,14 @@ export function CVMatching() {
       ].map((s: any) => ({
         subject: s.skill_name,
         you: Math.round((s.similarity || 0) * 100),
-        required: Math.round((s.weight || 0) * 100),
+        required: 100,
       }));
+
       setModalRadarDataFiltered(allData);
+      setOriginalModalRadarData(allData);
     }
   }, [showResultModal, analyzeResult]);
 
-  // Hàm helper map cấu trúc JSON API sang Object phẳng cho UI Recharts
   const mapAndSetMatchResult = (backendData: any) => {
     const allSkillsForRadar = [
       ...(backendData.radar_data || []),
@@ -382,7 +392,7 @@ export function CVMatching() {
           .map((s: MatchedSkillDetail) => ({
             skill: s.skill_name,
             cvLevel: getSkillLevel(s.similarity * 100),
-            required: s.weight >= 0.2 ? "Required" : "Preferred",
+            required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
             match: Math.round(s.similarity * 100),
             years: 1,
           })),
@@ -391,35 +401,36 @@ export function CVMatching() {
         ).map((s: any) => ({
           skill: s.skill_name,
           cvLevel: getSkillLevel(s.similarity * 100),
-          required: s.weight >= 0.2 ? "Required" : "Preferred",
+          required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
           match: Math.round(s.similarity * 100),
           years: 0,
         })),
         missingSkills: (backendData.gap_report?.missing_skills || []).map(
           (s: any) => ({
             skill: s.skill_name,
-            required: s.weight >= 0.2 ? "Required" : "Preferred",
-            priority: s.weight >= 0.2 ? "Critical" : "Nice to have",
+            required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
+            priority: s.weight >= 0.2 ? "Tối thiểu" : "Tốt để có",
           }),
         ),
       },
       experience: {
-        required: "3+ years",
-        yours: `${userProfile.experience_years} years`,
+        required: "3+ năm",
+        yours: `${userProfile.experience_years} năm`,
         match: Math.min((userProfile.experience_years / 5) * 100, 100),
       },
       education: {
-        required: "Bachelor's in CS or related",
+        required: "Cử nhân ngành Khoa học Máy tính hoặc liên quan",
         yours: userProfile.education_level,
         match: 100,
       },
       radarData: allSkillsForRadar.map((s: any) => ({
         subject: s.skill_name,
         you: Math.round((s.similarity || 0) * 100),
-        required: Math.round((s.weight || 0) * 100),
+        required: 100,
       })),
     };
-
+    setOriginalRadarData(mappedResult.radarData);
+    setOriginalModalRadarData(mappedResult.radarData);
     setMatchResult(mappedResult);
     setAnalyzed(true);
     setIsConfigChanged(false);
@@ -428,9 +439,20 @@ export function CVMatching() {
   const fetchCategories = async (matchId: string, isModal = false) => {
     try {
       const res = await MatchingApi.getMatchCategories(matchId);
-      if (res) {
-        if (isModal) setModalCategories(res.data);
-        else setCategories(res.data);
+
+      const categoriesArray = res.data;
+
+      if (Array.isArray(categoriesArray)) {
+        if (isModal) {
+          setModalCategories(categoriesArray);
+        } else {
+          setCategories(categoriesArray);
+        }
+      } else {
+        console.warn(
+          "Dữ liệu trả về không phải là một mảng mảng!",
+          categoriesArray,
+        );
       }
     } catch (err) {
       console.error("Lỗi lấy danh sách categories:", err);
@@ -447,7 +469,7 @@ export function CVMatching() {
 
     if (category === "All") {
       if (isModal) {
-        setModalRadarDataFiltered(originalRadarData);
+        setModalRadarDataFiltered(originalModalRadarData);
       } else {
         setMatchResult((prev: any) => ({
           ...prev,
@@ -461,15 +483,30 @@ export function CVMatching() {
       setIsCategoryLoading(true);
       const res = await MatchingApi.getRadarByCategory(matchId, category);
 
-      // Bóc đúng 3 tầng .data theo log console thực tế
-      const skillArray = res?.data;
+      if (res) {
+        const rawRadar = res.data.radar_data || [];
+        const rawGapReport = (res.data.gap_report as any) || {};
 
-      if (skillArray && Array.isArray(skillArray)) {
-        const formattedData = skillArray.map((s: any) => ({
-          subject: s.skill_name || s.subject,
-          you: Math.round((s.similarity || 0) * 100),
-          required: Math.round((s.weight || 0) * 100),
-        }));
+        const combinedSkills = [
+          ...rawRadar,
+          ...(rawGapReport.partially_matched_skills || []),
+          ...(rawGapReport.missing_skills || []),
+        ];
+
+        const formattedData = combinedSkills.map((s: any) => {
+          let youScore = Math.round((s.similarity || 0) * 100);
+
+          if (youScore === 0) {
+            youScore = 0.1;
+          }
+
+          return {
+            subject: s.skill_name,
+            you: youScore,
+            required: 100,
+            matchedVia: s.matched_via || null,
+          };
+        });
 
         if (isModal) {
           setModalRadarDataFiltered(formattedData);
@@ -479,11 +516,6 @@ export function CVMatching() {
             radarData: formattedData,
           }));
         }
-      } else {
-        console.warn(
-          "Không tìm thấy mảng kỹ năng hợp lệ trong RadarCategoryResponseDto:",
-          res,
-        );
       }
     } catch (err) {
       console.error("Lỗi lọc radar theo category:", err);
@@ -614,7 +646,21 @@ export function CVMatching() {
     try {
       const response = await CvApi.uploadCv(selectedFile);
       if (response && response.data) {
-        setRightFile(selectedFile);
+        setRightFile(null);
+        const uploadedCv = response.data;
+        if (uploadedCv?.cv_id) {
+          setActiveCv({
+            cv_id: uploadedCv.cv_id,
+            file_name: uploadedCv.file_name || selectedFile.name,
+            file_url: uploadedCv.file_url || "",
+            createdAt: new Date().toISOString(),
+          });
+
+          const profileRes = await profileApi.getMe();
+          if (profileRes?.data?.all_cvs) {
+            setAllCvs(profileRes.data.all_cvs);
+          }
+        }
       } else {
         setRightUploadError(
           response?.message || "Tải CV lên thất bại. Vui lòng thử lại.",
@@ -714,6 +760,20 @@ export function CVMatching() {
                           {activeCv.file_name}
                         </p>
                       </div>
+                      {activeCv.file_url && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Ngăn chặn sự kiện lan ra ngoài
+                            setViewingCvUrl(activeCv.file_url);
+                            setViewingCvName(activeCv.file_name);
+                          }}
+                          className="p-1.5 hover:bg-emerald-100 text-emerald-700 rounded-lg transition-colors"
+                          title="Xem nội dung CV"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={handleAnalyzeAndMatch}
                         disabled={isLoading}
@@ -759,10 +819,10 @@ export function CVMatching() {
                           className="px-2.5 py-1.5 border border-slate-200 bg-white text-slate-700 font-semibold rounded-lg text-[11px] hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400 whitespace-nowrap transition-all"
                         >
                           {isUpdatingDefault
-                            ? "Processing..."
+                            ? "Đang cập nhật..."
                             : activeCv.cv_id === defaultCv?.cv_id
-                              ? "Is Default ⭐"
-                              : "Set Default"}
+                              ? "Mặc định?  ⭐"
+                              : "Đặt làm mặc định"}
                         </button>
                       </div>
                     )}
@@ -771,10 +831,11 @@ export function CVMatching() {
                   <div className="border border-dashed border-slate-200 bg-slate-50/50 rounded-xl p-4 text-center flex flex-col justify-center items-center h-[114px]">
                     <AlertCircle className="w-5 h-5 text-slate-400 mb-1" />
                     <p className="text-xs font-semibold text-slate-600 mb-0.5">
-                      No CV Document Selected
+                      Không có tài liệu CV nào được chọn
                     </p>
                     <p className="text-[11px] text-slate-400">
-                      Please upload or manage your CVs in Profile settings.
+                      Vui lòng tải lên hoặc quản lý CV của bạn trong cài đặt Hồ
+                      sơ.
                     </p>
                   </div>
                 )}
@@ -805,7 +866,7 @@ export function CVMatching() {
                     <div className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
                       <p className="text-xs font-medium text-slate-600">
-                        Uploading...
+                        Đang tải lên...
                       </p>
                     </div>
                   ) : rightFile ? (
@@ -815,7 +876,7 @@ export function CVMatching() {
                         {rightFile.name}
                       </p>
                       <span className="text-[10px] text-emerald-600 font-medium shrink-0">
-                        (Done)
+                        (Hoàn tất)
                       </span>
                     </div>
                   ) : (
@@ -838,7 +899,7 @@ export function CVMatching() {
               <div className="space-y-2.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
-                    Job Description Source
+                    Nguồn Mô tả Công việc
                   </label>
                   <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl mb-2">
                     {modeButtons.map((b) => (
@@ -898,7 +959,7 @@ export function CVMatching() {
                                   onClick={() => {
                                     setSelectedRole(role);
                                     setIsDropdownOpen(false);
-                                    setSearchTerm(""); // Reset từ khóa sau khi chọn
+                                    setSearchTerm("");
                                   }}
                                   className={`w-full text-left px-3 py-2 text-xs font-medium transition-colors block truncate ${
                                     selectedRole === role
@@ -938,12 +999,12 @@ export function CVMatching() {
                   {isLoading ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Analyzing...
+                      Đang phân tích...
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-3.5 h-3.5" />
-                      Analyze & Match
+                      Phân tích & So khớp
                     </>
                   )}
                 </button>
@@ -951,19 +1012,18 @@ export function CVMatching() {
             </div>
           </div>
 
-          {/* HÀNG DƯỚI CÙNG: THANH DROPDOWN MATCH HISTORY KÉO DÀI CÂN TOÀN BỘ HAI CỘT */}
           {activeCv && (
             <div className="pt-4 border-t border-slate-100 w-full">
               <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide flex items-center gap-1">
-                <History className="w-3 h-3 text-slate-500" /> Match History for
-                this CV
+                <History className="w-3 h-3 text-slate-500" /> Lịch sử phù hợp
+                cho CV này
               </label>
               <select
                 value={selectedMatchingId}
                 onChange={(e) => handleSelectHistoryMatching(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 px-3 py-2 text-xs rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 font-medium"
               >
-                <option value="">-- Select an old match analysis --</option>
+                <option value="">-- Chọn lần phân tích phù hợp --</option>
                 {allMatchings.map((match) => (
                   <option key={match.match_id} value={match.match_id}>
                     {match.search_group || "Benchmark Role"} (
@@ -984,10 +1044,12 @@ export function CVMatching() {
           <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <BarChart3 className="w-8 h-8 text-blue-400" />
           </div>
-          <h3 className="font-bold text-slate-900 mb-2">Ready to analyze</h3>
+          <h3 className="font-bold text-slate-900 mb-2">
+            Sẵn sàng để phân tích
+          </h3>
           <p className="text-sm text-slate-500">
-            Upload your CV and provide a job description to see your
-            personalized match analysis.
+            Tải lên CV của bạn và cung cấp mô tả công việc để xem phân tích phù
+            hợp cá nhân hóa.
           </p>
         </div>
       ) : (
@@ -996,15 +1058,15 @@ export function CVMatching() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
               {
-                label: "Overall Match",
+                label: "Tổng thể phù hợp",
                 value: matchResult.overallScore,
-                sub: "Strong candidate",
+                sub: "Ứng viên mạnh",
                 type: "ring",
               },
               {
-                label: "Skills Matched",
+                label: "Kỹ năng phù hợp",
                 value: `${matchResult.analysis.strongMatches.length}/${matchResult.analysis.strongMatches.length + matchResult.analysis.partialMatches.length + matchResult.analysis.missingSkills.length}`,
-                sub: "Core skills fully met",
+                sub: "Kỹ năng cốt lõi được đáp ứng hoàn toàn",
                 type: "text",
                 color: "text-emerald-600",
               },
@@ -1037,10 +1099,9 @@ export function CVMatching() {
             ))}
           </div>
 
-          {/* ── Matching For Banner ── */}
           <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl px-6 py-4 flex items-center justify-between">
             <div>
-              <p className="text-slate-400 text-xs mb-0.5">Analyzed against</p>
+              <p className="text-slate-400 text-xs mb-0.5">Phân tích so sánh</p>
               <p className="text-white font-bold">{matchResult.jobTitle}</p>
               <p className="text-slate-400 text-xs">{matchResult.company}</p>
             </div>
@@ -1048,14 +1109,15 @@ export function CVMatching() {
               href="/skill-gap"
               className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
             >
-              View Gap Analysis <ArrowRight className="w-4 h-4" />
+              Xem phân tích khoảng cách kỹ năng{" "}
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
           {/* ── Body ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
             {/* Skills Breakdown */}
-            <div className="lg:col-span-2 space-y-4">
+            <div className="lg:col-span-3 space-y-4">
               {/* Strong Matches */}
               <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
                 <button
@@ -1068,10 +1130,10 @@ export function CVMatching() {
                     </div>
                     <div className="text-left">
                       <p className="font-bold text-slate-900 text-sm">
-                        Strong Matches
+                        Tương thích mạnh
                       </p>
                       <p className="text-xs text-slate-500">
-                        Skills you've fully demonstrated
+                        Kỹ năng bạn đã thể hiện đầy đủ
                       </p>
                     </div>
                     <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full ml-1">
@@ -1109,7 +1171,7 @@ export function CVMatching() {
                               {item.skill}
                             </span>
                             <span className="text-xs font-bold text-emerald-600">
-                              {item.match}% Match
+                              {item.match}% Tương thích
                             </span>
                           </div>
                           <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -1117,18 +1179,18 @@ export function CVMatching() {
                           </div>
                           <div className="flex gap-4 mt-1.5 text-[11px] text-slate-500">
                             <span>
-                              Your level:{" "}
+                              Cấp độ của bạn:{" "}
                               <span className="font-semibold text-slate-700">
                                 {item.cvLevel}
                               </span>
                             </span>
                             <span>
-                              Required:{" "}
+                              Yêu cầu:{" "}
                               <span className="font-semibold text-slate-700">
                                 {item.required}
                               </span>
                             </span>
-                            <span>{item.years}+ yrs experience</span>
+                            <span>{item.years}+ năm kinh nghiệm</span>
                           </div>
                         </div>
                       </div>
@@ -1149,10 +1211,10 @@ export function CVMatching() {
                     </div>
                     <div className="text-left">
                       <p className="font-bold text-slate-900 text-sm">
-                        Partial Matches
+                        Tương thích một phần
                       </p>
                       <p className="text-xs text-slate-500">
-                        Skills you have but need to level up
+                        Kỹ năng bạn có nhưng cần nâng cấp
                       </p>
                     </div>
                     <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full ml-1">
@@ -1186,7 +1248,7 @@ export function CVMatching() {
                             {item.skill}
                           </span>
                           <span className="text-xs font-bold text-amber-600">
-                            {item.match}% Match
+                            {item.match}% Tương thích
                           </span>
                         </div>
                         <div className="relative h-1.5 bg-slate-100 rounded-full overflow-hidden mb-1.5">
@@ -1197,13 +1259,13 @@ export function CVMatching() {
                         </div>
                         <div className="flex gap-4 text-[11px] text-slate-500">
                           <span>
-                            Your level:{" "}
+                            Cấp độ của bạn:{" "}
                             <span className="font-semibold text-slate-700">
                               {item.cvLevel}
                             </span>
                           </span>
                           <span>
-                            Required:{" "}
+                            Yêu cầu:{" "}
                             <span className="font-semibold text-slate-700">
                               {item.required}
                             </span>
@@ -1212,7 +1274,8 @@ export function CVMatching() {
                         <div className="mt-2 flex items-start gap-1.5 p-2 bg-amber-50 rounded-lg">
                           <Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
                           <p className="text-[11px] text-amber-700 font-medium">
-                            Consider upskilling to reach the required level
+                            Xem xét việc nâng cao kỹ năng để đạt được cấp độ yêu
+                            cầu
                           </p>
                         </div>
                       </div>
@@ -1233,10 +1296,10 @@ export function CVMatching() {
                     </div>
                     <div className="text-left">
                       <p className="font-bold text-slate-900 text-sm">
-                        Missing Skills
+                        Kỹ năng thiếu
                       </p>
                       <p className="text-xs text-slate-500">
-                        Skills not yet in your profile
+                        Kỹ năng chưa có trong hồ sơ của bạn
                       </p>
                     </div>
                     <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded-full ml-1">
@@ -1274,7 +1337,7 @@ export function CVMatching() {
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-500 mb-1.5">
-                          Req: {item.required}
+                          Yêu cầu: {item.required}
                         </p>
                         <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-full">
                           {item.priority}
@@ -1287,14 +1350,10 @@ export function CVMatching() {
             </div>
 
             {/* Radar Chart Sidebar */}
-            <div className="space-y-4">
+            <div className="lg:col-span-2 space-y-4">
               <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-                <h3 className="font-bold text-slate-900 mb-1">Skills Radar</h3>
-                <p className="text-xs text-slate-500 mb-4">
-                  You vs. Requirements
-                </p>
+                <h3 className="font-bold text-slate-900 mb-1">Radar kỹ năng</h3>
 
-                {/* Chèn Dropdown vào đây */}
                 {categories.length > 0 && (
                   <div className="mb-4">
                     <CategoryDropdown
@@ -1308,7 +1367,7 @@ export function CVMatching() {
                   </div>
                 )}
 
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={240}>
                   <RadarChart
                     data={matchResult.radarData}
                     margin={{ top: 10, right: 20, bottom: 10, left: 20 }}
@@ -1337,17 +1396,17 @@ export function CVMatching() {
                       fill="#10b981"
                       fillOpacity={0.15}
                     />
-                    <Tooltip />
+                    <Tooltip content={<CustomRadarTooltip />} />
                   </RadarChart>
                 </ResponsiveContainer>
                 <div className="flex gap-4 justify-center mt-2">
                   <div className="flex items-center gap-1.5 text-xs text-slate-500">
                     <span className="w-4 h-0.5 bg-blue-500 rounded-full inline-block" />
-                    You
+                    Bạn
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-slate-500">
                     <span className="w-4 h-0.5 bg-emerald-500 rounded-full inline-block" />
-                    Required
+                    Yêu cầu
                   </div>
                 </div>
               </div>
@@ -1355,16 +1414,18 @@ export function CVMatching() {
               {/* CTA */}
               <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-100 rounded-xl p-5">
                 <p className="text-sm font-bold text-violet-900 mb-1">
-                  Want detailed recommendations?
+                  Muốn có những gợi ý chi tiết?
                 </p>
                 <p className="text-xs text-violet-700 mb-3">
-                  See exactly what to learn to close your skill gaps.
+                  Xem chính xác những gì bạn cần học để lấp đầy các khoảng trống
+                  kỹ năng.
                 </p>
                 <Link
                   href="/skill-gap"
                   className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white rounded-lg text-xs font-semibold hover:bg-violet-700 transition-colors justify-center"
                 >
-                  View Gap Analysis <ArrowRight className="w-3.5 h-3.5" />
+                  Xem Phân Tích Khoảng Trống{" "}
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
             </div>
@@ -1372,7 +1433,6 @@ export function CVMatching() {
         </>
       )}
 
-      {/* Modal hiển thị kết quả phân tích mới */}
       {/* Modal hiển thị kết quả phân tích mới */}
       {showResultModal &&
         analyzeResult &&
@@ -1388,7 +1448,7 @@ export function CVMatching() {
           ].map((s: any) => ({
             subject: s.skill_name,
             you: Math.round((s.similarity || 0) * 100),
-            required: Math.round((s.weight || 0) * 100),
+            required: 100,
           }));
 
           const strongMatches = (analyzeResult.radar_data || []).filter(
@@ -1400,7 +1460,7 @@ export function CVMatching() {
 
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-              <div className="bg-white rounded-2xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto p-6 relative flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
+              <div className="bg-white rounded-2xl shadow-xl max-w-[90vw] w-full max-h-[90vh] overflow-y-auto p-6 relative flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
                 {/* Header của Modal */}
                 <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                   <div>
@@ -1433,7 +1493,7 @@ export function CVMatching() {
                       <ScoreRing score={modalScore} size={80} />
                       <div>
                         <p className="text-sm font-bold text-slate-800">
-                          Overall Match Score
+                          Điểm tương thích tổng thể
                         </p>
                         <p className="text-xs text-slate-500">
                           Hệ thống ghi nhận độ tương thích cốt lõi đạt{" "}
@@ -1442,12 +1502,11 @@ export function CVMatching() {
                       </div>
                     </div>
 
-                    {/* Strong Matches */}
                     <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
                       <div className="bg-emerald-50/50 px-4 py-3 border-b border-slate-100 flex justify-between items-center">
                         <span className="text-xs font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-1.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600" />{" "}
-                          Strong Matches ({strongMatches.length})
+                          Tương thích mạnh ({strongMatches.length})
                         </span>
                       </div>
                       <div className="p-4 flex flex-wrap gap-2">
@@ -1469,12 +1528,11 @@ export function CVMatching() {
                       </div>
                     </div>
 
-                    {/* Partial Matches */}
                     <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
                       <div className="bg-amber-50/50 px-4 py-3 border-b border-slate-100 flex justify-between items-center">
                         <span className="text-xs font-bold text-amber-800 uppercase tracking-wide flex items-center gap-1.5">
                           <AlertCircle className="w-4 h-4 text-amber-600" />{" "}
-                          Partial Matches ({partialMatches.length})
+                          Tương thích một phần ({partialMatches.length})
                         </span>
                       </div>
                       <div className="p-4 flex flex-wrap gap-2">
@@ -1496,12 +1554,11 @@ export function CVMatching() {
                       </div>
                     </div>
 
-                    {/* Missing Skills */}
                     <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
                       <div className="bg-red-50/50 px-4 py-3 border-b border-slate-100 flex justify-between items-center">
                         <span className="text-xs font-bold text-red-700 uppercase tracking-wide flex items-center gap-1.5">
-                          <XCircle className="w-4 h-4 text-red-500" /> Missing
-                          Skills ({missingSkills.length})
+                          <XCircle className="w-4 h-4 text-red-500" /> Kỹ năng
+                          thiếu ({missingSkills.length})
                         </span>
                       </div>
                       <div className="p-4 flex flex-wrap gap-2">
@@ -1523,13 +1580,11 @@ export function CVMatching() {
                     </div>
                   </div>
 
-                  {/* Cột 3: Radar Chart bên phải */}
                   <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-4 flex flex-col justify-center items-center min-h-[300px]">
                     <p className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide self-start">
-                      Skills Radar Graph
+                      Biểu đồ radar kỹ năng
                     </p>
 
-                    {/* Chèn Dropdown vào Modal */}
                     {modalCategories.length > 0 && (
                       <div className="w-full mb-3">
                         <CategoryDropdown
@@ -1550,19 +1605,10 @@ export function CVMatching() {
                     <ResponsiveContainer width="100%" height={240}>
                       <RadarChart
                         data={
-                          modalRadarDataFiltered.length > 0
+                          modalRadarDataFiltered.length > 0 ||
+                          selectedModalCategory !== "All"
                             ? modalRadarDataFiltered
-                            : [
-                                ...(analyzeResult.radar_data || []),
-                                ...(analyzeResult.gap_report
-                                  ?.partially_matched_skills || []),
-                                ...(analyzeResult.gap_report?.missing_skills ||
-                                  []),
-                              ].map((s: any) => ({
-                                subject: s.skill_name,
-                                you: Math.round((s.similarity || 0) * 100),
-                                required: Math.round((s.weight || 0) * 100),
-                              }))
+                            : modalRadarData
                         }
                         margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
                       >
@@ -1590,7 +1636,7 @@ export function CVMatching() {
                           fill="#10b981"
                           fillOpacity={0.15}
                         />
-                        <Tooltip />
+                        <Tooltip content={<CustomRadarTooltip />} />
                       </RadarChart>
                     </ResponsiveContainer>
                     <div className="flex gap-4 justify-center mt-3 text-[11px]">
@@ -1611,9 +1657,9 @@ export function CVMatching() {
                   <div className="flex items-center gap-2 text-slate-600 text-xs text-center sm:text-left">
                     <Info className="w-4 h-4 text-slate-400 shrink-0 hidden sm:inline" />
                     <span>
-                      Bạn có muốn **đặt CV này làm mặc định**? Hệ thống sẽ tự
-                      động ghim lượt đối sánh cao điểm nhất của CV này làm dữ
-                      liệu hiển thị chính trên Dashboard.
+                      Bạn có muốn đặt CV này làm mặc định? Hệ thống sẽ tự động
+                      ghim lượt đối sánh cao điểm nhất của CV này làm dữ liệu
+                      hiển thị chính trên Dashboard.
                     </span>
                   </div>
                   <div className="flex gap-2 w-full sm:w-auto shrink-0">
@@ -1635,6 +1681,49 @@ export function CVMatching() {
             </div>
           );
         })()}
+
+      {viewingCvUrl && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden border border-slate-100">
+            {/* Header của Popup */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="w-5 h-5 text-violet-600 shrink-0" />
+                <h3 className="text-sm font-bold text-slate-800 truncate">
+                  Chi tiết tài liệu: {viewingCvName}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setViewingCvUrl(null);
+                  setViewingCvName("");
+                }}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 bg-slate-100 p-4 flex justify-center items-center overflow-auto">
+              {viewingCvUrl.toLowerCase().includes(".pdf") ? (
+                <iframe
+                  src={`${viewingCvUrl}#toolbar=0&navpanes=0`}
+                  className="w-full h-full rounded-lg bg-white border border-slate-200"
+                  title="PDF Preview"
+                />
+              ) : (
+                <div className="max-w-full max-h-full overflow-auto flex justify-center">
+                  <img
+                    src={viewingCvUrl}
+                    alt="CV Preview"
+                    className="max-w-full h-auto object-contain rounded-lg shadow-md bg-white"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

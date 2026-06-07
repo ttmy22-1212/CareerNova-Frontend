@@ -1,6 +1,7 @@
 export interface CvItemDto {
   cv_id: string;
   file_name: string;
+  file_url: string;
   createdAt: string;
 }
 

@@ -26,7 +26,7 @@ interface Step {
 
 const STEPS: Step[] = [
   {
-    title: "Chào mừng đến Career Lens! 👋",
+    title: "Chào mừng đến Career Nova! 👋",
     desc: "Mình sẽ hướng dẫn bạn trực tiếp trên giao diện thực — không phải demo giả. Bấm Tiếp theo để bắt đầu!",
     tip: "6 bước · Khoảng 1 phút",
   },

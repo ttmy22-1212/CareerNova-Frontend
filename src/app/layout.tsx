@@ -16,7 +16,7 @@ import { AuthProvider } from "@/contexts/auth/auth-context";
 // caused noisy reload behavior in dev. We use the system font stack instead.
 
 export const metadata: Metadata = {
-  title: "Career Lens",
+  title: "Career Nova",
   description:
     "Nền tảng hỗ trợ định hướng nghề nghiệp và cá nhân hoá lộ trình học tập",
   icons: {

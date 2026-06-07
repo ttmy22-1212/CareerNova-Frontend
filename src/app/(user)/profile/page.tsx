@@ -34,6 +34,7 @@ import {
   AlertTriangle,
   Clock,
   Star,
+  XCircle,
 } from "lucide-react";
 import {
   CareerInterest,
@@ -57,6 +58,8 @@ import {
 import { GetSavedJobsResponse, GetSavedCoursesResponse } from "@/types/profile";
 import ProfileApi from "@/api/profile";
 import LearningRoadmapApi from "@/api/learning-roadmap";
+import CvApi from "@/api/cv";
+import { CvItemDto } from "@/types/cv";
 
 const interestLabels: Record<string, string> = {
   frontend: "Frontend",
@@ -133,6 +136,11 @@ export default function ProfilePage() {
   );
   const [loadingSavedCourses, setLoadingSavedCourses] =
     useState<boolean>(false);
+  const [allCvs, setAllCvs] = useState<CvItemDto[]>([]);
+  const [isLoadingCvs, setIsLoadingCvs] = useState(false);
+  const [updatingCvId, setUpdatingCvId] = useState<string | null>(null);
+  const [viewingCvUrl, setViewingCvUrl] = useState<string | null>(null);
+  const [viewingCvName, setViewingCvName] = useState<string>("");
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -188,6 +196,58 @@ export default function ProfilePage() {
 
     fetchProfileData();
   }, []);
+
+  const fetchAllCvs = async () => {
+    try {
+      setIsLoadingCvs(true);
+      const res = await CvApi.getMyCvs();
+      if (Array.isArray(res)) {
+        setAllCvs(res);
+      } else if (res && Array.isArray((res as any).data)) {
+        setAllCvs((res as any).data);
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách CV:", error);
+    } finally {
+      setIsLoadingCvs(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllCvs();
+  }, []);
+
+  const sortedCvs = useMemo(() => {
+    if (!allCvs || allCvs.length === 0) return [];
+    return [...allCvs].sort((a, b) => {
+      const aIsDefault = a.file_name === profile?.cvFileName;
+      const bIsDefault = b.file_name === profile?.cvFileName;
+
+      if (aIsDefault && !bIsDefault) return -1;
+      if (!aIsDefault && bIsDefault) return 1;
+      return 0;
+    });
+  }, [allCvs, profile?.cvFileName]);
+
+  const handleSetDefault = async (cvId: string) => {
+    try {
+      setUpdatingCvId(cvId);
+      await ProfileApi.setDefaultCv(cvId);
+
+      await fetchAllCvs();
+
+      setAllCvs((prev) =>
+        prev.map((cv) => ({
+          ...cv,
+          is_default: cv.cv_id === cvId,
+        })),
+      );
+    } catch (error) {
+      console.error("Đặt CV mặc định thất bại:", error);
+    } finally {
+      setUpdatingCvId(null);
+    }
+  };
 
   const fetchSavedCourses = async () => {
     try {
@@ -565,11 +625,12 @@ export default function ProfilePage() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                {/* Header */}
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-amber-600" />
                     <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                      CV
+                      Hồ sơ CV của bạn ({sortedCvs.length})
                     </h2>
                   </div>
                   <Link
@@ -579,34 +640,114 @@ export default function ProfilePage() {
                     Quản lý →
                   </Link>
                 </div>
-                {profile.hasUploadedCV && profile.cvFileName ? (
+
+                {/* Nội dung danh sách CV */}
+                {isLoadingCvs ? (
+                  <div className="p-8 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl flex justify-center items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : sortedCvs.length === 0 ? (
+                  <Empty href="/cv-matching" label="Tải CV (PDF/DOCX)" />
+                ) : (
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-3 dark:border-emerald-900/60 dark:from-emerald-950/30 dark:to-teal-950/20">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900/30">
-                        <FileText className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">
-                          {profile.cvFileName}
-                        </p>
-                        <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                          ✓ Đã upload &amp; sẵn sàng so khớp
-                        </p>
-                      </div>
+                    <div className="grid grid-cols-1 gap-2.5 max-h-[280px] overflow-y-auto pr-1">
+                      {sortedCvs.map((cv) => {
+                        const isCurrentDefault =
+                          cv.file_name === profile?.cvFileName;
+
+                        return (
+                          <div
+                            key={cv.cv_id}
+                            className={`p-3 border rounded-xl flex items-center justify-between gap-3 transition-all ${
+                              isCurrentDefault
+                                ? "border-emerald-200 bg-gradient-to-br from-emerald-50/60 to-teal-50/40 dark:border-emerald-900/60 dark:from-emerald-950/20 dark:to-teal-950/10 shadow-sm"
+                                : "bg-white border-slate-100 hover:border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
+                            }`}
+                          >
+                            {/* Info CV */}
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div
+                                className={`p-2 rounded-lg shrink-0 ${
+                                  isCurrentDefault
+                                    ? "bg-emerald-500 text-white"
+                                    : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                }`}
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                              </div>
+                              <div className="min-w-0">
+                                <p
+                                  className="truncate text-xs font-bold text-slate-900 dark:text-slate-100"
+                                  title={cv.file_name}
+                                >
+                                  {cv.file_name}
+                                </p>
+                                <p className="text-[10px] text-slate-400 mt-0.5">
+                                  {isCurrentDefault
+                                    ? "✓ Đang chọn mặc định"
+                                    : "Hồ sơ lưu trữ"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Nút tác vụ */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {/* Nút đặt Default */}
+                              <button
+                                type="button"
+                                disabled={
+                                  isCurrentDefault || updatingCvId === cv.cv_id
+                                }
+                                onClick={async () => {
+                                  await handleSetDefault(cv.cv_id);
+                                  // Cập nhật lại UI text của profile instant mà không cần f5
+                                  if (profile)
+                                    profile.cvFileName = cv.file_name;
+                                }}
+                                className={`px-2 py-1 border font-semibold rounded-lg text-[9px] transition-all ${
+                                  isCurrentDefault
+                                    ? "bg-emerald-600 border-emerald-600 text-white"
+                                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 disabled:bg-slate-50 disabled:text-slate-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300"
+                                }`}
+                              >
+                                {updatingCvId === cv.cv_id
+                                  ? "..."
+                                  : isCurrentDefault
+                                    ? "Mặc định ⭐"
+                                    : "Chọn"}
+                              </button>
+                              {/* Nút Xem CV (Thay đổi thành mở Popup tại đây) */}
+                              {cv.file_url && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setViewingCvUrl(cv.file_url);
+                                    setViewingCvName(cv.file_name);
+                                  }}
+                                  className="p-1.5 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-slate-50 rounded-lg shadow-sm transition-colors dark:bg-slate-800 dark:border-slate-600 dark:text-slate-400"
+                                  title="Xem nội dung CV"
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
+
+                    {/* Nút điều hướng */}
                     <Link
                       href="/cv-matching"
-                      className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                      className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
                     >
                       Phân tích CV với JD
                       <ChevronRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>
-                ) : (
-                  <Empty href="/cv-matching" label="Tải CV (PDF/DOCX)" />
                 )}
 
-                {profile.lastAnalysisAt && (
+                {profile?.lastAnalysisAt && (
                   <p className="mt-3 text-xs text-slate-500">
                     Phân tích gần nhất: {formatDate(profile.lastAnalysisAt)}
                   </p>
@@ -1096,6 +1237,50 @@ export default function ProfilePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {viewingCvUrl && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden scale-in duration-200">
+            {/* Header Popup */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-900/80 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <FileText className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">
+                  {viewingCvName}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setViewingCvUrl(null);
+                  setViewingCvName("");
+                }}
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Nội dung file hiển thị */}
+            <div className="flex-1 bg-slate-100/50 dark:bg-slate-950 p-4 flex justify-center items-center overflow-auto">
+              {viewingCvUrl.toLowerCase().includes(".pdf") ? (
+                <iframe
+                  src={`${viewingCvUrl}#toolbar=0&navpanes=0`}
+                  className="w-full h-full rounded-lg bg-white border border-slate-200 dark:border-slate-800"
+                  title="CV Preview"
+                />
+              ) : (
+                <div className="max-w-full max-h-full overflow-auto flex justify-center">
+                  <img
+                    src={viewingCvUrl}
+                    alt="CV Preview"
+                    className="max-w-full h-auto object-contain rounded-lg shadow-md bg-white dark:bg-slate-800"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

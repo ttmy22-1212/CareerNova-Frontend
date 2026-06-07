@@ -85,6 +85,7 @@ export interface UserProfileResponse {
     match_id: string;
     cv_id: string;
     job_id: string | null;
+    job_posting_url: string | null;
     match_type: string;
     search_group: string | null;
     match_score: number | null;

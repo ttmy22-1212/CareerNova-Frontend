@@ -192,7 +192,6 @@ export const AuthProvider: FC<AuthProviderProps> = (props) => {
 
   const isDashboard =
     pathname.includes("/dashboard") ||
-    pathname.includes("/forum") ||
     pathname.includes("/careers") ||
     pathname.includes("/profle") ||
     pathname.includes("/roadmap");

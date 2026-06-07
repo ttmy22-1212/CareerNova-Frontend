@@ -69,7 +69,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
         href: paths.cvMatching,
         label: "So khớp CV",
         Icon: FileText,
-        badge: "Core",
+        badge: "Cốt lõi",
       },
       { href: paths.profile.detail, label: "Hồ sơ Người dùng", Icon: User },
       {

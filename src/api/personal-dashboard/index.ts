@@ -38,16 +38,6 @@ export default class PersonalDashboardApi {
   }
 
   /**
-   * Lấy dữ liệu biểu đồ Radar cụ thể theo danh mục (Tab Kỹ năng - Bên trái)
-   * GET /personal-dashboard/skills-radar?category=...
-   */
-  static async getSkillsRadar(
-    filters: SkillsRadarFilterDto,
-  ): Promise<IBaseResponse<RadarSkillPointDto[]>> {
-    return await apiGet("/personal-dashboard/skills-radar", filters);
-  }
-
-  /**
    * Lấy dữ liệu biểu đồ so sánh kỹ năng theo danh mục (Tab Kỹ năng - Bên phải)
    * GET /personal-dashboard/skills-chart
    */

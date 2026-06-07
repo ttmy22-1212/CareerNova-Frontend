@@ -129,7 +129,7 @@ export function LandingPage() {
       <section className="py-12 px-4 border-t border-b border-slate-200 bg-slate-50">
         <div className="max-w-5xl mx-auto">
           <p className="text-center text-sm font-semibold text-slate-500 mb-6">
-            ĐƯỢC TIN TỚI BỞI
+            ĐƯỢC TIN TƯỞNG BỞI
           </p>
           <div className="flex flex-wrap items-center justify-center gap-8">
             {["TechCorp", "DataFlow", "CloudSys", "DesignLab"].map(

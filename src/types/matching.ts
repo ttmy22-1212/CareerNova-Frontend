@@ -58,13 +58,17 @@ export type GetMatchDetailResponse = IBaseResponse<CvJobMatchResultDto>;
 
 export type GetAllMatchesResponse = IBaseResponse<CvJobMatchResultDto[]>;
 
-export interface GetRadarCategoryQuery {
-  category: string;
-}
-
 export interface MatchCategoryResponse {
   category: string;
   is_matched: boolean;
+}
+
+export interface GetMatchCategoriesApiResponse {
+  data: MatchCategoryResponse[];
+}
+
+export interface GetRadarCategoryQuery {
+  category: string;
 }
 
 export interface MatchedSkillDetail {
@@ -75,10 +79,32 @@ export interface MatchedSkillDetail {
   contribution: number;
 }
 
-export interface GetMatchCategoriesApiResponse {
-  data: MatchCategoryResponse[];
+export interface MissingSkill {
+  skill_id: number;
+  skill_name: string;
+  weight: number;
+  similarity: number;
+  gap: number;
+}
+
+export interface PartiallyMatchedSkill {
+  skill_id: number;
+  skill_name: string;
+  weight: number;
+  similarity: number;
+  gap: number;
+  matched_via: string;
+  contribution: number;
+}
+
+export interface GapReport {
+  missing_skills: MissingSkill[];
+  partially_matched_skills: PartiallyMatchedSkill[];
 }
 
 export interface GetRadarByCategoryApiResponse {
-  data: MatchedSkillDetail[];
+  data: {
+    radar_data: MatchedSkillDetail[];
+    gap_report: GapReport;
+  };
 }
