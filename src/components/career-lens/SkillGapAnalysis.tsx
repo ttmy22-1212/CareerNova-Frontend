@@ -352,7 +352,7 @@ export function SkillGapAnalysis() {
             <h3 className="font-bold text-slate-900">Skills Detail</h3>
           </div>
           <p className="text-xs text-slate-500 mb-3">
-            Select a category to see detailed skill breakdown
+            Select a category to see detailed skills breakdown
           </p>
 
           {/* Combo Box */}
