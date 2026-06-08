@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Search,
   MapPin,
-  Briefcase,
   Clock,
   DollarSign,
   SlidersHorizontal,
@@ -21,20 +20,26 @@ import CvApi from "@/api/cv";
 import { JobListItem } from "@/types/job-insight";
 import ProfileApi from "@/api/profile";
 
-const jobTypes = ["All", "Full-time", "Remote", "Hybrid", "Part-time"];
+const jobTypes = [
+  "Tất cả",
+  "Toàn thời gian",
+  "Làm việc từ xa",
+  "linh hoạt",
+  "Bán thời gian",
+];
 
 const experienceLevels = [
-  { label: "Any Level", value: "Any Level" },
+  { label: "Mọi cấp độ", value: "Any Level" },
   { label: "Junior", value: "Junior" },
-  { label: "Mid Level", value: "Mid" },
+  { label: "Cấp độ Trung bình", value: "Mid" },
   { label: "Senior", value: "Senior" },
 ];
 
 const typeColors: Record<string, string> = {
-  "Full-time": "bg-blue-100 text-blue-700",
-  Remote: "bg-emerald-100 text-emerald-700",
-  Hybrid: "bg-violet-100 text-violet-700",
-  "Part-time": "bg-amber-100 text-amber-700",
+  "Toàn thời gian": "bg-blue-100 text-blue-700",
+  "Làm việc từ xa": "bg-emerald-100 text-emerald-700",
+  "linh hoạt": "bg-violet-100 text-violet-700",
+  "Bán thời gian": "bg-amber-100 text-amber-700",
 };
 
 const matchColor = (m: number | null) => {
@@ -63,8 +68,8 @@ const formatSalaryRange = (
 
 export function JobSearch() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedType, setSelectedType] = useState("All");
-  const [selectedExp, setSelectedExp] = useState("Any Level");
+  const [selectedType, setSelectedType] = useState("Tất cả");
+  const [selectedExp, setSelectedExp] = useState("Mọi cấp độ");
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<string>("match_score");
   const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
@@ -98,8 +103,8 @@ export function JobSearch() {
         sortOrder: "desc",
 
         ...(searchTerm && { q: searchTerm }),
-        ...(selectedType !== "All" && { work_type: selectedType }),
-        ...(selectedExp !== "Any Level" && { experience_level: selectedExp }),
+        ...(selectedType !== "Tất cả" && { work_type: selectedType }),
+        ...(selectedExp !== "Mọi cấp độ" && { experience_level: selectedExp }),
         ...(activeCvId && { cv_id: activeCvId }),
         ...(minMatch !== undefined && { min_match: minMatch }),
       };
@@ -219,7 +224,7 @@ export function JobSearch() {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by title, company, skill, or location..."
+              placeholder="Tìm theo chức danh, công ty, kỹ năng hoặc vị trí..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-11 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-400"
@@ -242,7 +247,7 @@ export function JobSearch() {
             }`}
           >
             <SlidersHorizontal className="w-4 h-4" />
-            Filters
+            Bộ lọc
           </button>
         </div>
 
@@ -266,9 +271,9 @@ export function JobSearch() {
             onChange={(e) => setSortBy(e.target.value)}
             className="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
-            <option value="match_score">Best Match</option>
-            <option value="salary_med">Highest Salary</option>
-            <option value="listed_time">Most Recent</option>
+            <option value="match_score">Phù hợp nhất</option>
+            <option value="salary_med">Lương cao nhất</option>
+            <option value="listed_time">Gần đây nhất</option>
           </select>
         </div>
 
@@ -277,7 +282,7 @@ export function JobSearch() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Experience Level
+                  Cấp độ kinh nghiệm
                 </label>
                 <div className="space-y-1">
                   {experienceLevels.map((l) => (
@@ -298,14 +303,14 @@ export function JobSearch() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Minimum Match Score
+                  Điểm phù hợp tối thiểu
                 </label>
                 <div className="space-y-1">
                   {[
-                    { label: "Any Match", value: undefined },
-                    { label: "80%+ Match", value: 80 },
-                    { label: "70%+ Match", value: 70 },
-                    { label: "60%+ Match", value: 60 },
+                    { label: "Bất kỳ phù hợp", value: undefined },
+                    { label: "80%+ Phù hợp", value: 80 },
+                    { label: "70%+ Phù hợp", value: 70 },
+                    { label: "60%+ Phù hợp", value: 60 },
                   ].map((r) => (
                     <button
                       key={r.label}
@@ -324,10 +329,10 @@ export function JobSearch() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Salary (Static Reference)
+                  Lương (Tham khảo)
                 </label>
                 <div className="space-y-1">
-                  {["Any Amount", "Market Rate"].map((r, idx) => (
+                  {["Bất kỳ mức lương", "Mức thị trường"].map((r, idx) => (
                     <button
                       key={r}
                       className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 transition-colors ${idx === 0 ? "bg-slate-50 font-semibold" : ""}`}
@@ -344,12 +349,12 @@ export function JobSearch() {
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-600">
-          Found <span className="font-bold text-slate-900">{total}</span>{" "}
-          {total === 1 ? "position" : "positions"}
+          Tìm thấy <span className="font-bold text-slate-900">{total}</span>{" "}
+          {total === 1 ? "vị trí" : "vị trí"}
           {searchTerm && (
             <>
               {" "}
-              for{" "}
+              cho{" "}
               <span className="font-semibold text-blue-600">
                 "{searchTerm}"
               </span>
@@ -357,13 +362,13 @@ export function JobSearch() {
           )}
         </p>
         <p className="text-xs text-slate-400">
-          Sorted by:{" "}
+          Sắp xếp theo:{" "}
           <span className="text-slate-600 font-medium capitalize">
             {sortBy === "match_score"
-              ? "Best Match"
+              ? "Phù hợp nhất"
               : sortBy === "salary_med"
-                ? "Highest Salary"
-                : "Most Recent"}
+                ? "Lương cao nhất"
+                : "Gần đây nhất"}
           </span>
         </p>
       </div>
@@ -371,27 +376,29 @@ export function JobSearch() {
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center text-slate-400">
           <Loader2 className="w-8 h-8 animate-spin mb-2" />
-          <p className="text-sm">Fetching best opportunities...</p>
+          <p className="text-sm">Đang tìm các cơ hội tốt nhất...</p>
         </div>
       ) : jobs.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-100 p-12 text-center">
           <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Search className="w-6 h-6 text-slate-400" />
           </div>
-          <h3 className="font-semibold text-slate-900 mb-1">No jobs found</h3>
+          <h3 className="font-semibold text-slate-900 mb-1">
+            Không tìm thấy công việc
+          </h3>
           <p className="text-sm text-slate-500">
-            Try adjusting your search or filters
+            Hãy thử điều chỉnh tìm kiếm hoặc bộ lọc của bạn
           </p>
           <button
             onClick={() => {
               setSearchTerm("");
-              setSelectedType("All");
-              setSelectedExp("Any Level");
+              setSelectedType("Tất cả");
+              setSelectedExp("Mọi cấp độ");
               setMinMatch(undefined);
             }}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
           >
-            Clear filters
+            Xóa bộ lọc
           </button>
         </div>
       ) : (
@@ -439,7 +446,9 @@ export function JobSearch() {
                         <span className="flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" />
                           {job.listed_time
-                            ? new Date(job.listed_time).toLocaleDateString()
+                            ? new Date(job.listed_time).toLocaleDateString(
+                                "vi-VN",
+                              )
                             : "N/A"}
                         </span>
                       </div>
@@ -449,8 +458,8 @@ export function JobSearch() {
                         className={`px-2.5 py-1 rounded-full text-xs font-bold ${matchColor(job.match_score)}`}
                       >
                         {job.match_score !== null
-                          ? `${job.match_score}% Match`
-                          : "Not Analyzed"}
+                          ? `${job.match_score}% Phù hợp`
+                          : "Chưa phân tích"}
                       </span>
                       <button
                         onClick={(e) => {

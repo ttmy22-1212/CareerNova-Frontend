@@ -141,6 +141,8 @@ export default function ProfilePage() {
   const [updatingCvId, setUpdatingCvId] = useState<string | null>(null);
   const [viewingCvUrl, setViewingCvUrl] = useState<string | null>(null);
   const [viewingCvName, setViewingCvName] = useState<string>("");
+  const [allowMatching, setAllowMatching] = useState<boolean>(false);
+  const [togglingMatching, setTogglingMatching] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -165,6 +167,8 @@ export default function ProfilePage() {
                 level: 1,
               }))
             : [];
+
+          setAllowMatching(!!userData.allow_default_cv_matching);
 
           setProfile({
             major: userData.major ? (userData.major as StudentMajor) : null,
@@ -595,7 +599,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-emerald-600" />
                     <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                      Top Skills ({profile.topSkills.length})
+                      Kỹ năng chủ lực ({profile.topSkills.length})
                     </h2>
                   </div>
                   <Link
@@ -1136,6 +1140,46 @@ export default function ProfilePage() {
                   <LogOut className="h-3.5 w-3.5" /> Đăng xuất
                 </button>
               </div>
+            </div>
+
+            {/* 3b. Cấu hình tự động đối sánh CV */}
+            <div className="flex items-center justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
+              <div className="flex-1 pr-4">
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  Tự động đối sánh CV mặc định
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Cho phép hệ thống tự động phân tích CV và gợi ý việc làm phù
+                  hợp trên Dashboard, Phân tích kỹ năng và Khuyến nghị
+                </p>
+              </div>
+              <button
+                role="switch"
+                aria-checked={allowMatching}
+                disabled={togglingMatching}
+                onClick={async () => {
+                  try {
+                    setTogglingMatching(true);
+                    await ProfileApi.updateCvMatchingPermission(!allowMatching);
+                    setAllowMatching((v) => !v);
+                  } catch (err) {
+                    console.error("Cập nhật quyền đối sánh thất bại:", err);
+                  } finally {
+                    setTogglingMatching(false);
+                  }
+                }}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
+                  allowMatching
+                    ? "bg-blue-600"
+                    : "bg-slate-200 dark:bg-slate-700"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                    allowMatching ? "translate-x-5" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
             </div>
 
             {/* 4. Vùng nguy hiểm */}

@@ -45,13 +45,13 @@ const statusConfig: Record<
   { label: string; barColor: string; badgeBg: string; badgeText: string }
 > = {
   Proficient: {
-    label: "Proficient",
+    label: "Thành thạo",
     barColor: "bg-emerald-500",
     badgeBg: "bg-emerald-100",
     badgeText: "text-emerald-700",
   },
   Missing: {
-    label: "Needs Work",
+    label: "Cần cải thiện",
     barColor: "bg-amber-400",
     badgeBg: "bg-amber-100",
     badgeText: "text-amber-700",
@@ -305,20 +305,20 @@ export function SkillGapAnalysis() {
         {[
           {
             icon: Target,
-            label: "Avg. Market Alignment",
+            label: "Mức độ phù hợp với thị trường",
             value: `${statistics?.match_score ?? 0}%`,
-            sub: "Across all categories",
+            sub: "Trên tất cả danh mục",
             iconBg: "from-blue-500 to-blue-600",
-            change: "Alignment",
+            change: "Phù hợp",
             changeColor: "text-blue-500",
           },
           {
             icon: Zap,
-            label: "Critical Gaps",
+            label: "Khoảng trống nghiêm trọng",
             value: `${statistics?.core_gaps_count ?? 0}`,
-            sub: "Skills needing urgent focus",
+            sub: "Kỹ năng cần ưu tiên",
             iconBg: "from-red-500 to-orange-500",
-            change: "Core",
+            change: "Cốt lõi",
             changeColor: "text-red-500",
           },
         ].map((stat) => (
@@ -349,10 +349,10 @@ export function SkillGapAnalysis() {
         {/* Radar with Category Combo Box */}
         <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
           <div className="flex items-center justify-between mb-1">
-            <h3 className="font-bold text-slate-900">Skills Detail</h3>
+            <h3 className="font-bold text-slate-900">Chi tiết kỹ năng</h3>
           </div>
           <p className="text-xs text-slate-500 mb-3">
-            Select a category to see detailed skills breakdown
+            Chọn danh mục để xem phân tích kỹ năng chi tiết
           </p>
 
           {/* Combo Box */}
@@ -406,26 +406,28 @@ export function SkillGapAnalysis() {
               <div className="flex gap-5 justify-center mt-1">
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
                   <span className="w-4 h-0.5 bg-blue-500 inline-block rounded-full" />
-                  You
+                  Bạn
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
                   <span className="w-4 h-0.5 bg-emerald-500 inline-block rounded-full" />
-                  Market
+                  Thị trường
                 </div>
               </div>
             </>
           ) : (
             <div className="flex items-center justify-center h-48 text-sm text-slate-400">
-              No data for this category
+              Không có dữ liệu kỹ năng cho danh mục này
             </div>
           )}
         </div>
 
         {/* Gap Bar Chart */}
         <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-          <h3 className="font-bold text-slate-900 mb-0.5">Gap by Category</h3>
+          <h3 className="font-bold text-slate-900 mb-0.5">
+            Khoảng cách theo danh mục
+          </h3>
           <p className="text-xs text-slate-500 mb-4">
-            Points behind market average
+            Điểm lệch so với trung bình thị trường
           </p>
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
@@ -473,7 +475,7 @@ export function SkillGapAnalysis() {
             </ResponsiveContainer>
           ) : (
             <div className="flex items-center justify-center h-48 text-sm text-slate-400">
-              No gap data found
+              Không có dữ liệu khoảng cách
             </div>
           )}
         </div>
@@ -482,9 +484,11 @@ export function SkillGapAnalysis() {
       {/* ── Detailed Breakdown ── */}
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="font-bold text-slate-900">Detailed Skill Breakdown</h2>
+          <h2 className="font-bold text-slate-900">
+            Phân tích kỹ năng chi tiết
+          </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Expand each category to review individual skills
+            Mở rộng từng danh mục để xem các kỹ năng
           </p>
         </div>
         <div className="divide-y divide-slate-50">
@@ -531,11 +535,11 @@ export function SkillGapAnalysis() {
                         />
                       </div>
                       <span className="text-xs text-slate-500">
-                        You:{" "}
+                        Bạn:{" "}
                         <span className="font-semibold text-slate-700">
                           {cat.user_rate_avg}%
                         </span>
-                        {" · "}Market:{" "}
+                        {" · "}Thị trường:{" "}
                         <span className="font-semibold text-slate-700">
                           {cat.market_rate_avg}%
                         </span>
@@ -588,10 +592,10 @@ export function SkillGapAnalysis() {
                             </div>
                             <div className="flex items-center justify-between mt-1">
                               <span className="text-[10px] text-slate-400">
-                                Your level
+                                Bạn: {skill.user_rate}%
                               </span>
                               <span className="text-[10px] text-slate-400">
-                                Target: {skill.market_rate}%
+                                Thị trường: {skill.market_rate}%
                               </span>
                             </div>
                           </div>
@@ -610,18 +614,16 @@ export function SkillGapAnalysis() {
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div>
-            <h2 className="font-bold text-slate-900">
-              Recommended Learning Paths
-            </h2>
+            <h2 className="font-bold text-slate-900">Lộ trình học đề xuất</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Prioritized to maximize your job match score
+              Ưu tiên để tối đa hóa điểm phù hợp công việc
             </p>
           </div>
           <Link
             href="/recommendations"
             className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
           >
-            View all <ArrowRight className="w-3.5 h-3.5" />
+            Xem tất cả <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
         <div className="divide-y divide-slate-50">
@@ -643,7 +645,7 @@ export function SkillGapAnalysis() {
                       </span>
                       {path.started && (
                         <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
-                          In Progress
+                          Trong tiến trình
                         </span>
                       )}
                     </div>
@@ -659,7 +661,8 @@ export function SkillGapAnalysis() {
                         {path.impact}
                       </span>
                       <span className="text-slate-500">
-                        Required by {path.jobsRequiring} of target jobs
+                        Yêu cầu ở {path.jobsRequiring} công việc trong danh mục
+                        này
                       </span>
                     </div>
                   </div>
@@ -694,7 +697,7 @@ export function SkillGapAnalysis() {
                     {/* Resources */}
                     <div>
                       <p className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
-                        Resources
+                        Tài nguyên
                       </p>
                       <div className="space-y-2">
                         {path.resources.map((r, i) => (
@@ -721,7 +724,7 @@ export function SkillGapAnalysis() {
                     {/* Steps */}
                     <div>
                       <p className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
-                        Learning Steps
+                        Các bước học
                       </p>
                       <div className="space-y-2">
                         {path.steps.map((step, i) => (

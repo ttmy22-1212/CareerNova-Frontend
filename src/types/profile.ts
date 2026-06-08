@@ -62,6 +62,7 @@ export interface UserProfileResponse {
     target_salary: number | null;
     prefer_remote: boolean;
     onboarding_completed: boolean;
+    allow_default_cv_matching: boolean;
   };
   auth_providers: AuthProviderInfo[];
   created_at: number;

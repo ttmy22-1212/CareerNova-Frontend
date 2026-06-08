@@ -7,8 +7,6 @@ import {
   Building2,
   Flame,
   ArrowRight,
-  MapPin,
-  Clock,
   ArrowUpRight,
   Filter,
   Sparkles,
@@ -41,16 +39,10 @@ import {
   SalaryRangeItemDto,
   InDemandSkillItemDto,
   RisingSkillItemDto,
-  DashboardFilterDto,
 } from "@/types/market-dashboard";
 
 import { userProfile } from "@/data/mockData";
-import {
-  formatSalary,
-  formatRelativeTime,
-  getMatchedJobs,
-  analyzeSkillGaps,
-} from "@/utils/matching";
+import { getMatchedJobs, analyzeSkillGaps } from "@/utils/matching";
 import { useOnboarding } from "@/contexts/onboarding/onboarding-context";
 
 const SKILL_COLORS = [
@@ -65,14 +57,6 @@ const SKILL_COLORS = [
   "#f97316",
   "#84cc16",
 ];
-
-const typeColors: Record<string, string> = {
-  "Full-time": "bg-blue-100 text-blue-700",
-  Remote: "bg-emerald-100 text-emerald-700",
-  Hybrid: "bg-violet-100 text-violet-700",
-  "Part-time": "bg-amber-100 text-amber-700",
-  Contract: "bg-orange-100 text-orange-700",
-};
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload?.length) {
@@ -252,7 +236,7 @@ export function MarketDashboard({
             <div className="flex items-center gap-2 mb-2">
               <Globe className="w-4 h-4 text-blue-400" />
               <span className="text-blue-300 text-xs font-semibold uppercase tracking-widest">
-                Market Intelligence
+                Thông tin thị trường
               </span>
             </div>
             <h1 className="text-white text-2xl font-bold mb-1">
@@ -273,7 +257,7 @@ export function MarketDashboard({
                 Xem insight cá nhân
               </Link>
               <p className="text-xs text-slate-400 text-center">
-                Đăng nhập để thấy job phù hợp với bạn
+                Đăng nhập để thấy công việc phù hợp với bạn
               </p>
             </div>
           )}
@@ -295,7 +279,7 @@ export function MarketDashboard({
               className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
             >
               <Briefcase className="w-3.5 h-3.5" />
-              {highMatchCount} jobs khớp CV của bạn
+              {highMatchCount} công việc khớp CV của bạn
               <ArrowRight className="w-3 h-3" />
             </Link>
             {missingSkills > 0 && (
@@ -304,7 +288,7 @@ export function MarketDashboard({
                 className="flex items-center gap-2 rounded-lg border border-orange-300 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700 hover:bg-orange-100 transition-colors dark:bg-orange-950/30 dark:text-orange-300 dark:border-orange-800"
               >
                 <TrendingUp className="w-3.5 h-3.5" />
-                Thiếu {missingSkills} skill — bắt đầu với {topMissingSkill}
+                Thiếu {missingSkills} kỹ năng — bắt đầu với {topMissingSkill}
                 <ArrowRight className="w-3 h-3" />
               </Link>
             )}
@@ -452,14 +436,14 @@ export function MarketDashboard({
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="font-semibold text-slate-900">
-                Job Posting Trends
+                Xu hướng tin tuyển dụng
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Total postings vs. remote positions
+                Tổng tin tuyển dụng vs. vị trí remote
               </p>
             </div>
             <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full uppercase">
-              Scale: {trends.scale}
+              Quy mô: {trends.scale}
             </span>
           </div>
           <ResponsiveContainer width="100%" height={220}>
@@ -513,11 +497,11 @@ export function MarketDashboard({
           <div className="flex items-center gap-5 mt-3 justify-center">
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
               <span className="w-6 h-0.5 bg-blue-500 rounded-full inline-block" />
-              Total Postings
+              Tổng tin
             </div>
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
               <span className="w-6 h-0.5 bg-emerald-500 rounded-full inline-block" />
-              Remote Jobs
+              Việc remote
             </div>
           </div>
         </div>
@@ -525,10 +509,10 @@ export function MarketDashboard({
         {/* Industry Breakdown */}
         <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
           <h3 className="font-semibold text-slate-900 mb-0.5">
-            Industry Breakdown
+            Phân bổ thị trường
           </h3>
           <p className="text-xs text-slate-500 mb-3">
-            Phân bổ job theo ngành nghề
+            Phân bổ công việc theo ngành nghề
           </p>
           <ResponsiveContainer width="100%" height={160}>
             <PieChart>
@@ -581,7 +565,7 @@ export function MarketDashboard({
             <Flame className="w-5 h-5 text-orange-500" />
             <div>
               <h3 className="font-semibold text-slate-900">
-                Top 5 Hot Jobs This Week
+                Top 5 Công Việc Hot Tuần Này
               </h3>
               <p className="text-xs text-slate-500">
                 Được xem và apply nhiều nhất tuần này
@@ -644,10 +628,10 @@ export function MarketDashboard({
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold text-slate-900">
-                Top 10 In-Demand Skills
+                Top 10 Kỹ Năng Được Yêu Cầu
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Số job yêu cầu kỹ năng này trên sàn
+                Số công việc yêu cầu kỹ năng này trên sàn
               </p>
             </div>
             <span className="px-3 py-1 bg-violet-50 text-violet-700 text-xs font-semibold rounded-full">
@@ -666,7 +650,7 @@ export function MarketDashboard({
                       {item.skill_name}
                     </span>
                     <span className="text-xs text-slate-500">
-                      {item.job_count} jobs
+                      {item.job_count} công việc
                     </span>
                   </div>
                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -710,7 +694,7 @@ export function MarketDashboard({
                       {s.skill_name}
                     </p>
                     <p className="text-xs text-slate-500">
-                      {s.job_count_current.toLocaleString()} jobs · ~$
+                      {s.job_count_current.toLocaleString()} công việc · ~$
                       {Math.round(s.avg_salary / 1000)}K/yr
                     </p>
                   </div>
@@ -731,7 +715,7 @@ export function MarketDashboard({
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="font-semibold text-slate-900">
-              Salary Ranges by Role
+              Mức Lương theo Vị Trí
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
               Hệ thống phân bố lương (USD/năm) gộp All Levels
@@ -765,13 +749,13 @@ export function MarketDashboard({
             />
             <Bar
               dataKey="min_salary"
-              name="Min Salary"
+              name="Mức Lương Tối Thiểu"
               fill="#bfdbfe"
               radius={[4, 4, 0, 0]}
             />
             <Bar
               dataKey="max_salary"
-              name="Max Salary"
+              name="Mức Lương Tối Đa"
               fill="#3b82f6"
               radius={[4, 4, 0, 0]}
             />
@@ -780,11 +764,11 @@ export function MarketDashboard({
         <div className="flex items-center gap-5 justify-center mt-2">
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <span className="w-3 h-3 rounded bg-blue-200 inline-block" />
-            Min Salary
+            Mức Lương Tối Thiểu
           </div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <span className="w-3 h-3 rounded bg-blue-500 inline-block" />
-            Max Salary
+            Mức Lương Tối Đa
           </div>
         </div>
       </div>

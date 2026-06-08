@@ -140,6 +140,16 @@ export default class ProfileApi {
     return await apiGet("/profile/saved-courses");
   }
 
+  /**
+   * PATCH /profile/me
+   * Cập nhật trạng thái cho phép tự động đối sánh CV mặc định
+   */
+  static async updateCvMatchingPermission(
+    allow: boolean,
+  ): Promise<IBaseResponse<any>> {
+    return await apiPatch("/profile/me", { allow_default_cv_matching: allow });
+  }
+
   static async uploadAvatar(
     file: File,
   ): Promise<IBaseResponse<{ message: string; url: string }>> {

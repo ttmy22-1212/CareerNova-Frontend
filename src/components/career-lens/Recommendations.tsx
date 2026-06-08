@@ -442,9 +442,9 @@ export function Recommendations() {
   };
 
   const tabs = [
-    { key: "overview" as const, label: "Career Overview", icon: Sparkles },
-    { key: "saved" as const, label: "Đề xuất", icon: BookmarkCheck },
-    { key: "resources" as const, label: "Resources", icon: BookOpen },
+    { key: "overview" as const, label: "Tổng Quan Sự Nghiệp", icon: Sparkles },
+    { key: "saved" as const, label: "Đề Xuất", icon: BookmarkCheck },
+    { key: "resources" as const, label: "Tài Nguyên", icon: BookOpen },
   ];
 
   return (
@@ -460,19 +460,19 @@ export function Recommendations() {
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-5 h-5 text-violet-300" />
               <p className="text-violet-200 text-sm font-semibold">
-                Career Snapshot — AI Insight
+                Tóm Tắt Sự Nghiệp — Thông Tin Từ AI
               </p>
             </div>
             <p className="text-white font-bold text-lg mb-2 max-w-xl">
-              You're well-positioned for Frontend & Full Stack roles. Focus on
-              cloud technologies to unlock senior positions.
+              Bạn có vị trí tốt cho các vai trò Frontend & Full Stack. Tập trung
+              vào công nghệ đám mây để mở khóa các vị trí cấp cao.
             </p>
             <div className="flex flex-wrap gap-2 mt-3">
               <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
                 85% Độ hoàn thiện hồ sơ
               </span>
               <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
-                234 Matching Jobs
+                234 Công Việc Phù Hợp
               </span>
               <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
                 3 Đề xuất
@@ -480,9 +480,11 @@ export function Recommendations() {
             </div>
           </div>
           <div className="hidden lg:block text-right">
-            <p className="text-violet-200 text-xs mb-1">Top Career Match</p>
+            <p className="text-violet-200 text-xs mb-1">
+              Phù Hợp Sự Nghiệp Hàng Đầu
+            </p>
             <p className="text-white font-bold">Senior Frontend Dev</p>
-            <p className="text-violet-200 text-sm">$110K–$140K avg.</p>
+            <p className="text-violet-200 text-sm">$110K–$140K tb.</p>
           </div>
         </div>
       </div>

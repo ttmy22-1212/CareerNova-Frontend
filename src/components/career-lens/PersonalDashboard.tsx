@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   Target,
@@ -37,7 +37,6 @@ import {
 
 import PersonalDashboardApi from "@/api/personal-dashboard";
 import ProfileApi from "@/api/profile";
-import JobApi from "@/api/job";
 import {
   DashboardBannerDto,
   DashboardStatisticsDto,
@@ -49,17 +48,8 @@ import {
 import { UserProfileResponse } from "@/types/profile";
 import MatchingApi from "@/api/matching";
 import { MatchCategoryResponse } from "@/types/matching";
-
-import {
-  jobsWithDetails,
-  userProfile,
-  skills as allSkills,
-} from "@/data/mockData";
-import { analyzeSkillGaps } from "@/utils/matching";
-const rawGaps = analyzeSkillGaps(jobsWithDetails, userProfile);
-const gapAnalysisMock = Array.isArray(rawGaps)
-  ? rawGaps.filter((s) => !s.user_has)
-  : [];
+import LearningRoadmapApi from "@/api/learning-roadmap";
+import { CourseItemDto } from "@/types/learning-roadmap";
 
 const typeColors: Record<string, string> = {
   "Full-time": "bg-blue-100 text-blue-700",
@@ -427,6 +417,8 @@ export function PersonalDashboard() {
   const [radarSkills, setRadarSkills] = useState<RadarSkillPointDto[]>([]);
   const [skillsChart, setSkillsChart] = useState<CategoryGapDto[]>([]);
   const [progress, setProgress] = useState<DashboardProgressDto | null>(null);
+  const [roadmapCourses, setRoadmapCourses] = useState<CourseItemDto[]>([]);
+  const [isLoadingRoadmap, setIsLoadingRoadmap] = useState(false);
 
   // Kích hoạt gọi API khi vào trang lần đầu
 
@@ -535,11 +527,66 @@ export function PersonalDashboard() {
     fetchRadarDataDynamic();
   }, [skillCategory, profile?.default_match?.match_id]);
 
+  // Top 7 kỹ năng cần cải thiện khẩn cấp nhất (từ gap_report của default match)
+  const urgentGapSkills = useMemo(() => {
+    const gapReport = profile?.default_match?.gap_report as any;
+    if (!gapReport) return [];
+
+    const missing: any[] = (gapReport.missing_skills || []).map((s: any) => ({
+      skill_name: s.skill_name,
+      weight: s.weight ?? 0,
+      user_score: 0,
+      type: "missing" as const,
+    }));
+
+    const partial: any[] = (gapReport.partially_matched_skills || []).map(
+      (s: any) => ({
+        skill_name: s.skill_name,
+        weight: s.weight ?? 0,
+        user_score: Math.round((s.similarity ?? 0) * 100),
+        type: "partial" as const,
+      }),
+    );
+
+    return [...missing, ...partial]
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 7);
+  }, [profile?.default_match?.gap_report]);
+
+  // Fetch khóa học gợi ý dựa trên skill thiếu hụt nặng nhất
+  useEffect(() => {
+    const topSkill = urgentGapSkills[0]?.skill_name;
+    if (!topSkill) return;
+
+    let cancelled = false;
+    setIsLoadingRoadmap(true);
+
+    LearningRoadmapApi.getRoadmap({ skill: topSkill, limit: 3 })
+      .then((res) => {
+        if (cancelled) return;
+        const courses = res?.recommended_courses ?? [];
+        setRoadmapCourses(courses.slice(0, 3));
+      })
+      .catch(() => {
+        if (!cancelled) setRoadmapCourses([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingRoadmap(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [urgentGapSkills]);
+
   // Ánh xạ dữ liệu động từ API phục vụ các logic hiển thị hoặc cảnh báo
   const strength = statistics?.profile_completion_percentage ?? 0;
   const hasCV = !!(profile?.all_cvs && profile.all_cvs.length > 0);
   const userName = profile?.user?.full_name?.split(" ").pop() ?? "bạn";
   const personalMatchedCount = recommendedJobs.length;
+  // suitable_jobs_count từ banner = tổng job ≥ 70% trong toàn bộ lịch sử
+  const totalSuitableCount =
+    banner?.suitable_jobs_count ?? personalMatchedCount;
   const avgMatchScore = banner?.match_score ?? 0;
 
   // Khớp nối cấu trúc checklist cũ từ API mới để giữ nguyên UI lặp
@@ -570,17 +617,20 @@ export function PersonalDashboard() {
       badge: "Khẩn",
     },
     {
-      href: "/roadmap",
+      href: "/skill-gap",
       icon: BookOpen,
       title: "Tiếp tục lộ trình học",
-      desc: "Node.js · 60% hoàn thành",
+      desc:
+        urgentGapSkills.length > 0
+          ? `${urgentGapSkills.length} kỹ năng cần bổ sung — Xem lộ trình`
+          : "Khám phá lộ trình kỹ năng cá nhân hóa",
       color: "from-blue-500 to-blue-600",
-      badge: "In progress",
+      badge: "Lộ trình",
     },
     {
       href: "/jobs",
       icon: Briefcase,
-      title: `${personalMatchedCount} jobs phù hợp với bạn`,
+      title: `${totalSuitableCount} jobs phù hợp với bạn`,
       desc: `Match cao nhất · Cập nhật hôm nay`,
       color: "from-emerald-500 to-emerald-600",
       badge: "Mới",
@@ -680,9 +730,9 @@ export function PersonalDashboard() {
                 <>
                   Hồ sơ của bạn khớp với{" "}
                   <span className="text-white font-bold">
-                    {personalMatchedCount} jobs
+                    {totalSuitableCount} jobs
                   </span>{" "}
-                  (match ≥ 70%). Điểm match trung bình:{" "}
+                  (match ≥ 70%). Điểm match CV mặc định:{" "}
                   <span className="text-white font-bold">{avgMatchScore}%</span>
                   .
                 </>
@@ -760,7 +810,7 @@ export function PersonalDashboard() {
           {
             icon: Briefcase,
             label: "Jobs Phù Hợp",
-            value: personalMatchedCount.toString(),
+            value: totalSuitableCount.toString(),
             sub: "Match ≥ 70%",
             color: "from-emerald-500 to-emerald-600",
             text: "text-white",
@@ -816,9 +866,9 @@ export function PersonalDashboard() {
         data-tour="next-actions"
         className="grid grid-cols-1 sm:grid-cols-3 gap-3"
       >
-        {actionItems.map((action) => (
+        {actionItems.map((action, index) => (
           <Link
-            key={action.href}
+            key={`${action.href}-${index}`}
             href={action.href}
             className="group flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
           >
@@ -948,9 +998,9 @@ export function PersonalDashboard() {
 
         {/* Tab: Skills */}
         {activeTab === "skills" && (
-          <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Radar */}
-            <div className="bg-white rounded-xl p-5 space-y-4">
+          <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            {/* CỘT TRÁI: Radar chart theo danh mục */}
+            <div className="flex flex-col bg-slate-50/60 border border-slate-100 rounded-2xl p-5 gap-4">
               <div>
                 <h4 className="text-sm font-bold text-slate-900">
                   Kỹ năng của bạn so với thị trường
@@ -960,8 +1010,7 @@ export function PersonalDashboard() {
                 </p>
               </div>
 
-              {/* Thanh Dropdown thông minh tích hợp thanh tìm kiếm và kiểm soát trạng thái is_matched */}
-              <div className="pt-1">
+              <div>
                 <RadarCategoryDropdown
                   categories={categories}
                   selected={skillCategory}
@@ -970,9 +1019,8 @@ export function PersonalDashboard() {
                 />
               </div>
 
-              {/* Khu vực vẽ Chart */}
               {radarData.length === 0 ? (
-                <div className="h-[240px] flex items-center justify-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50 text-xs text-slate-400">
+                <div className="flex-1 flex items-center justify-center border border-dashed border-slate-200 rounded-xl bg-white/70 text-xs text-slate-400 min-h-[200px]">
                   Không có dữ liệu phân tích kỹ năng cho danh mục này
                 </div>
               ) : (
@@ -1010,8 +1058,7 @@ export function PersonalDashboard() {
                 </ResponsiveContainer>
               )}
 
-              {/* Chú thích màu sắc */}
-              <div className="flex gap-4 justify-center border-t border-slate-50 pt-3">
+              <div className="flex gap-4 justify-center border-t border-slate-200/60 pt-3 mt-auto">
                 <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                   <span className="w-3.5 h-0.5 bg-blue-500 inline-block rounded-full" />
                   Bạn
@@ -1023,94 +1070,84 @@ export function PersonalDashboard() {
               </div>
             </div>
 
-            {/* Critical Gaps */}
-            {/* Critical Gaps */}
-            <div>
+            {/* CỘT PHẢI: Top 7 kỹ năng cần cải thiện khẩn cấp nhất */}
+            <div className="flex flex-col bg-slate-50/60 border border-slate-100 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-900">
-                    Kỹ năng cần cải thiện
+                  <h4 className="text-sm font-bold text-slate-900">
+                    7 Kỹ năng cần cải thiện khẩn cấp
                   </h4>
-                  <p className="text-xs text-slate-500">
-                    Ảnh hưởng lớn đến match score của nhóm này
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Sắp xếp theo mức độ ảnh hưởng đến match score
                   </p>
                 </div>
+                {urgentGapSkills.length > 0 && (
+                  <span className="shrink-0 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold">
+                    {urgentGapSkills.length} kỹ năng
+                  </span>
+                )}
               </div>
 
-              <div className="space-y-3">
-                {radarSkills.length === 0 ? (
-                  <div className="h-[116px] flex items-center justify-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50 text-xs text-slate-400">
-                    Không có dữ liệu đánh giá cho danh mục này
-                  </div>
-                ) : /* CHỐT CHẶN CẤP 2: Có dữ liệu gốc nhưng không có kỹ năng nào bị thiếu điểm */
-                radarSkills.filter((s: any) => {
-                    const currentScore =
-                      typeof s.similarity === "number"
-                        ? Math.round(s.similarity * 100)
-                        : (s.user_score ?? 0);
-                    const targetScore =
-                      typeof s.similarity === "number"
-                        ? 100
-                        : (s.market_score ?? 100);
-                    return currentScore < targetScore;
-                  }).length === 0 ? (
-                  <div className="p-3 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center text-xs text-slate-500">
-                    🎉 Tuyệt vời! Bạn đã đáp ứng tốt các kỹ năng trong nhóm này.
+              <div className="flex-1 space-y-2.5 overflow-y-auto">
+                {urgentGapSkills.length === 0 ? (
+                  <div className="flex items-center justify-center border border-dashed border-slate-200 rounded-xl bg-white/70 text-xs text-slate-400 min-h-[160px]">
+                    {profile?.default_match
+                      ? "🎉 Tuyệt vời! Không có kỹ năng nào thiếu hụt."
+                      : "Chưa có kết quả matching để phân tích"}
                   </div>
                 ) : (
-                  /* Duyệt qua các kỹ năng có điểm số thấp hơn yêu cầu thị trường */
-                  radarSkills
-                    .filter((s: any) => {
-                      const currentScore =
-                        typeof s.similarity === "number"
-                          ? Math.round(s.similarity * 100)
-                          : (s.user_score ?? 0);
-                      const targetScore =
-                        typeof s.similarity === "number"
-                          ? 100
-                          : (s.market_score ?? 100);
-                      return currentScore < targetScore;
-                    })
-                    .map((item: any, idx) => {
-                      // Tính toán phần trăm khoảng cách thiếu hụt dựa theo nguồn API tương ứng
-                      const userScore =
-                        typeof item.similarity === "number"
-                          ? Math.round(item.similarity * 100)
-                          : (item.user_score ?? 0);
-                      const marketScore =
-                        typeof item.similarity === "number"
-                          ? 100
-                          : (item.market_score ?? 100);
-                      const gapScore = marketScore - userScore;
-
-                      return (
-                        <div key={idx} className="p-3 bg-slate-50 rounded-xl">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-semibold text-slate-900">
-                              {item.skill_name}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">
-                              {userScore === 0
-                                ? "Chưa có"
-                                : `Thiếu ${gapScore}% (Hiện tại: ${userScore}%)`}
-                            </span>
-                          </div>
-                          <div className="relative h-2 bg-white border border-slate-200 rounded-full overflow-hidden">
-                            <div
-                              className="absolute h-full rounded-full bg-amber-500 transition-all"
-                              /* Thanh progress bar thể hiện tỷ lệ sở hữu kỹ năng hiện tại */
-                              style={{ width: `${userScore}%` }}
-                            />
-                          </div>
+                  urgentGapSkills.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 bg-white border border-slate-100 rounded-xl shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-5 h-5 shrink-0 flex items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-500">
+                            {idx + 1}
+                          </span>
+                          <span className="text-sm font-semibold text-slate-900 truncate">
+                            {item.skill_name}
+                          </span>
                         </div>
-                      );
-                    })
+                        <span
+                          className={`shrink-0 ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            item.type === "missing"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {item.type === "missing"
+                            ? "Chưa có"
+                            : `${item.user_score}%`}
+                        </span>
+                      </div>
+                      <div className="relative h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`absolute h-full rounded-full transition-all ${
+                            item.type === "missing"
+                              ? "bg-red-400"
+                              : "bg-amber-400"
+                          }`}
+                          style={{
+                            width: `${item.type === "missing" ? 4 : item.user_score}%`,
+                          }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        Trọng số:{" "}
+                        <span className="font-semibold text-slate-600">
+                          {Math.round((item.weight ?? 0) * 100)}%
+                        </span>
+                      </p>
+                    </div>
+                  ))
                 )}
               </div>
 
               <Link
                 href="/skill-gap"
-                className="mt-3 flex items-center justify-center gap-2 py-2.5 w-full bg-violet-50 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-100 transition-colors"
+                className="mt-4 flex items-center justify-center gap-2 py-2.5 w-full bg-violet-50 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-100 transition-colors border border-violet-100"
               >
                 <Zap className="w-4 h-4" />
                 Xem full Phân tích kỹ năng
@@ -1225,44 +1262,105 @@ export function PersonalDashboard() {
 
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-slate-900">
-                    Lộ trình đề xuất
-                  </h4>
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-900">
+                      Lộ trình đề xuất
+                    </h4>
+                    {urgentGapSkills[0] && (
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        Gợi ý cho kỹ năng:{" "}
+                        <span className="font-semibold text-blue-600">
+                          {urgentGapSkills[0].skill_name}
+                        </span>
+                      </p>
+                    )}
+                  </div>
                   <Link
                     href="/roadmap"
                     className="text-xs text-blue-600 font-semibold flex items-center gap-0.5 hover:text-blue-700"
                   >
-                    Xem tất cả <ArrowRight className="w-3 h-3" />
+                    Xem lộ trình <ArrowRight className="w-3 h-3" />
                   </Link>
                 </div>
 
-                {gapAnalysisMock.slice(0, 3).map((path, idx) => (
-                  <div key={idx} className="mb-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-slate-700">
-                        {/* SỬA TỪ path.name THÀNH path.skill_name */}
-                        {path.skill_name}
-                      </span>
-                      <span className="text-xs text-emerald-600 font-semibold">
-                        +{path.demand_percentage || 20}% jobs
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500 rounded-full"
-                          style={{ width: `${path.user_proficiency || 0}%` }}
-                        />
-                      </div>
-                      <span className="text-[10px] text-slate-400 shrink-0">
-                        {path.user_proficiency || 0}%
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      Độ ưu tiên {idx + 1} — Nhóm: {path.category || "General"}
-                    </p>
+                {/* Loading skeleton */}
+                {isLoadingRoadmap && (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="h-14 bg-slate-100 rounded-xl animate-pulse"
+                      />
+                    ))}
                   </div>
-                ))}
+                )}
+
+                {/* Danh sách khóa học thực từ API */}
+                {!isLoadingRoadmap && roadmapCourses.length > 0 && (
+                  <div className="space-y-2">
+                    {roadmapCourses.map((course) => (
+                      <Link
+                        key={course.id}
+                        href={course.source_url || "/roadmap"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50 hover:border-blue-100 transition-colors group"
+                      >
+                        {/* Thumbnail hoặc icon fallback */}
+                        {course.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={course.image}
+                            alt={course.title}
+                            className="w-9 h-9 rounded-lg object-cover shrink-0 bg-slate-200"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                            <BookOpen className="w-4 h-4 text-blue-600" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-slate-800 truncate">
+                            {course.title}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            {course.provider}
+                            {course.duration ? ` · ${course.duration}` : ""}
+                          </p>
+                        </div>
+                        <div className="shrink-0 flex flex-col items-end gap-1">
+                          {course.rating > 0 && (
+                            <span className="text-[10px] font-bold text-amber-600">
+                              ★ {course.rating.toFixed(1)}
+                            </span>
+                          )}
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-500" />
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
+                {/* Fallback khi không có khóa học */}
+                {!isLoadingRoadmap && roadmapCourses.length === 0 && (
+                  <Link
+                    href="/skill-gap"
+                    className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+                      <BookOpen className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-blue-800">
+                        Khám phá lộ trình kỹ năng
+                      </p>
+                      <p className="text-[10px] text-blue-600">
+                        Phân tích CV để nhận gợi ý khóa học cá nhân hóa
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-blue-400 group-hover:text-blue-600 shrink-0" />
+                  </Link>
+                )}
               </div>
             </div>
           </div>
