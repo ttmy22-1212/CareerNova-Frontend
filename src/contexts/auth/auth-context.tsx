@@ -16,7 +16,7 @@ import { RegisterResponse } from "@/types/auth";
 
 export type AuthProvider = "password" | "google" | "facebook";
 
-export type AuthUser = {
+type AuthUser = {
   id: string;
   full_name: string;
   school: string;

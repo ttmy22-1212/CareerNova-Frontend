@@ -96,7 +96,7 @@ export interface JourneyStage {
   href: string;
 }
 
-export interface ChecklistItem {
+interface ChecklistItem {
   id: string;
   label: string;
   done: boolean;

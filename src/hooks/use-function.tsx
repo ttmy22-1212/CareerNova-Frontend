@@ -11,7 +11,7 @@ import { get, set, del } from "idb-keyval";
 const MAX_CACHED_ARRAY = 2000;
 type ApiFunction<P, T> = (payload: P) => Promise<T>;
 
-export interface UseFunctionOptions<P, T> {
+interface UseFunctionOptions<P, T> {
   successMessage?: string;
   getErrorMessage?: (error: unknown) => string;
   hideSnackbarError?: boolean;
