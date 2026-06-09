@@ -9,13 +9,11 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import ProfileApi from "@/api/profile";
 
 interface AllowMatchingModalProps {
   open: boolean;
   onClose: () => void;
-  /** Gọi sau khi user đồng ý và API thành công */
-  onActivated: () => void;
+  onActivated: () => Promise<void> | void;
 }
 
 export default function AllowMatchingModal({
@@ -28,8 +26,7 @@ export default function AllowMatchingModal({
   const handleActivate = async () => {
     try {
       setLoading(true);
-      await ProfileApi.updateCvMatchingPermission(true);
-      onActivated();
+      await onActivated();
     } catch (err) {
       console.error("Kích hoạt tự động đối sánh thất bại:", err);
     } finally {

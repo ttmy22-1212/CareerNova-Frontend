@@ -101,6 +101,7 @@ export interface User {
   role: "student" | "admin";
   created_at: Date | null;
   updated_at: Date | null;
+  allow_default_cv_matching: boolean;
 }
 
 export interface UserAuthProvider {

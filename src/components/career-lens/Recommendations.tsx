@@ -595,23 +595,23 @@ export function Recommendations() {
         ))}
       </div>
 
-      {/* ── Overview Tab ── */}
+      {/* ── Thẻ Tổng Quan ── */}
       {activeTab === "overview" && (
         <div className="space-y-5">
-          {/* Top Job Matches */}
+          {/* Những Công Việc Phù Hợp Nhất */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-blue-600" />
                 <h2 className="font-bold text-slate-900">
-                  Top Job Matches For You
+                  Những Công Việc Phù Hợp Nhất Cho Bạn
                 </h2>
               </div>
               <Link
                 href="/jobs"
                 className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
               >
-                Browse all <ChevronRight className="w-3.5 h-3.5" />
+                Xem tất cả <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -666,7 +666,7 @@ export function Recommendations() {
                     href={`/jobs/${job.id}`}
                     className="block w-full py-2 bg-blue-600 text-white text-center rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
                   >
-                    View Details
+                    Xem Chi Tiết
                   </Link>
                 </div>
               ))}
@@ -678,7 +678,7 @@ export function Recommendations() {
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="w-5 h-5 text-orange-500" />
               <h2 className="font-bold text-slate-900">
-                Priority Skills to Develop
+                Kỹ Năng Ưu Tiên Cần Phát Triển
               </h2>
             </div>
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm divide-y divide-slate-50">
@@ -705,7 +705,7 @@ export function Recommendations() {
                           {skill.impact}
                         </p>
                         <p className="text-[11px] text-slate-400">
-                          {skill.jobs} jobs need this
+                          {skill.jobs} công việc yêu cầu kỹ năng này
                         </p>
                       </div>
                     </div>
@@ -718,7 +718,7 @@ export function Recommendations() {
                         href="/skill-gap"
                         className="px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-700 transition-colors"
                       >
-                        Start Learning
+                        Bắt đầu học
                       </Link>
                     </div>
                   </div>
@@ -764,14 +764,14 @@ export function Recommendations() {
                       />
                     </div>
                     <div className="flex justify-between text-[10px] mt-1 text-slate-400">
-                      <span>Now</span>
-                      <span>Target</span>
+                      <span>Hiện tại</span>
+                      <span>Mục tiêu</span>
                     </div>
                   </div>
 
                   <div className="mb-3">
                     <p className="text-xs font-semibold text-slate-700 mb-1.5">
-                      Skills to develop:
+                      Kỹ năng cần phát triển:
                     </p>
                     <div className="flex flex-wrap gap-1">
                       {path.gaps.map((gap) => (
@@ -788,7 +788,7 @@ export function Recommendations() {
                   <div className="border-t border-slate-100 pt-3 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-1 text-slate-500">
-                        <Clock className="w-3 h-3" /> Time to ready
+                        <Clock className="w-3 h-3" /> Thời gian chuẩn bị
                       </span>
                       <span className="font-semibold text-slate-900">
                         {path.timeToReady}
@@ -796,7 +796,7 @@ export function Recommendations() {
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-1 text-slate-500">
-                        <DollarSign className="w-3 h-3" /> Avg. Salary
+                        <DollarSign className="w-3 h-3" /> Mức lương trung bình
                       </span>
                       <span className="font-bold text-emerald-600">
                         {path.avgSalary}
@@ -804,10 +804,10 @@ export function Recommendations() {
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-1 text-slate-500">
-                        <Briefcase className="w-3 h-3" /> Open Roles
+                        <Briefcase className="w-3 h-3" /> Công việc đang mở
                       </span>
                       <span className="font-semibold text-blue-700">
-                        {path.openings.toLocaleString()} jobs
+                        {path.openings.toLocaleString()} công việc
                       </span>
                     </div>
                   </div>
@@ -821,21 +821,22 @@ export function Recommendations() {
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-5 flex flex-col justify-between">
               <div>
                 <p className="text-blue-200 text-xs font-semibold mb-2">
-                  Next Step
+                  Bước tiếp theo
                 </p>
                 <p className="text-white font-bold text-lg mb-2">
-                  Ready to analyze a new job?
+                  Sẵn sàng phân tích một công việc mới?
                 </p>
                 <p className="text-blue-200 text-sm">
-                  Upload your CV and compare it against any job description in
-                  seconds.
+                  Đăng tải CV của bạn để nhận báo cáo phân tích chi tiết về mức
+                  độ phù hợp với công việc mơ ước và lộ trình phát triển kỹ năng
+                  cá nhân hóa.
                 </p>
               </div>
               <Link
                 href="/cv-matching"
                 className="mt-4 flex items-center justify-center gap-2 py-2.5 bg-white text-blue-700 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors"
               >
-                Start CV Matching <ChevronRight className="w-4 h-4" />
+                Bắt đầu <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
@@ -851,7 +852,7 @@ export function Recommendations() {
             </p>
             <button className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
               <Filter className="w-3.5 h-3.5" />
-              Filter
+              Bộ lọc
             </button>
           </div>
           {savedReports.map((report) => (
@@ -983,7 +984,7 @@ export function Recommendations() {
                     href={r.url}
                     className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors"
                   >
-                    View <ExternalLink className="w-3 h-3" />
+                    Xem <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
               </div>
@@ -992,20 +993,20 @@ export function Recommendations() {
 
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 text-center">
             <p className="text-slate-300 text-xs mb-2">
-              📚 Personalized for you
+              📚 Cá nhân hóa dành cho bạn
             </p>
             <p className="text-white font-bold text-lg mb-1">
-              Want more resources?
+              Muốn thêm tài nguyên?
             </p>
             <p className="text-slate-400 text-sm mb-4">
-              Run a full gap analysis to get a tailored learning roadmap based
-              on your current skills.
+              Thực hiện phân tích khoảng cách đầy đủ để nhận lộ trình học tập
+              phù hợp dựa trên kỹ năng hiện tại của bạn.
             </p>
             <Link
               href="/skill-gap"
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors"
             >
-              View Gap Analysis <ChevronRight className="w-4 h-4" />
+              Xem Phân tích Khoảng cách <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
         </div>

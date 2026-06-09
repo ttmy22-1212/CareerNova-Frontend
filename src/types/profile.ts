@@ -27,6 +27,7 @@ export interface OnboardingCompleteResponse {
 export interface UpdateProfilePayload {
   full_name?: string;
   avatar_url?: string;
+  allow_default_cv_matching?: boolean;
   major?: string;
   school?: string;
   current_year?: number | null;

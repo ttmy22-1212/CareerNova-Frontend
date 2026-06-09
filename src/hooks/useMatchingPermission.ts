@@ -21,8 +21,13 @@ export function useMatchingPermission() {
       .then((res) => {
         if (!cancelled && res.data) {
           const value = res.data.user.allow_default_cv_matching;
-          setAllowed(value);
-          if (!value) setShowModal(true);
+          if (typeof value === "boolean") {
+            setAllowed(value);
+            setShowModal(value === false);
+          } else {
+            setAllowed(null);
+            setShowModal(false);
+          }
         }
       })
       .catch(() => {

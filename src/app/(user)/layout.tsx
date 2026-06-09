@@ -46,6 +46,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { DefaultCvManager } from "../../components/cv-matching/DefaultCvManager";
 
 type NavItem = {
   href: string;
@@ -593,13 +594,26 @@ export default function UserLayout({
             </Link>
           )}
 
-          <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Tìm nhanh job, skill, công ty..."
-              className="w-48 rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-4 text-sm placeholder:text-slate-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 lg:w-64 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-            />
+          <div className="hidden md:block">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-100/80 active:scale-95 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  <FileText className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                  <span>CV và So khớp mặc định</span>
+                  <ChevronDown className="h-3 w-3 text-slate-400" />
+                </button>
+              </PopoverTrigger>
+
+              <PopoverContent
+                align="end"
+                className="w-[420px] p-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+              >
+                <DefaultCvManager />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <button
