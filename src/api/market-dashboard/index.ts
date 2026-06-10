@@ -85,7 +85,7 @@ export default class MarketDashboardApi {
 
   /**
    * GET /dashboard/skills/rising
-   * Top kỹ năng bứt phá có tốc độ tăng trưởng đột biến (Rising Skills)
+   * Top kỹ năng có nhu cầu tuyển dụng tăng nhanh nhất
    */
   static async getRisingSkills(
     filters: DashboardFilterDto,

@@ -16,6 +16,20 @@ export interface SavedReportItem {
   created_at: string | null;
 }
 
+export interface PrioritySkill {
+  skill_id: number;
+  skill_name: string;
+  category: string | null;
+  status: "Missing" | "Partial";
+  priority: "critical" | "high" | "medium" | "low";
+  weight: number;
+  similarity: number;
+  job_count: number;
+  reason: string;
+  impact: string;
+  timeframe: string;
+}
+
 // Cấu trúc phản hồi bọc qua lớp IBaseResponse quen thuộc
 export interface GetTopJobsResponse {
   data: RecommendedJob[];
@@ -23,4 +37,8 @@ export interface GetTopJobsResponse {
 
 export interface GetSavedReportsResponse {
   data: SavedReportItem[];
+}
+
+export interface GetPrioritySkillsResponse {
+  data: PrioritySkill[];
 }

@@ -38,8 +38,8 @@ export interface UpdateProfilePayload {
 }
 
 export interface ChangePasswordPayload {
-  current: string;
-  next: string;
+  current_password: string;
+  new_password: string;
 }
 
 export interface AuthProviderInfo {

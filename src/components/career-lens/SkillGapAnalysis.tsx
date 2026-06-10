@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Target,
-  TrendingUp,
   BookOpen,
   Award,
   ChevronDown,
@@ -28,33 +27,48 @@ import {
   YAxis,
   CartesianGrid,
   Cell,
+  ReferenceLine,
 } from "recharts";
 
 // ── IMPORT API & TYPES THỰC TẾ ──────────────────────────────────
 import SkillGapApi from "@/api/skill-gap";
-import JobApi from "@/api/job";
+import MatchingApi from "@/api/matching";
+import ProfileApi from "@/api/profile";
 import {
   SkillGapStatisticsDto,
   CategoryGapDto,
-  RadarSkillPointDto,
-  CategoryBreakdownDto,
+  SkillGapLearningRecommendationDto,
 } from "@/types/skill-gap";
+import { MatchCategoryResponse } from "@/types/matching";
+import { UserProfileResponse } from "@/types/profile";
 
 const statusConfig: Record<
   string,
   { label: string; barColor: string; badgeBg: string; badgeText: string }
 > = {
+  Matched: {
+    label: "Đã khớp",
+    barColor: "bg-emerald-500",
+    badgeBg: "bg-emerald-100",
+    badgeText: "text-emerald-700",
+  },
+  Partial: {
+    label: "Khớp một phần",
+    barColor: "bg-amber-400",
+    badgeBg: "bg-amber-100",
+    badgeText: "text-amber-700",
+  },
+  Missing: {
+    label: "Thiếu",
+    barColor: "bg-red-500",
+    badgeBg: "bg-red-100",
+    badgeText: "text-red-700",
+  },
   Proficient: {
     label: "Thành thạo",
     barColor: "bg-emerald-500",
     badgeBg: "bg-emerald-100",
     badgeText: "text-emerald-700",
-  },
-  Missing: {
-    label: "Cần cải thiện",
-    barColor: "bg-amber-400",
-    badgeBg: "bg-amber-100",
-    badgeText: "text-amber-700",
   },
 };
 
@@ -62,239 +76,313 @@ const priorityConfig: Record<
   string,
   { label: string; color: string; bg: string }
 > = {
-  critical: { label: "Critical", color: "text-red-700", bg: "bg-red-100" },
+  critical: { label: "Rất ưu tiên", color: "text-red-700", bg: "bg-red-100" },
   high: {
-    label: "High Priority",
+    label: "Ưu tiên cao",
     color: "text-orange-700",
     bg: "bg-orange-100",
   },
-  medium: { label: "Medium", color: "text-amber-700", bg: "bg-amber-100" },
-  low: { label: "Low", color: "text-blue-700", bg: "bg-blue-100" },
+  medium: { label: "Ưu tiên", color: "text-amber-700", bg: "bg-amber-100" },
+  low: { label: "Bổ sung", color: "text-blue-700", bg: "bg-blue-100" },
 };
 
-const learningPaths = [
-  {
-    id: 1,
-    skill: "AWS Cloud Fundamentals",
-    category: "DevOps & Cloud",
-    priority: "critical",
-    estimatedTime: "3–4 months",
-    impact: "+32% job matches",
-    jobsRequiring: "78%",
-    resources: [
-      {
-        name: "AWS Certified Developer – Associate",
-        type: "Certification",
-        duration: "3 mo",
-        cost: "$150",
-      },
-      {
-        name: "A Cloud Guru — AWS Path",
-        type: "Course",
-        duration: "6 weeks",
-        cost: "$49/mo",
-      },
-      {
-        name: "AWS Free Tier Projects",
-        type: "Practice",
-        duration: "Ongoing",
-        cost: "Free",
-      },
-    ],
-    steps: [
-      "Create AWS Free Tier account",
-      "Complete IAM & EC2 module",
-      "Deploy a Node.js app to Elastic Beanstalk",
-      "Pass AWS Cloud Practitioner exam",
-    ],
-    started: false,
-  },
-  {
-    id: 2,
-    skill: "Advanced Node.js & APIs",
-    category: "Backend Development",
-    priority: "high",
-    estimatedTime: "2–3 months",
-    impact: "+25% job matches",
-    jobsRequiring: "65%",
-    resources: [
-      {
-        name: "Node.js Design Patterns",
-        type: "Book",
-        duration: "4 weeks",
-        cost: "$35",
-      },
-      {
-        name: "Build REST APIs with Express",
-        type: "Course",
-        duration: "2 weeks",
-        cost: "Free",
-      },
-      {
-        name: "Build a microservices project",
-        type: "Project",
-        duration: "4 weeks",
-        cost: "Free",
-      },
-    ],
-    steps: [
-      "Learn Express.js middleware chain",
-      "Implement JWT authentication",
-      "Design a RESTful API",
-      "Add rate-limiting and caching",
-    ],
-    started: true,
-  },
-  {
-    id: 3,
-    skill: "Docker & Containerization",
-    category: "DevOps & Cloud",
-    priority: "medium",
-    estimatedTime: "2 months",
-    impact: "+18% job matches",
-    jobsRequiring: "55%",
-    resources: [
-      {
-        name: "Docker Deep Dive (Nigel Poulton)",
-        type: "Book",
-        duration: "2 weeks",
-        cost: "$25",
-      },
-      {
-        name: "Play with Docker Labs",
-        type: "Practice",
-        duration: "Ongoing",
-        cost: "Free",
-      },
-    ],
-    steps: [
-      "Understand containers vs VMs",
-      "Write your first Dockerfile",
-      "Use Docker Compose for multi-service apps",
-      "Push images to Docker Hub",
-    ],
-    started: false,
-  },
-  {
-    id: 4,
-    skill: "GraphQL API Development",
-    category: "Backend Development",
-    priority: "medium",
-    estimatedTime: "1–2 months",
-    impact: "+14% job matches",
-    jobsRequiring: "42%",
-    resources: [
-      {
-        name: "GraphQL — The Full Course",
-        type: "Course",
-        duration: "3 weeks",
-        cost: "$29",
-      },
-      {
-        name: "Build a GraphQL API with Apollo",
-        type: "Project",
-        duration: "2 weeks",
-        cost: "Free",
-      },
-    ],
-    steps: [
-      "Learn GraphQL schema definition",
-      "Set up Apollo Server",
-      "Write queries, mutations, and subscriptions",
-      "Integrate with a React frontend",
-    ],
-    started: false,
-  },
-];
+function RadarCategoryDropdown({
+  categories,
+  selected,
+  onSelect,
+  isLoading,
+}: {
+  categories: MatchCategoryResponse[];
+  selected: string;
+  onSelect: (cat: string) => void;
+  isLoading: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filtered = categories.filter((c) =>
+    (c.category || "").toLowerCase().includes(search.toLowerCase()),
+  );
+
+  return (
+    <div className="relative z-10 w-full">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition-all hover:bg-slate-100"
+      >
+        <span className="truncate">
+          {selected === "All" ? "Tất cả nhóm kỹ năng" : selected}
+        </span>
+        {isLoading ? (
+          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+        ) : (
+          <svg
+            className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${
+              isOpen ? "rotate-180" : ""
+            }`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="animate-in fade-in slide-in-from-top-1 absolute left-0 z-20 mt-1 flex max-h-48 w-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg duration-150">
+          <div className="border-b border-slate-100 bg-slate-50/50 p-2">
+            <input
+              type="text"
+              placeholder="Tìm kiếm nhóm kỹ năng..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoFocus
+              className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="flex-1 divide-y divide-slate-50 overflow-y-auto">
+            {filtered.map((cat) => (
+              <button
+                key={cat.category}
+                type="button"
+                disabled={!cat.is_matched}
+                onClick={() => {
+                  onSelect(cat.category);
+                  setIsOpen(false);
+                  setSearch("");
+                }}
+                className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs transition-all
+                  ${
+                    selected === cat.category
+                      ? "bg-blue-50 font-bold text-blue-600"
+                      : "text-slate-700"
+                  }
+                  ${
+                    !cat.is_matched
+                      ? "cursor-not-allowed bg-slate-50/50 opacity-30"
+                      : "hover:bg-slate-50"
+                  }
+                `}
+              >
+                <span className="truncate">{cat.category}</span>
+                {!cat.is_matched && (
+                  <span className="shrink-0 text-[10px] text-slate-400">
+                    (Không khớp)
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const CustomRadarTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-3 text-xs font-medium shadow-xl">
+        <p className="mb-1 flex items-center gap-1 font-semibold text-slate-900">
+          <span>{data.subject}</span>
+          {data.matchedVia && (
+            <span className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-normal text-violet-500">
+              (khớp qua {data.matchedVia})
+            </span>
+          )}
+        </p>
+        <p className="text-blue-600">Bạn có: {data.you}%</p>
+        <p className="text-emerald-600">
+          Yêu cầu thị trường: {data.market || data.required || 100}%
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 export function SkillGapAnalysis() {
-  const [expandedPath, setExpandedPath] = useState<number | null>(null);
+  const [expandedPath, setExpandedPath] = useState<string | null>(null);
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [matchSkillCategory, setMatchSkillCategory] = useState<string>("");
+  const [matchCategories, setMatchCategories] = useState<
+    MatchCategoryResponse[]
+  >([]);
+  const [isMatchCategoryLoading, setIsMatchCategoryLoading] = useState(false);
 
   // States quản lý dữ liệu động từ API
+  const [profile, setProfile] = useState<UserProfileResponse | null>(null);
   const [statistics, setStatistics] = useState<SkillGapStatisticsDto | null>(
     null,
   );
   const [categoryGaps, setCategoryGaps] = useState<CategoryGapDto[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [radarSkills, setRadarSkills] = useState<RadarSkillPointDto[]>([]);
-  const [skillsBreakdown, setSkillsBreakdown] = useState<
-    CategoryBreakdownDto[]
+  const [matchRadarSkills, setMatchRadarSkills] = useState<any[]>([]);
+  const [learningRecommendations, setLearningRecommendations] = useState<
+    SkillGapLearningRecommendationDto[]
   >([]);
+  const [isLearningLoading, setIsLearningLoading] = useState(false);
 
   // 1. Tải toàn bộ cấu trúc dữ liệu ban đầu khi mount trang
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [statsRes, gapsRes, categoriesRes, breakdownRes] =
-          await Promise.all([
-            SkillGapApi.getStatistics(),
-            SkillGapApi.getCategoryGaps(),
-            JobApi.getCategories(),
-            SkillGapApi.getSkillsBreakdown(),
-          ]);
+        setIsLearningLoading(true);
+        const [profileRes, statsRes, gapsRes, learningRes] = await Promise.all([
+          ProfileApi.getMe(),
+          SkillGapApi.getStatistics(),
+          SkillGapApi.getCategoryGaps(10),
+          SkillGapApi.getLearningPaths(3),
+        ]);
 
-        if (statsRes.data) setStatistics(statsRes.data);
-        if (gapsRes.data) setCategoryGaps(gapsRes.data);
-        if (breakdownRes.data) {
-          setSkillsBreakdown(breakdownRes.data);
-          // Mặc định expand danh mục đầu tiên trong bảng breakdown nếu có dữ liệu
-          if (breakdownRes.data.length > 0) {
-            setExpandedCat(breakdownRes.data[0].category_name);
+        if (profileRes.data) {
+          setProfile(profileRes.data);
+
+          const defaultMatchId = profileRes.data.default_match?.match_id;
+          if (defaultMatchId) {
+            const catRes = await MatchingApi.getMatchCategories(defaultMatchId);
+            if (catRes?.data) {
+              setMatchCategories(catRes.data);
+              setMatchSkillCategory("All");
+            }
           }
         }
-        if (categoriesRes && categoriesRes.length > 0) {
-          setCategories(categoriesRes);
-          setSelectedCategoryId(categoriesRes[0]);
+        if (statsRes.data) setStatistics(statsRes.data);
+        if (gapsRes.data) {
+          setCategoryGaps(gapsRes.data);
+          if (gapsRes.data.length > 0) {
+            setExpandedCat(gapsRes.data[0].category);
+          }
         }
+        if (learningRes.data) setLearningRecommendations(learningRes.data);
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu Skill Gap:", err);
+      } finally {
+        setIsLearningLoading(false);
       }
     };
 
     fetchInitialData();
   }, []);
 
-  // 2. Tải dữ liệu biểu đồ Radar mỗi khi thay đổi ô Combo Box chọn ngành nghề
   useEffect(() => {
-    if (!selectedCategoryId) return;
-    const fetchRadarData = async () => {
+    const defaultMatchId = profile?.default_match?.match_id;
+    if (!defaultMatchId || !matchSkillCategory) return;
+
+    const fetchMatchRadarData = async () => {
       try {
-        const res = await SkillGapApi.getSkillsRadar({
-          category: selectedCategoryId,
-        });
-        if (res.data) setRadarSkills(res.data);
+        setIsMatchCategoryLoading(true);
+
+        if (matchSkillCategory === "All") {
+          const rawRadar = profile?.default_match?.radar_data || [];
+          const rawGapReport = profile?.default_match?.gap_report || {};
+          const allSkillsForRadar = [
+            ...rawRadar,
+            ...((rawGapReport as any).partially_matched_skills || []),
+            ...((rawGapReport as any).missing_skills || []),
+          ];
+
+          const formattedAll = allSkillsForRadar.map((s: any) => {
+            const rawSim =
+              s.similarity ?? (s.user_score ? s.user_score / 100 : 0);
+            return {
+              skill_name: s.skill_name,
+              similarity: rawSim,
+              matched_via: s.matched_via || null,
+              user_score: s.user_score ?? 0,
+              market_score: s.market_score ?? 0,
+            };
+          });
+
+          setMatchRadarSkills(formattedAll);
+          return;
+        }
+
+        const res = await MatchingApi.getRadarByCategory(
+          defaultMatchId,
+          matchSkillCategory,
+        );
+        if (res?.data) {
+          const rawRadar = res.data.radar_data || [];
+          const rawGapReport = (res.data.gap_report as any) || {};
+          setMatchRadarSkills([
+            ...rawRadar,
+            ...(rawGapReport.partially_matched_skills || []),
+            ...(rawGapReport.missing_skills || []),
+          ]);
+        }
       } catch (err) {
-        console.error("Lỗi khi tải dữ liệu Radar chi tiết:", err);
+        console.error("Lỗi khi tải dữ liệu Radar theo matching:", err);
+      } finally {
+        setIsMatchCategoryLoading(false);
       }
     };
 
-    fetchRadarData();
-  }, [selectedCategoryId]);
+    fetchMatchRadarData();
+  }, [matchSkillCategory, profile?.default_match?.match_id]);
 
-  // Map dữ liệu Radar cho Recharts
-  const categoryRadarData = radarSkills.map((s) => ({
-    subject: s.skill_name,
-    you: s.user_score,
-    market: s.market_score,
-  }));
+  const matchRadarData = matchRadarSkills.map((s: any) => {
+    let youScore = Math.round((s.similarity || 0) * 100);
+    if (youScore === 0) youScore = 0.1;
 
-  // Định dạng lại dữ liệu cho biểu đồ thanh ngang khoảng cách danh mục (Gap Bar Chart)
-  // Đảm bảo lấy giá trị trị tuyệt đối (Math.abs) vì gap_score từ BE có thể mang dấu âm (-) biểu thị sự thiếu hụt
+    return {
+      subject: s.skill_name || "",
+      you: youScore,
+      required: 100,
+      matchedVia: s.matched_via || null,
+    };
+  });
+
+  const formatCategoryGapScore = (value: number) => {
+    const roundedValue = Number(value.toFixed(1));
+    return `${roundedValue > 0 ? "+" : ""}${roundedValue}pt`;
+  };
+
+  const clampPercent = (value: number) => Math.min(Math.max(value, 0), 100);
+
+  const renderCategoryGapLabel = (props: any) => {
+    const { x = 0, y = 0, width = 0, height = 0, value = 0 } = props;
+    const numericValue = Number(value);
+    const labelX =
+      numericValue >= 0 ? Number(x) + Number(width) + 6 : Number(x) - 6;
+    const labelY = Number(y) + Number(height) / 2 + 4;
+
+    return (
+      <text
+        x={labelX}
+        y={labelY}
+        textAnchor={numericValue >= 0 ? "start" : "end"}
+        fill="#64748b"
+        fontSize={11}
+        fontWeight={600}
+      >
+        {formatCategoryGapScore(numericValue)}
+      </text>
+    );
+  };
+
+  // Định dạng dữ liệu cho biểu đồ thanh ngang độ khớp danh mục (âm: thiếu, dương: khớp)
   const chartData = categoryGaps.map((c) => {
-    let barColor = "#10b981"; // emerald
-    const absGap = Math.abs(c.gap_score);
-    if (absGap > 25)
-      barColor = "#ef4444"; // red
-    else if (absGap > 15)
-      barColor = "#f59e0b"; // amber
-    else if (absGap > 5) barColor = "#3b82f6"; // blue
+    const score = Number(c.gap_score || 0);
+    const roundedScore = Number(score.toFixed(1));
 
     return {
       name: c.category.replace(" Development", "").replace(" & Data", ""),
-      gap: absGap,
-      color: barColor,
+      gap: roundedScore,
+      color:
+        roundedScore < 0
+          ? "#ef4444"
+          : roundedScore > 0
+            ? "#10b981"
+            : "#94a3b8",
     };
   });
 
@@ -355,79 +443,95 @@ export function SkillGapAnalysis() {
             Chọn danh mục để xem phân tích kỹ năng chi tiết
           </p>
 
-          {/* Combo Box */}
-          <select
-            value={selectedCategoryId}
-            onChange={(e) => setSelectedCategoryId(e.target.value)}
-            className="w-full mb-4 px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                🛠️ {cat}
-              </option>
-            ))}
-          </select>
-
-          {/* Category Radar */}
-          {categoryRadarData.length > 0 ? (
-            <>
-              <ResponsiveContainer width="100%" height={240}>
-                <RadarChart
-                  data={categoryRadarData}
-                  margin={{ top: 10, right: 30, bottom: 10, left: 30 }}
-                >
-                  <PolarGrid stroke="#e2e8f0" />
-                  <PolarAngleAxis
-                    dataKey="subject"
-                    tick={{ fontSize: 10, fill: "#64748b" }}
-                  />
-                  <PolarRadiusAxis
-                    tick={false}
-                    axisLine={false}
-                    domain={[0, 100]}
-                  />
-                  <Radar
-                    name="You"
-                    dataKey="you"
-                    stroke="#3b82f6"
-                    fill="#3b82f6"
-                    fillOpacity={0.35}
-                  />
-                  <Radar
-                    name="Market"
-                    dataKey="market"
-                    stroke="#10b981"
-                    fill="#10b981"
-                    fillOpacity={0.15}
-                  />
-                  <Tooltip />
-                </RadarChart>
-              </ResponsiveContainer>
-              <div className="flex gap-5 justify-center mt-1">
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <span className="w-4 h-0.5 bg-blue-500 inline-block rounded-full" />
-                  Bạn
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <span className="w-4 h-0.5 bg-emerald-500 inline-block rounded-full" />
-                  Thị trường
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex items-center justify-center h-48 text-sm text-slate-400">
-              Không có dữ liệu kỹ năng cho danh mục này
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+            <div className="mb-3">
+              <h4 className="text-sm font-bold text-slate-900">
+                Kỹ năng của bạn so với thị trường
+              </h4>
+              <p className="mt-0.5 text-[11px] text-slate-500">
+                Theo kết quả so khớp CV mặc định
+              </p>
             </div>
-          )}
+
+            {profile?.default_match ? (
+              <>
+                <RadarCategoryDropdown
+                  categories={matchCategories}
+                  selected={matchSkillCategory}
+                  onSelect={(cat) => setMatchSkillCategory(cat)}
+                  isLoading={isMatchCategoryLoading}
+                />
+
+                {matchRadarData.length === 0 ? (
+                  <div className="mt-4 flex min-h-[200px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/70 text-xs text-slate-400">
+                    Không có dữ liệu phân tích kỹ năng cho danh mục này
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={240}>
+                    <RadarChart
+                      data={matchRadarData}
+                      margin={{ top: 10, right: 25, bottom: 10, left: 25 }}
+                    >
+                      <PolarGrid stroke="#e2e8f0" />
+                      <PolarAngleAxis
+                        dataKey="subject"
+                        tick={{
+                          fontSize: 10,
+                          fill: "#64748b",
+                          fontWeight: 500,
+                        }}
+                      />
+                      <PolarRadiusAxis
+                        tick={false}
+                        axisLine={false}
+                        domain={[0, 100]}
+                      />
+                      <Radar
+                        name="Bạn"
+                        dataKey="you"
+                        stroke="#3b82f6"
+                        fill="#3b82f6"
+                        fillOpacity={0.35}
+                      />
+                      <Radar
+                        name="Thị trường"
+                        dataKey="required"
+                        stroke="#10b981"
+                        fill="#10b981"
+                        fillOpacity={0.15}
+                      />
+                      <Tooltip content={<CustomRadarTooltip />} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                )}
+
+                <div className="mt-1 flex justify-center gap-5">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <span className="inline-block h-0.5 w-4 rounded-full bg-blue-500" />
+                    Bạn
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <span className="inline-block h-0.5 w-4 rounded-full bg-emerald-500" />
+                    Yêu cầu thị trường
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex min-h-[200px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/70 px-4 text-center text-xs text-slate-400">
+                Chưa có kết quả so khớp CV mặc định để hiển thị radar cá nhân
+                hóa
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Gap Bar Chart */}
         <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
           <h3 className="font-bold text-slate-900 mb-0.5">
-            Khoảng cách theo danh mục
+            Độ khớp theo danh mục
           </h3>
           <p className="text-xs text-slate-500 mb-4">
-            Điểm lệch so với trung bình thị trường
+            Điểm khớp theo trọng số skill trong default matching
           </p>
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
@@ -446,7 +550,10 @@ export function SkillGapAnalysis() {
                   tick={{ fontSize: 10, fill: "#94a3b8" }}
                   axisLine={false}
                   tickLine={false}
-                  domain={[0, "dataMax + 10"]}
+                  domain={[
+                    (dataMin: number) => Math.min(dataMin - 10, 0),
+                    (dataMax: number) => Math.max(dataMax + 10, 0),
+                  ]}
                 />
                 <YAxis
                   type="category"
@@ -456,16 +563,17 @@ export function SkillGapAnalysis() {
                   tickLine={false}
                   width={80}
                 />
-                <Tooltip formatter={(v: any) => [`${v} pts gap`, "Gap"]} />
+                <ReferenceLine x={0} stroke="#cbd5e1" strokeDasharray="3 3" />
+                <Tooltip
+                  formatter={(v: any) => [
+                    formatCategoryGapScore(Number(v)),
+                    "Điểm khớp",
+                  ]}
+                />
                 <Bar
                   dataKey="gap"
-                  radius={[0, 6, 6, 0]}
-                  label={{
-                    position: "right",
-                    fontSize: 11,
-                    fill: "#64748b",
-                    formatter: (v: any) => `${v}pts`,
-                  }}
+                  radius={[6, 6, 6, 6]}
+                  label={renderCategoryGapLabel}
                 >
                   {chartData.map((entry, idx) => (
                     <Cell key={idx} fill={entry.color} />
@@ -475,7 +583,7 @@ export function SkillGapAnalysis() {
             </ResponsiveContainer>
           ) : (
             <div className="flex items-center justify-center h-48 text-sm text-slate-400">
-              Không có dữ liệu khoảng cách
+              Không có dữ liệu độ khớp
             </div>
           )}
         </div>
@@ -492,121 +600,134 @@ export function SkillGapAnalysis() {
           </p>
         </div>
         <div className="divide-y divide-slate-50">
-          {skillsBreakdown.map((cat) => {
-            const isExpanded = expandedCat === cat.category_name;
-            const absGap = Math.abs(cat.user_rate_avg - cat.market_rate_avg);
-            const gapColor =
-              absGap <= 10
-                ? "bg-emerald-100 text-emerald-700"
-                : absGap <= 20
-                  ? "bg-amber-100 text-amber-700"
-                  : "bg-red-100 text-red-700";
-            const barFillColor =
-              absGap <= 10 ? "#10b981" : absGap <= 20 ? "#f59e0b" : "#ef4444";
+          {categoryGaps.length === 0 ? (
+            <div className="flex items-center justify-center px-5 py-12 text-sm text-slate-400">
+              Không có dữ liệu kỹ năng chi tiết
+            </div>
+          ) : (
+            categoryGaps.map((cat) => {
+              const isExpanded = expandedCat === cat.category;
+              const gapColor =
+                cat.gap_score > 0
+                  ? "bg-emerald-100 text-emerald-700"
+                  : cat.gap_score < 0
+                    ? "bg-red-100 text-red-700"
+                    : "bg-slate-100 text-slate-600";
+              const barFillColor =
+                cat.gap_score > 0
+                  ? "#10b981"
+                  : cat.gap_score < 0
+                    ? "#ef4444"
+                    : "#94a3b8";
+              const categoryUserRate = clampPercent(cat.user_rate_avg);
 
-            return (
-              <div key={cat.category_name}>
-                <button
-                  onClick={() =>
-                    setExpandedCat(isExpanded ? null : cat.category_name)
-                  }
-                  className="w-full flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors text-left"
-                >
-                  <span className="text-xl">🛠️</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-1.5">
-                      <span className="font-semibold text-slate-900 text-sm">
-                        {cat.category_name}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${gapColor}`}
-                      >
-                        {cat.gap_label}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 max-w-48 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${cat.user_rate_avg}%`,
-                            backgroundColor: barFillColor,
-                          }}
-                        />
-                      </div>
-                      <span className="text-xs text-slate-500">
-                        Bạn:{" "}
-                        <span className="font-semibold text-slate-700">
-                          {cat.user_rate_avg}%
+              return (
+                <div key={cat.category}>
+                  <button
+                    onClick={() =>
+                      setExpandedCat(isExpanded ? null : cat.category)
+                    }
+                    className="w-full flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors text-left"
+                  >
+                    <span className="text-xl">🛠️</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-1.5">
+                        <span className="font-semibold text-slate-900 text-sm">
+                          {cat.category}
                         </span>
-                        {" · "}Thị trường:{" "}
-                        <span className="font-semibold text-slate-700">
-                          {cat.market_rate_avg}%
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                  {isExpanded ? (
-                    <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-                  )}
-                </button>
-
-                {isExpanded && (
-                  <div className="px-5 pb-4 space-y-3">
-                    {cat.skills.map((skill) => {
-                      const sc =
-                        statusConfig[skill.status] || statusConfig["Missing"];
-                      return (
-                        <div
-                          key={skill.skill_id}
-                          className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl"
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${gapColor}`}
                         >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-semibold text-slate-900">
-                                {skill.skill_name}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[11px] text-slate-500">
-                                  {skill.user_rate}% / {skill.market_rate}%
+                          {cat.gap_label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 max-w-48 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${categoryUserRate}%`,
+                              backgroundColor: barFillColor,
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs text-slate-500">
+                          Bạn:{" "}
+                          <span className="font-semibold text-slate-700">
+                            {cat.user_rate_avg}%
+                          </span>
+                          {" · "}Thị trường:{" "}
+                          <span className="font-semibold text-slate-700">
+                            {cat.market_rate_avg}%
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                    {isExpanded ? (
+                      <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                    )}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="px-5 pb-4 space-y-3">
+                      {cat.skills.map((skill) => {
+                        const sc =
+                          statusConfig[skill.status] ||
+                          statusConfig["Missing"];
+                        const skillUserRate = clampPercent(skill.user_rate);
+                        const skillMarketRate = clampPercent(skill.market_rate);
+
+                        return (
+                          <div
+                            key={skill.skill_id}
+                            className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-semibold text-slate-900">
+                                  {skill.skill_name}
                                 </span>
-                                <span
-                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${sc.badgeBg} ${sc.badgeText}`}
-                                >
-                                  {sc.label}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[11px] text-slate-500">
+                                    {skill.user_rate}% / {skill.market_rate}%
+                                  </span>
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${sc.badgeBg} ${sc.badgeText}`}
+                                  >
+                                    {sc.label}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="relative h-2 bg-white border border-slate-200 rounded-full overflow-hidden">
+                                <div
+                                  className={`absolute h-full rounded-full transition-all ${sc.barColor}`}
+                                  style={{ width: `${skillUserRate}%` }}
+                                />
+                                <div
+                                  className="absolute top-0 bottom-0 w-0.5 bg-slate-400 rounded-full"
+                                  style={{ left: `${skillMarketRate}%` }}
+                                />
+                              </div>
+                              <div className="flex items-center justify-between mt-1">
+                                <span className="text-[10px] text-slate-400">
+                                  Bạn: {skill.user_rate}%
+                                </span>
+                                <span className="text-[10px] text-slate-400">
+                                  Thị trường: {skill.market_rate}%
                                 </span>
                               </div>
                             </div>
-                            <div className="relative h-2 bg-white border border-slate-200 rounded-full overflow-hidden">
-                              <div
-                                className={`absolute h-full rounded-full transition-all ${sc.barColor}`}
-                                style={{ width: `${skill.user_rate}%` }}
-                              />
-                              {/* Target marker */}
-                              <div
-                                className="absolute top-0 bottom-0 w-0.5 bg-slate-400 rounded-full"
-                                style={{ left: `${skill.market_rate}%` }}
-                              />
-                            </div>
-                            <div className="flex items-center justify-between mt-1">
-                              <span className="text-[10px] text-slate-400">
-                                Bạn: {skill.user_rate}%
-                              </span>
-                              <span className="text-[10px] text-slate-400">
-                                Thị trường: {skill.market_rate}%
-                              </span>
-                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -620,140 +741,229 @@ export function SkillGapAnalysis() {
             </p>
           </div>
           <Link
-            href="/recommendations"
+            href="/roadmap"
             className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
           >
-            Xem tất cả <ArrowRight className="w-3.5 h-3.5" />
+            Xem lộ trình <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
         <div className="divide-y divide-slate-50">
-          {learningPaths.map((path) => {
-            const isExpanded = expandedPath === path.id;
-            const pc = priorityConfig[path.priority];
-            return (
-              <div key={path.id} className="px-5 py-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <h3 className="font-bold text-slate-900 text-sm">
-                        {path.skill}
-                      </h3>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${pc.bg} ${pc.color}`}
-                      >
-                        {pc.label}
-                      </span>
-                      {path.started && (
-                        <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
-                          Trong tiến trình
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-500 mb-2">
-                      {path.category}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-3 text-xs">
-                      <span className="flex items-center gap-1 text-slate-600">
-                        <Clock className="w-3 h-3" />
-                        {path.estimatedTime}
-                      </span>
-                      <span className="text-emerald-600 font-semibold">
-                        {path.impact}
-                      </span>
-                      <span className="text-slate-500">
-                        Yêu cầu ở {path.jobsRequiring} công việc trong danh mục
-                        này
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button
-                      onClick={() =>
-                        setExpandedPath(isExpanded ? null : path.id)
-                      }
-                      className="px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 transition-colors flex items-center gap-1"
-                    >
-                      {isExpanded ? "Less" : "Details"}
-                      {isExpanded ? (
-                        <ChevronUp className="w-3 h-3" />
-                      ) : (
-                        <ChevronDown className="w-3 h-3" />
-                      )}
-                    </button>
-                    <button
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                        path.started
-                          ? "bg-blue-600 text-white hover:bg-blue-700"
-                          : "bg-slate-900 text-white hover:bg-slate-800"
-                      }`}
-                    >
-                      {path.started ? "Continue" : "Start"}
-                    </button>
-                  </div>
-                </div>
+          {isLearningLoading ? (
+            <div className="space-y-3 px-5 py-4">
+              {[1, 2, 3].map((item) => (
+                <div
+                  key={item}
+                  className="h-16 rounded-xl bg-slate-100 animate-pulse"
+                />
+              ))}
+            </div>
+          ) : learningRecommendations.length === 0 ? (
+            <div className="flex items-center justify-center px-5 py-12 text-sm text-slate-400">
+              Không có lộ trình học đề xuất
+            </div>
+          ) : (
+            learningRecommendations.map((path) => {
+              const isExpanded = expandedPath === path.id;
+              const pc = priorityConfig[path.priority];
+              const firstCourse = path.courses[0];
+              const actionHref = firstCourse?.source_url || "/roadmap";
 
-                {isExpanded && (
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Resources */}
-                    <div>
-                      <p className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
-                        Tài nguyên
+              return (
+                <div key={path.id} className="px-5 py-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <h3 className="font-bold text-slate-900 text-sm">
+                          {path.skill_name}
+                        </h3>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${pc.bg} ${pc.color}`}
+                        >
+                          {pc.label}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            path.status === "Missing"
+                              ? "bg-red-50 text-red-600"
+                              : "bg-amber-50 text-amber-600"
+                          }`}
+                        >
+                          {path.status === "Missing" ? "Thiếu" : "Khớp một phần"}
+                        </span>
+                        {path.started && (
+                          <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                            Trong tiến trình
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mb-2">
+                        {path.category || "General"}
                       </p>
-                      <div className="space-y-2">
-                        {path.resources.map((r, i) => (
-                          <div
-                            key={i}
-                            className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg"
-                          >
-                            <div>
-                              <p className="text-xs font-semibold text-slate-900">
-                                {r.name}
-                              </p>
-                              <p className="text-[11px] text-slate-500">
-                                {r.type} · {r.duration}
-                              </p>
-                            </div>
-                            <span className="text-xs font-semibold text-blue-700 shrink-0 ml-2">
-                              {r.cost}
-                            </span>
-                          </div>
-                        ))}
+                      <div className="flex flex-wrap items-center gap-3 text-xs">
+                        <span className="flex items-center gap-1 text-slate-600">
+                          <Clock className="w-3 h-3" />
+                          {path.estimated_time}
+                        </span>
+                        <span className="text-emerald-600 font-semibold">
+                          {path.impact}
+                        </span>
+                        <span className="text-slate-500">
+                          {path.jobs_requiring}
+                        </span>
                       </div>
                     </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedPath(isExpanded ? null : path.id)
+                        }
+                        className="px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 transition-colors flex items-center gap-1"
+                      >
+                        {isExpanded ? "Thu gọn" : "Chi tiết"}
+                        {isExpanded ? (
+                          <ChevronUp className="w-3 h-3" />
+                        ) : (
+                          <ChevronDown className="w-3 h-3" />
+                        )}
+                      </button>
+                      <Link
+                        href={actionHref}
+                        target={firstCourse?.source_url ? "_blank" : undefined}
+                        rel={
+                          firstCourse?.source_url
+                            ? "noopener noreferrer"
+                            : undefined
+                        }
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                          path.started
+                            ? "bg-blue-600 text-white hover:bg-blue-700"
+                            : "bg-slate-900 text-white hover:bg-slate-800"
+                        }`}
+                      >
+                        {path.started ? "Tiếp tục" : "Bắt đầu"}
+                      </Link>
+                    </div>
+                  </div>
 
-                    {/* Steps */}
-                    <div>
-                      <p className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
-                        Các bước học
-                      </p>
-                      <div className="space-y-2">
-                        {path.steps.map((step, i) => (
-                          <div key={i} className="flex items-start gap-2.5">
-                            <div
-                              className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                                path.started && i === 0
-                                  ? "bg-blue-600"
-                                  : "bg-slate-200"
-                              }`}
+                  {isExpanded && (
+                    <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
+                          Khóa học gợi ý
+                        </p>
+                        <div className="space-y-2">
+                          {path.courses.map((course) => (
+                            <Link
+                              key={course.id}
+                              href={course.source_url || "/roadmap"}
+                              target={course.source_url ? "_blank" : undefined}
+                              rel={
+                                course.source_url
+                                  ? "noopener noreferrer"
+                                  : undefined
+                              }
+                              className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-lg hover:bg-blue-50 transition-colors group"
                             >
-                              {path.started && i === 0 ? (
-                                <CheckCircle2 className="w-3 h-3 text-white" />
-                              ) : (
-                                <Circle className="w-3 h-3 text-slate-400" />
-                              )}
+                              <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 text-base">
+                                {course.image || (
+                                  <BookOpen className="w-4 h-4 text-blue-600" />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-semibold text-slate-900 truncate">
+                                  {course.title}
+                                </p>
+                                <p className="text-[11px] text-slate-500">
+                                  {course.provider} · {course.duration}
+                                </p>
+                              </div>
+                              <div className="shrink-0 text-right">
+                                {course.rating > 0 && (
+                                  <p className="text-[10px] font-bold text-amber-600">
+                                    ★ {course.rating.toFixed(1)}
+                                  </p>
+                                )}
+                                <p className="text-[10px] text-slate-400">
+                                  {course.price > 0 ? `$${course.price}` : "Free"}
+                                </p>
+                              </div>
+                            </Link>
+                          ))}
+                          {path.paths.map((learningPath) => (
+                            <div
+                              key={learningPath.id}
+                              className="flex items-start gap-3 rounded-lg bg-slate-50 p-2.5"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0 text-base">
+                                {learningPath.icon}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-slate-900">
+                                  {learningPath.title}
+                                </p>
+                                <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-2">
+                                  {learningPath.description}
+                                </p>
+                                <p className="mt-1 text-[10px] font-semibold text-emerald-600">
+                                  {learningPath.difficulty} ·{" "}
+                                  {learningPath.duration}
+                                </p>
+                              </div>
                             </div>
-                            <p className="text-xs text-slate-700 leading-relaxed">
-                              {step}
+                          ))}
+                          {path.courses.length === 0 &&
+                            path.paths.length === 0 && (
+                              <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-400">
+                                Chưa có khóa học phù hợp cho kỹ năng này
+                              </div>
+                            )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
+                          Các bước học
+                        </p>
+                        <div className="space-y-2">
+                          {path.steps.map((step, i) => (
+                            <div key={i} className="flex items-start gap-2.5">
+                              <div
+                                className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                                  path.started && i === 0
+                                    ? "bg-blue-600"
+                                    : "bg-slate-200"
+                                }`}
+                              >
+                                {path.started && i === 0 ? (
+                                  <CheckCircle2 className="w-3 h-3 text-white" />
+                                ) : (
+                                  <Circle className="w-3 h-3 text-slate-400" />
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-700 leading-relaxed">
+                                {step}
+                              </p>
+                            </div>
+                          ))}
+                          <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                              <Award className="h-3.5 w-3.5 text-blue-600" />
+                              Chi tiết matching
+                            </div>
+                            <p className="mt-1 text-[11px] text-slate-500">
+                              Hiện tại: {path.user_rate}% · Mức độ ưu tiên theo{" "}
+                              {path.jobs_requiring.toLowerCase()}
                             </p>
                           </div>
-                        ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>

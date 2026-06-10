@@ -1,6 +1,10 @@
 import { apiGet } from "@/utils/api-request";
 import { IBaseResponse } from "@/types/apis";
-import { RecommendedJob, SavedReportItem } from "@/types/recommendation";
+import {
+  PrioritySkill,
+  RecommendedJob,
+  SavedReportItem,
+} from "@/types/recommendation";
 
 export default class RecommendationApi {
   /**
@@ -9,6 +13,16 @@ export default class RecommendationApi {
    */
   static async getTopJobs(): Promise<IBaseResponse<RecommendedJob[]>> {
     return await apiGet("/recommendation/top-jobs");
+  }
+
+  /**
+   * Lấy kỹ năng thiếu/khớp một phần cần ưu tiên phát triển
+   * GET /recommendation/priority-skills
+   */
+  static async getPrioritySkills(
+    limit = 4,
+  ): Promise<IBaseResponse<PrioritySkill[]>> {
+    return await apiGet("/recommendation/priority-skills", { limit });
   }
 
   /**

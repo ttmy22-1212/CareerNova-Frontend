@@ -152,7 +152,9 @@ export default class ProfileApi {
 
   static async uploadAvatar(
     file: File,
-  ): Promise<IBaseResponse<{ message: string; url: string }>> {
+  ): Promise<
+    IBaseResponse<{ message: string; url: string; avatar_url: string }>
+  > {
     const formData = new FormData();
     formData.append("file", file);
     return await apiPost("/profile/avatar", formData);

@@ -31,6 +31,7 @@ import {
 
 import MarketDashboardApi from "@/api/market-dashboard";
 import {
+  DashboardFilterDto,
   FilterOptionDto,
   StatsCardData,
   TrendDataPointDto,
@@ -82,8 +83,10 @@ export function MarketDashboard({
 }) {
   // ── States quản lý giá trị bộ lọc hiện tại ────────────────────────
   const [region, setRegion] = useState("");
-  const [timePeriod, setTimePeriod] = useState("30days");
-  const [jobType, setJobType] = useState("");
+  const [timePeriod, setTimePeriod] =
+    useState<DashboardFilterDto["time_range"]>("30days");
+  const [jobType, setJobType] =
+    useState<DashboardFilterDto["work_type"] | "">("");
 
   // ── States quản lý dữ liệu động lấy từ API Options ────────────────
   const [filterOptions, setFilterOptions] = useState<{
@@ -135,15 +138,15 @@ export function MarketDashboard({
   useEffect(() => {
     async function fetchDashboardData() {
       setIsLoading(true);
-      const payload: any = {
+      const payload: DashboardFilterDto = {
         time_range: timePeriod,
       };
 
-      if (region && region !== "All Regions") {
+      if (region) {
         payload.location = region;
       }
 
-      if (jobType && jobType !== "All Types") {
+      if (jobType) {
         payload.work_type = jobType;
       }
 
@@ -240,7 +243,7 @@ export function MarketDashboard({
               </span>
             </div>
             <h1 className="text-white text-2xl font-bold mb-1">
-              IT Job Thông tin Thị trường
+              Thông tin thị trường việc làm IT
             </h1>
             <p className="text-slate-300 text-sm max-w-lg">
               Cập nhật thời gian thực về xu hướng tuyển dụng, mức lương và kỹ
@@ -329,7 +332,9 @@ export function MarketDashboard({
         {/* Dropdown 2: Time Ranges */}
         <select
           value={timePeriod}
-          onChange={(e) => setTimePeriod(e.target.value)}
+          onChange={(e) =>
+            setTimePeriod(e.target.value as DashboardFilterDto["time_range"])
+          }
           className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
         >
           {filterOptions?.timeRanges.map((opt) => (
@@ -342,7 +347,9 @@ export function MarketDashboard({
         {/* Dropdown 3: Work Types */}
         <select
           value={jobType}
-          onChange={(e) => setJobType(e.target.value)}
+          onChange={(e) =>
+            setJobType(e.target.value as DashboardFilterDto["work_type"] | "")
+          }
           className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
         >
           {filterOptions?.workTypes.map((opt) => (
@@ -364,8 +371,8 @@ export function MarketDashboard({
         {[
           {
             icon: Briefcase,
-            label: "Active Job Postings",
-            sub: "IT roles đang mở tuyển",
+            label: "Tin tuyển dụng đang mở",
+            sub: "Vị trí IT đang mở tuyển",
             value: stats?.active_jobs?.count?.toLocaleString() ?? "0",
             change:
               stats?.active_jobs?.growth_percentage !== undefined
@@ -376,7 +383,7 @@ export function MarketDashboard({
           },
           {
             icon: TrendingUp,
-            label: "Avg. IT Salary",
+            label: "Lương IT trung bình",
             sub: `~$${Math.round((stats?.avg_it_salary?.min ?? 0) / 1000)}K – $${Math.round((stats?.avg_it_salary?.max ?? 0) / 1000)}K / năm`,
             value: `$${Math.round((stats?.avg_it_salary?.average ?? 0) / 1000)}K`,
             change: "USD",
@@ -385,16 +392,16 @@ export function MarketDashboard({
           },
           {
             icon: Building2,
-            label: "Companies Hiring",
+            label: "Công ty đang tuyển",
             sub: "Nhà tuyển dụng đang active",
             value: stats?.companies_hiring?.count?.toString() ?? "0",
-            change: "Active",
+            change: "Đang tuyển",
             color: "from-violet-500 to-violet-600",
             light: "bg-violet-50 text-violet-700",
           },
           {
             icon: BarChart3,
-            label: "Market Growth",
+            label: "Tăng trưởng thị trường",
             sub: "So với cùng kỳ năm ngoái",
             value:
               stats?.market_growth?.yoy_percentage !== undefined
@@ -477,7 +484,7 @@ export function MarketDashboard({
               <Area
                 type="monotone"
                 dataKey="total_postings"
-                name="Total Postings"
+                name="Tổng tin tuyển dụng"
                 stroke="#3b82f6"
                 strokeWidth={2.5}
                 fill="url(#gradPost)"
@@ -486,7 +493,7 @@ export function MarketDashboard({
               <Area
                 type="monotone"
                 dataKey="remote_jobs"
-                name="Remote Jobs"
+                name="Việc từ xa"
                 stroke="#10b981"
                 strokeWidth={2.5}
                 fill="url(#gradRemote)"
@@ -512,7 +519,7 @@ export function MarketDashboard({
             Phân bổ thị trường
           </h3>
           <p className="text-xs text-slate-500 mb-3">
-            Phân bổ công việc theo ngành nghề
+            Phân bổ công việc theo category
           </p>
           <ResponsiveContainer width="100%" height={160}>
             <PieChart>
@@ -529,13 +536,13 @@ export function MarketDashboard({
                   <Cell key={i} fill={SKILL_COLORS[i % SKILL_COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(v: any) => [`${v} Jobs`, ""]} />
+              <Tooltip formatter={(v: any) => [`${v} công việc`, ""]} />
             </PieChart>
           </ResponsiveContainer>
           <div className="mt-2 space-y-1.5 overflow-y-auto max-h-[100px]">
             {industriesData?.map((item, i) => (
               <div
-                key={item.industry_name}
+                key={item.category_name || item.industry_name || i}
                 className="flex items-center justify-between text-xs"
               >
                 <div className="flex items-center gap-2">
@@ -546,7 +553,7 @@ export function MarketDashboard({
                     }}
                   />
                   <span className="text-slate-600 truncate max-w-[140px]">
-                    {item.industry_name}
+                    {item.category_name || item.industry_name}
                   </span>
                 </div>
                 <span className="font-semibold text-slate-900 shrink-0">
@@ -565,10 +572,10 @@ export function MarketDashboard({
             <Flame className="w-5 h-5 text-orange-500" />
             <div>
               <h3 className="font-semibold text-slate-900">
-                Top 5 Công Việc Hot Tuần Này
+                Top 5 công việc nổi bật tuần này
               </h3>
               <p className="text-xs text-slate-500">
-                Được xem và apply nhiều nhất tuần này
+                Các công việc được lưu nhiều nhất trong 7 ngày gần đây
               </p>
             </div>
           </div>
@@ -580,44 +587,54 @@ export function MarketDashboard({
           </Link>
         </div>
         <div className="divide-y divide-slate-50">
-          {hotJobsData?.map((job, i) => (
-            <Link
-              key={job.job_category}
-              href={`/jobs?category=${encodeURIComponent(job.job_category)}`}
-              className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors group"
-            >
-              <span
-                className={`text-lg font-black w-7 shrink-0 ${i === 0 ? "text-orange-500" : i === 1 ? "text-slate-400" : i === 2 ? "text-amber-600" : "text-slate-300"}`}
+          {hotJobsData.length === 0 ? (
+            <div className="px-5 py-10 text-center text-sm text-slate-400">
+              Chưa có công việc nào được lưu trong 7 ngày gần đây
+            </div>
+          ) : (
+            hotJobsData.map((job, i) => (
+              <Link
+                key={job.job_id}
+                href={`/jobs/${job.job_id}`}
+                className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors group"
               >
-                #{i + 1}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="text-sm font-semibold text-slate-900 group-hover:text-blue-700 transition-colors">
-                    {job.job_category}
-                  </span>
-                  {i < 2 && (
-                    <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-full text-[10px] font-bold">
-                      <Flame className="w-2.5 h-2.5" />
-                      HOT
+                <span
+                  className={`text-lg font-black w-7 shrink-0 ${i === 0 ? "text-orange-500" : i === 1 ? "text-slate-400" : i === 2 ? "text-amber-600" : "text-slate-300"}`}
+                >
+                  #{i + 1}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="text-sm font-semibold text-slate-900 group-hover:text-blue-700 transition-colors">
+                      {job.title}
                     </span>
-                  )}
+                    {i < 2 && (
+                      <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-full text-[10px] font-bold">
+                        <Flame className="w-2.5 h-2.5" />
+                        Nổi bật
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-slate-500 mb-1.5">
+                    <span className="flex items-center gap-1">
+                      <Briefcase className="w-3 h-3" />
+                      {job.save_count} lượt lưu trong 7 ngày
+                    </span>
+                    {job.company_name && <span>{job.company_name}</span>}
+                    {job.location && <span>{job.location}</span>}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-slate-500 mb-1.5">
-                  <span className="flex items-center gap-1">
-                    <Briefcase className="w-3 h-3" />
-                    Tổng nhu cầu: {job.job_count} bài đăng tuyển dụng trong kỳ
-                  </span>
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-bold text-slate-900">
+                    {job.avg_salary > 0
+                      ? `$${Math.round(job.avg_salary / 1000)}K/năm`
+                      : "Chưa có lương"}
+                  </p>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors ml-auto mt-1" />
                 </div>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-sm font-bold text-slate-900">
-                  ${Math.round(job.avg_salary / 1000)}K/yr
-                </p>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors ml-auto mt-1" />
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))
+          )}
         </div>
       </div>
 
@@ -668,44 +685,55 @@ export function MarketDashboard({
           </div>
         </div>
 
-        {/* Rising Skills */}
+        {/* Kỹ năng tăng trưởng nhanh */}
         <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
             <Flame className="w-5 h-5 text-orange-500" />
             <div>
-              <h3 className="font-semibold text-slate-900">Rising Skills</h3>
+              <h3 className="font-semibold text-slate-900">
+                Kỹ năng tăng trưởng nhanh
+              </h3>
               <p className="text-xs text-slate-500">
-                Kỹ năng đột phá có tốc độ tăng trưởng cao nhất
+                Kỹ năng có nhu cầu tuyển dụng tăng mạnh nhất theo bộ lọc
               </p>
             </div>
           </div>
           <div className="space-y-3">
-            {risingSkillsData?.map((s) => (
-              <div
-                key={s.skill_id}
-                className={`flex items-center justify-between p-3 rounded-xl border transition-colors hover:shadow-sm ${s.growth_percentage >= 50 ? "border-orange-100 bg-orange-50" : "border-slate-100 bg-slate-50"}`}
-              >
-                <div className="flex items-center gap-2.5">
-                  {s.growth_percentage >= 50 && (
-                    <Flame className="w-4 h-4 text-orange-500 shrink-0" />
-                  )}
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {s.skill_name}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {s.job_count_current.toLocaleString()} công việc · ~$
-                      {Math.round(s.avg_salary / 1000)}K/yr
-                    </p>
-                  </div>
-                </div>
-                <span
-                  className={`flex items-center gap-0.5 text-sm font-bold ${s.growth_percentage >= 50 ? "text-orange-600" : "text-emerald-600"}`}
+            {risingSkillsData && risingSkillsData.length > 0 ? (
+              risingSkillsData.map((s) => (
+                <div
+                  key={s.skill_id}
+                  className={`flex items-center justify-between p-3 rounded-xl border transition-colors hover:shadow-sm ${s.growth_percentage >= 50 ? "border-orange-100 bg-orange-50" : "border-slate-100 bg-slate-50"}`}
                 >
-                  <ArrowUpRight className="w-4 h-4" />+{s.growth_percentage}%
-                </span>
-              </div>
-            ))}
+                  <div className="flex items-center gap-2.5">
+                    {s.growth_percentage >= 50 && (
+                      <Flame className="w-4 h-4 text-orange-500 shrink-0" />
+                    )}
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {s.skill_name}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {s.job_count_current.toLocaleString()} công việc ·{" "}
+                        {s.avg_salary > 0
+                          ? `~$${Math.round(s.avg_salary / 1000)}K/năm`
+                          : "Chưa có lương"}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`flex items-center gap-0.5 text-sm font-bold ${s.growth_percentage >= 50 ? "text-orange-600" : "text-emerald-600"}`}
+                  >
+                    <ArrowUpRight className="w-4 h-4" />+
+                    {s.growth_percentage}%
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm text-slate-500">
+                Chưa có đủ dữ liệu kỹ năng tăng trưởng cho bộ lọc này.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -718,7 +746,7 @@ export function MarketDashboard({
               Mức Lương theo Vị Trí
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Hệ thống phân bố lương (USD/năm) gộp All Levels
+              Hệ thống phân bố lương (USD/năm) gộp mọi cấp độ
             </p>
           </div>
         </div>

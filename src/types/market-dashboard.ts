@@ -5,7 +5,13 @@
 export interface DashboardFilterDto {
   location?: string;
   time_range: "7days" | "14days" | "30days";
-  work_type?: "Full-time" | "Remote" | "Hybrid" | "Part-time" | "Contract";
+  work_type?:
+    | "full_time"
+    | "part_time"
+    | "contract"
+    | "internship"
+    | "remote"
+    | "hybrid";
 }
 
 export interface FilterOptionDto {
@@ -73,7 +79,8 @@ export interface JobPostingTrendsResponseDto {
 // ==========================================
 
 export interface IndustryItemDto {
-  industry_name: string;
+  category_name: string;
+  industry_name?: string;
   count: number;
   percentage: number;
 }
@@ -87,7 +94,13 @@ export interface IndustryBreakdownResponseDto {
 // ==========================================
 
 export interface HotJobItemDto {
+  job_id: string;
+  title: string;
+  company_name: string | null;
+  location: string | null;
+  work_type: string | null;
   job_category: string;
+  save_count: number;
   job_count: number;
   avg_salary: number;
 }

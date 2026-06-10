@@ -26,6 +26,8 @@ type AuthUser = {
   createdAt: number;
   target_salary: number;
   prefer_remote: boolean;
+  onboarding_completed: boolean;
+  current_step: number;
 };
 
 type AuthState = {
@@ -87,6 +89,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       target_salary: userData.target_salary ?? 0,
       prefer_remote: !!userData.prefer_remote,
       school: userData.school || "",
+      onboarding_completed: !!userData.onboarding_completed,
+      current_step: userData.current_step ?? 1,
     };
   }, []);
 
@@ -208,6 +212,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             target_salary: 0,
             prefer_remote: false,
             school: "",
+            onboarding_completed: false,
+            current_step: 1,
           });
         }
       } else {
@@ -285,8 +291,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!user) throw new Error("Bạn chưa đăng nhập");
 
       const res = await ProfileApi.changePassword({
-        current: currentPassword,
-        next: newPassword,
+        current_password: currentPassword,
+        new_password: newPassword,
       });
 
       if (!res.data) {

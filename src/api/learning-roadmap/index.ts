@@ -1,6 +1,7 @@
 import { apiGet, apiPost } from "@/utils/api-request";
 import { IBaseResponse } from "@/types/apis";
 import {
+  CourseItemDto,
   LearningRoadmapFilterDto,
   LearningRoadmapResponseDto,
   SavedCourseActionDto,
@@ -16,6 +17,16 @@ export default class LearningRoadmapApi {
     filters: LearningRoadmapFilterDto,
   ): Promise<LearningRoadmapResponseDto> {
     return await apiGet("/learning-roadmap", filters);
+  }
+
+  /**
+   * Lấy danh sách khóa học gợi ý có thể tái sử dụng ở nhiều trang
+   * GET /learning-roadmap/recommended-courses
+   */
+  static async getRecommendedCourses(
+    filters: LearningRoadmapFilterDto,
+  ): Promise<IBaseResponse<CourseItemDto[]>> {
+    return await apiGet("/learning-roadmap/recommended-courses", filters);
   }
 
   /**

@@ -15,13 +15,14 @@ import {
 } from "@mui/material";
 import { useFormik } from "formik";
 import { initialValuesOnboarding, validationSchema } from "@/types/user";
+import CvApi from "@/api/cv";
+import ProfileApi from "@/api/profile";
 import PersonalInfoForm from "./personal-info-form";
 import EducationForm from "./education-form";
 import CareerGoalsForm from "./career-goals-form";
 import SkillsForm from "./skills-form";
 import ExperienceForm from "./experience-form";
 import ReviewForm from "./review-form";
-import { useAuth } from "@/contexts/auth/firebase-context";
 import ThankYouDialog from "./thank-you-dialog";
 import { useDialog } from "@/hooks/use-dialog";
 
@@ -38,23 +39,52 @@ const OnboardingContent = () => {
   const [activeStep, setActiveStep] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const { completeOnboarding } = useAuth();
   const thankyouDialog = useDialog();
 
   const formik = useFormik({
     initialValues: initialValuesOnboarding,
     validationSchema: validationSchema[activeStep],
-    onSubmit: (values) => {
+    onSubmit: async (values, helpers) => {
       if (activeStep === steps.length - 1) {
-        thankyouDialog.handleOpen();
         const convertedValues = {
           ...values,
           full_name: values.full_name.trim(),
           experience: (values.experience || []).filter((exp) => exp.job_title),
         };
-        completeOnboarding(convertedValues);
+
+        try {
+          const skills = convertedValues.skills_have
+            .map((skill) => skill.name)
+            .filter(Boolean);
+
+          await ProfileApi.updateProfile({
+            full_name: convertedValues.full_name,
+            major: convertedValues.major || undefined,
+            school: convertedValues.school || undefined,
+            orientation: convertedValues.current_goal || undefined,
+            objective: convertedValues.current_goal || undefined,
+          });
+
+          await ProfileApi.updateOnboardingProgress({
+            current_step: 4,
+            major: convertedValues.major || undefined,
+            school: convertedValues.school || undefined,
+            orientation: convertedValues.current_goal || undefined,
+            objective: convertedValues.current_goal || undefined,
+          });
+
+          if (skills.length > 0) {
+            await CvApi.syncProfileSkills({ cv_id: null, skills });
+          }
+
+          await ProfileApi.completeOnboarding();
+          thankyouDialog.handleOpen();
+        } finally {
+          helpers.setSubmitting(false);
+        }
       } else {
         setActiveStep((prevActiveStep) => prevActiveStep + 1);
+        helpers.setSubmitting(false);
       }
     },
   });

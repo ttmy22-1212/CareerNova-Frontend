@@ -1,6 +1,6 @@
 export interface LearningRoadmapFilterDto {
   skill?: string;
-  level?: string;
+  level?: "All" | "Beginner" | "Intermediate" | "Advanced";
   limit?: string | number; // Thêm trường này để FE truyền limit lên khi cần bung/nén mảng
 }
 

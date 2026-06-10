@@ -5,7 +5,7 @@ import {
   CategoryGapDto,
   SkillsRadarFilterDto,
   RadarSkillPointDto,
-  CategoryBreakdownDto,
+  SkillGapLearningRecommendationDto,
 } from "@/types/skill-gap";
 
 export default class SkillGapApi {
@@ -18,11 +18,13 @@ export default class SkillGapApi {
   }
 
   /**
-   * Lấy dữ liệu biểu đồ so sánh số lượng hoặc tỷ lệ kỹ năng thiếu theo danh mục
-   * GET /skill-gap/category-gaps
+   * Lấy dữ liệu độ khớp theo danh mục kèm danh sách skill chi tiết
+   * GET /skill-gap/category-gaps?limit=...
    */
-  static async getCategoryGaps(): Promise<IBaseResponse<CategoryGapDto[]>> {
-    return await apiGet("/skill-gap/category-gaps");
+  static async getCategoryGaps(
+    limit = 10,
+  ): Promise<IBaseResponse<CategoryGapDto[]>> {
+    return await apiGet("/skill-gap/category-gaps", { limit });
   }
 
   /**
@@ -36,12 +38,12 @@ export default class SkillGapApi {
   }
 
   /**
-   * Lấy danh sách toàn bộ kỹ năng trải phẳng dạng phân cấp (Detailed Breakdown) để vẽ bảng mở rộng
-   * GET /skill-gap/skills-breakdown
+   * Lấy lộ trình học đề xuất theo skill thiếu/khớp một phần từ default matching
+   * GET /skill-gap/learning-paths?limit=...
    */
-  static async getSkillsBreakdown(): Promise<
-    IBaseResponse<CategoryBreakdownDto[]>
-  > {
-    return await apiGet("/skill-gap/skills-breakdown");
+  static async getLearningPaths(
+    limit = 3,
+  ): Promise<IBaseResponse<SkillGapLearningRecommendationDto[]>> {
+    return await apiGet("/skill-gap/learning-paths", { limit });
   }
 }

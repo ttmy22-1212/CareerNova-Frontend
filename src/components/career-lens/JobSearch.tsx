@@ -42,6 +42,8 @@ const typeColors: Record<string, string> = {
   "Bán thời gian": "bg-amber-100 text-amber-700",
 };
 
+const VIEWED_JOB_IDS_STORAGE_KEY = "viewed_job_ids";
+
 const matchColor = (m: number | null) => {
   if (m === null) return "bg-slate-100 text-slate-500";
   return m >= 80
@@ -176,6 +178,35 @@ export function JobSearch() {
       setProcessingJobId(null);
     }
   };
+
+  const trackViewedJob = useCallback((jobId: string) => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const rawValue = window.localStorage.getItem(
+        VIEWED_JOB_IDS_STORAGE_KEY,
+      );
+      const parsedValue = rawValue ? JSON.parse(rawValue) : [];
+      const viewedJobIds = Array.isArray(parsedValue)
+        ? parsedValue.map(String)
+        : [];
+      const nextViewedJobIds = [
+        jobId,
+        ...viewedJobIds.filter((storedJobId) => storedJobId !== jobId),
+      ];
+
+      window.localStorage.setItem(
+        VIEWED_JOB_IDS_STORAGE_KEY,
+        JSON.stringify(nextViewedJobIds),
+      );
+    } catch (error) {
+      console.error("Không thể lưu job đã xem:", error);
+      window.localStorage.setItem(
+        VIEWED_JOB_IDS_STORAGE_KEY,
+        JSON.stringify([jobId]),
+      );
+    }
+  }, []);
 
   const getPaginationRange = () => {
     const current = currentPage;
@@ -407,6 +438,7 @@ export function JobSearch() {
             <Link
               key={job.job_id}
               href={`/jobs/${job.job_id}`}
+              onClick={() => trackViewedJob(job.job_id)}
               className="group block bg-white rounded-xl border border-slate-100 shadow-sm hover:border-blue-200 hover:shadow-md transition-all p-5"
             >
               <div className="flex items-start gap-4">

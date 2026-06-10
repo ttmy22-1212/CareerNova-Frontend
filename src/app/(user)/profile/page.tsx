@@ -1569,13 +1569,25 @@ function EditAvatarDialog({
     try {
       setUploading(true);
       const res = await ProfileApi.uploadAvatar(file);
-      if (res && res.data?.url) {
-        // 1. Lưu link Cloudinary thực tế vào state ẩn của dialog để làm preview/mẫu
-        setUrl(res.data.url);
+      const legacyResponse = res as typeof res & {
+        avatar_url?: string;
+        url?: string;
+      };
+      const uploadedAvatarUrl =
+        res.data?.url ||
+        res.data?.avatar_url ||
+        legacyResponse.url ||
+        legacyResponse.avatar_url;
 
-        // 2. ĐỒNG BỘ NGAY: Đẩy URL mới này ra ngoài để cập nhật State Auth của user liền lập tức
-        onSave(res.data.url);
+      if (!uploadedAvatarUrl) {
+        throw new Error("API upload avatar không trả về URL hợp lệ");
       }
+
+      // 1. Lưu link Cloudinary thực tế vào state ẩn của dialog để làm preview/mẫu
+      setUrl(uploadedAvatarUrl);
+
+      // 2. ĐỒNG BỘ NGAY: Đẩy URL mới này ra ngoài để cập nhật State Auth của user liền lập tức
+      onSave(uploadedAvatarUrl);
     } catch (error) {
       console.error("Lỗi khi upload ảnh đại diện:", error);
       alert("Tải ảnh lên Cloudinary thất bại, vui lòng thử lại!");
