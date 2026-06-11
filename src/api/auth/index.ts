@@ -85,4 +85,14 @@ export default class AuthApi {
   ): Promise<IBaseResponse<RefreshTokenResponseDto>> {
     return await apiPost("/auth/refresh", payload);
   }
+
+  /**
+   * Yêu cầu xoá tài khoản (guest flow — gửi email xác nhận)
+   * POST /auth/request-delete-account
+   */
+  static async requestDeleteAccount(
+    email: string,
+  ): Promise<IBaseResponse<void>> {
+    return await apiPost("/auth/request-delete-account", { email });
+  }
 }
