@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      allowedOrigins: ["152.42.218.141", "152.42.218.141:80"],
+      allowedOrigins: ["career-nova.online", "www.career-nova.online"],
     },
   },
 };
