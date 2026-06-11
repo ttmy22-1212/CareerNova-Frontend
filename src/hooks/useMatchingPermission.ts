@@ -1,6 +1,9 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import ProfileApi from "@/api/profile";
+import { useAuth } from "@/contexts/auth/auth-context";
+
+const TOUR_KEY = "career-lens.tour.v1";
 
 /**
  * Hook trả về trạng thái quyền tự động đối sánh CV và helper để cập nhật.
@@ -12,6 +15,7 @@ import ProfileApi from "@/api/profile";
  * - `deactivate`: gọi API tắt quyền.
  */
 export function useMatchingPermission() {
+  const { user } = useAuth();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -23,7 +27,11 @@ export function useMatchingPermission() {
           const value = res.data.user.allow_default_cv_matching;
           if (typeof value === "boolean") {
             setAllowed(value);
-            setShowModal(value === false);
+            // Không hiện modal nếu tour chưa được xem xong
+            const tourDone = user
+              ? !!localStorage.getItem(`${TOUR_KEY}.${user.id}`)
+              : true;
+            setShowModal(value === false && tourDone);
           } else {
             setAllowed(null);
             setShowModal(false);
@@ -36,7 +44,7 @@ export function useMatchingPermission() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user]);
 
   const activate = useCallback(async () => {
     await ProfileApi.updateCvMatchingPermission(true);
