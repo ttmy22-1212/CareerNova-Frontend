@@ -143,6 +143,7 @@ export default function ProfilePage() {
   const [viewingCvName, setViewingCvName] = useState<string>("");
   const [allowMatching, setAllowMatching] = useState<boolean>(false);
   const [togglingMatching, setTogglingMatching] = useState<boolean>(false);
+  const [defaultCvId, setDefaultCvId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -169,6 +170,7 @@ export default function ProfilePage() {
             : [];
 
           setAllowMatching(!!userData.allow_default_cv_matching);
+          setDefaultCvId(rawData.default_cv?.cv_id || null);
 
           setProfile({
             major: userData.major ? (userData.major as StudentMajor) : null,
@@ -224,28 +226,20 @@ export default function ProfilePage() {
   const sortedCvs = useMemo(() => {
     if (!allCvs || allCvs.length === 0) return [];
     return [...allCvs].sort((a, b) => {
-      const aIsDefault = a.file_name === profile?.cvFileName;
-      const bIsDefault = b.file_name === profile?.cvFileName;
-
+      const aIsDefault = a.cv_id === defaultCvId;
+      const bIsDefault = b.cv_id === defaultCvId;
       if (aIsDefault && !bIsDefault) return -1;
       if (!aIsDefault && bIsDefault) return 1;
       return 0;
     });
-  }, [allCvs, profile?.cvFileName]);
+  }, [allCvs, defaultCvId]);
 
   const handleSetDefault = async (cvId: string) => {
     try {
       setUpdatingCvId(cvId);
       await ProfileApi.setDefaultCv(cvId);
-
+      setDefaultCvId(cvId);
       await fetchAllCvs();
-
-      setAllCvs((prev) =>
-        prev.map((cv) => ({
-          ...cv,
-          is_default: cv.cv_id === cvId,
-        })),
-      );
     } catch (error) {
       console.error("Đặt CV mặc định thất bại:", error);
     } finally {
@@ -656,8 +650,7 @@ export default function ProfilePage() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 gap-2.5 max-h-[280px] overflow-y-auto pr-1">
                       {sortedCvs.map((cv) => {
-                        const isCurrentDefault =
-                          cv.file_name === profile?.cvFileName;
+                        const isCurrentDefault = cv.cv_id === defaultCvId;
 
                         return (
                           <div
@@ -1235,43 +1228,20 @@ export default function ProfilePage() {
                 ) as HTMLInputElement;
 
                 try {
-                  const updateData: any = {};
-
-                  if (nameInp) updateData.name = nameInp.value.trim();
-
-                  const updatedUser = await ProfileApi.updateProfile({
-                    full_name: nameInp?.value.trim(),
-                    school: schoolInp?.value.trim(),
-                    target_salary: 0,
-                    prefer_remote: false,
+                  await updateProfile({
+                    full_name: nameInp?.value.trim() || user?.full_name,
+                    school: schoolInp?.value.trim() || undefined,
+                    prefer_remote: profile.preferRemote,
                   });
 
-                  if (updatedUser) {
-                    await updateProfile({
-                      full_name: updatedUser.data.full_name,
-                      target_salary: updatedUser.data.target_salary,
-                      prefer_remote: updatedUser.data.prefer_remote,
-                      avatarUrl: user?.avatarUrl,
-                    });
+                  setProfile({
+                    ...profile,
+                    university: schoolInp?.value.trim() || profile.university,
+                  });
 
-                    // Hàm cập nhật thông tin học vấn từ context useOnboarding của bạn
-                    setProfile({
-                      ...profile,
-                      university: schoolInp?.value.trim(),
-                    });
-                  }
-
-                  // 4. Đóng dialog sau khi lưu thành công
                   setOpenEditDialog(false);
-
-                  // Hiển thị thông báo (nếu dự án của bạn có dùng alert/snackbar)
-                  // showSnackbarSuccess("Cập nhật thông tin tài khoản thành công!");
                 } catch (err) {
-                  console.error(
-                    "Lỗi khi kết nối endpoint update profile:",
-                    err,
-                  );
-                  // showSnackbarError("Cập nhật thất bại, vui lòng thử lại!");
+                  console.error("Lỗi khi cập nhật hồ sơ:", err);
                 }
               }}
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm"

@@ -19,6 +19,9 @@ import JobApi, { GetJobsQueryDto } from "@/api/job";
 import CvApi from "@/api/cv";
 import { JobListItem } from "@/types/job-insight";
 import ProfileApi from "@/api/profile";
+import PersonalDashboardApi from "@/api/personal-dashboard";
+
+type DisplayJobItem = JobListItem & { salary_text?: string };
 
 const jobTypes = [
   "Tất cả",
@@ -80,13 +83,67 @@ export function JobSearch() {
   const [totalPages, setTotalPages] = useState(1);
   const [minMatch, setMinMatch] = useState<number | undefined>(undefined);
 
-  const [jobs, setJobs] = useState<JobListItem[]>([]);
+  const [jobs, setJobs] = useState<DisplayJobItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [processingJobId, setProcessingJobId] = useState<string | null>(null);
+  const [isRecommendedMode, setIsRecommendedMode] = useState(sortBy === "match_score");
 
   const loadJobs = useCallback(async () => {
     setLoading(true);
+
+    // ── Chế độ "Phù hợp nhất": lấy từ API recommended-jobs (giống Jobs gợi ý ở dashboard) ──
+    if (sortBy === "match_score") {
+      setIsRecommendedMode(true);
+      try {
+        const res = await PersonalDashboardApi.getRecommendedJobs();
+        if (res?.data) {
+          const mapped: DisplayJobItem[] = res.data.map((r) => {
+            const rateNum = parseInt(r.match_rate ?? "", 10);
+            return {
+              job_id: r.job_id,
+              title: r.title,
+              company: { company_id: "", name: r.company_name, url: undefined },
+              location: r.location,
+              salary: null,
+              salary_text: r.salary_text,
+              skills: [],
+              match_score: Number.isFinite(rateNum) ? rateNum : null,
+              is_saved: false,
+              // Job base fields
+              company_id: null,
+              skills_desc: null,
+              description: null,
+              formatted_experience_level: null,
+              work_type: null,
+              is_remote: false,
+              listed_time: null,
+              expiry_time: null,
+              job_posting_url: null,
+              scraped_at: null,
+              applies: null,
+              views: null,
+              fingerprint: null,
+              job_category: null,
+              search_group: null,
+              source_name: null,
+              source_id: null,
+            };
+          });
+          setJobs(mapped);
+          setTotal(mapped.length);
+          setTotalPages(1);
+        }
+      } catch (error) {
+        console.error("Failed to load recommended jobs:", error);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // ── Chế độ thông thường: gọi JobApi.findAll ──
+    setIsRecommendedMode(false);
     try {
       let activeCvId: string | undefined = undefined;
       try {
@@ -103,7 +160,6 @@ export function JobSearch() {
         limit: 10,
         sortBy: sortBy,
         sortOrder: "desc",
-
         ...(searchTerm && { q: searchTerm }),
         ...(selectedType !== "Tất cả" && { work_type: selectedType }),
         ...(selectedExp !== "Mọi cấp độ" && { experience_level: selectedExp }),
@@ -113,13 +169,8 @@ export function JobSearch() {
 
       const res = await JobApi.findAll(query);
       if (res && res.data) {
-        const rawJobs = Array.isArray(res.data)
-          ? res.data
-          : res.data.data || [];
-
+        const rawJobs = Array.isArray(res.data) ? res.data : res.data.data || [];
         setJobs(rawJobs);
-
-        // Nhận thông tin phân trang từ meta do Back-End phản hồi
         const meta = res.data.meta || res.meta;
         setTotal(meta?.total ?? rawJobs.length);
         setTotalPages(meta?.totalPages ?? 1);
@@ -168,7 +219,7 @@ export function JobSearch() {
         await ProfileApi.saveJob({ job_id: jobId });
       }
       setJobs((prevJobs) =>
-        prevJobs.map((job) =>
+        prevJobs.map((job: DisplayJobItem) =>
           job.job_id === jobId ? { ...job, is_saved: !currentIsSaved } : job,
         ),
       );
@@ -378,23 +429,47 @@ export function JobSearch() {
         )}
       </div>
 
+      {isRecommendedMode && (
+        <div className="flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-2.5 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300">
+          <span className="text-base">✨</span>
+          <span>
+            <strong>Jobs gợi ý từ phân tích CV của bạn</strong> — Chỉ hiển thị
+            công việc có độ phù hợp ≥70% với CV mặc định.{" "}
+            {total === 0 && !loading && (
+              <span className="text-blue-500">
+                Chưa có dữ liệu — hãy upload CV và chạy So khớp CV trước.
+              </span>
+            )}
+          </span>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-600">
-          Tìm thấy <span className="font-bold text-slate-900">{total}</span>{" "}
-          {total === 1 ? "vị trí" : "vị trí"}
-          {searchTerm && (
+          {isRecommendedMode ? (
             <>
-              {" "}
-              cho{" "}
-              <span className="font-semibold text-blue-600">
-                "{searchTerm}"
-              </span>
+              <span className="font-bold text-slate-900">{total}</span> công
+              việc phù hợp từ CV của bạn
+            </>
+          ) : (
+            <>
+              Tìm thấy <span className="font-bold text-slate-900">{total}</span>{" "}
+              vị trí
+              {searchTerm && (
+                <>
+                  {" "}
+                  cho{" "}
+                  <span className="font-semibold text-blue-600">
+                    "{searchTerm}"
+                  </span>
+                </>
+              )}
             </>
           )}
         </p>
         <p className="text-xs text-slate-400">
           Sắp xếp theo:{" "}
-          <span className="text-slate-600 font-medium capitalize">
+          <span className="text-slate-600 font-medium">
             {sortBy === "match_score"
               ? "Phù hợp nhất"
               : sortBy === "salary_med"
@@ -453,11 +528,13 @@ export function JobSearch() {
                         <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
                           {job.title}
                         </h3>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${typeColors[job.work_type || ""] || "bg-slate-100 text-slate-600"}`}
-                        >
-                          {job.work_type}
-                        </span>
+                        {job.work_type && (
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${typeColors[job.work_type] || "bg-slate-100 text-slate-600"}`}
+                          >
+                            {job.work_type}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
                         <span className="flex items-center gap-1 font-medium text-slate-700">
@@ -470,19 +547,19 @@ export function JobSearch() {
                         </span>
                         <span className="flex items-center gap-1">
                           <DollarSign className="w-3.5 h-3.5" />
-                          {formatSalaryRange(
-                            job.salary?.min_salary!,
-                            job.salary?.max_salary!,
-                          )}
+                          {(job as DisplayJobItem).salary_text
+                            ? (job as DisplayJobItem).salary_text
+                            : formatSalaryRange(
+                                job.salary?.min_salary!,
+                                job.salary?.max_salary!,
+                              )}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" />
-                          {job.listed_time
-                            ? new Date(job.listed_time).toLocaleDateString(
-                                "vi-VN",
-                              )
-                            : "N/A"}
-                        </span>
+                        {job.listed_time && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5" />
+                            {new Date(job.listed_time).toLocaleDateString("vi-VN")}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2 shrink-0">
@@ -518,16 +595,18 @@ export function JobSearch() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    {job.skills.slice(0, 5).map((skill) => (
-                      <span
-                        key={skill.skill_id}
-                        className="px-2.5 py-1 bg-slate-100 text-slate-600 text-[11px] font-medium rounded-md hover:bg-blue-50 hover:text-blue-700 transition-colors"
-                      >
-                        {skill.skill_name}
-                      </span>
-                    ))}
-                  </div>
+                  {job.skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {job.skills.slice(0, 5).map((skill) => (
+                        <span
+                          key={skill.skill_id}
+                          className="px-2.5 py-1 bg-slate-100 text-slate-600 text-[11px] font-medium rounded-md hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                        >
+                          {skill.skill_name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 mt-1 shrink-0 hidden md:block transition-colors" />
               </div>
@@ -536,7 +615,7 @@ export function JobSearch() {
         </div>
       )}
 
-      {!loading && totalPages > 1 && (
+      {!loading && !isRecommendedMode && totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-6 border-t border-slate-100">
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}

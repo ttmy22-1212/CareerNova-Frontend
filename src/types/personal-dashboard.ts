@@ -47,6 +47,20 @@ export interface DashboardProgressDto {
   recent_activities: RecentActivityDto[];
 }
 
+export interface JourneyStageDto {
+  id: "explore" | "analyze" | "plan" | "apply";
+  label: string;
+  desc: string;
+  progress: number;
+  done: boolean;
+  href: string;
+}
+
+export interface JourneyProgressDto {
+  stages: JourneyStageDto[];
+  overall: number;
+}
+
 export interface SkillsRadarFilterDto {
   category: string;
 }

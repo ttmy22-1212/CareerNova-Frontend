@@ -27,16 +27,6 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
-function FacebookIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="#1877F2"
-        d="M24 12c0-6.6-5.4-12-12-12S0 5.4 0 12c0 6 4.4 11 10.1 11.9V15.5H7.1V12h3v-2.6c0-3 1.8-4.6 4.5-4.6 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-1.9.9-1.9 1.9V12h3.3l-.5 3.5h-2.8v8.4C19.6 23 24 18 24 12z"
-      />
-    </svg>
-  );
-}
 
 export function SocialAuthButtons({
   onSuccess,
@@ -46,10 +36,10 @@ export function SocialAuthButtons({
   disabled?: boolean;
 }) {
   const { loginWithProvider } = useAuth();
-  const [loading, setLoading] = useState<"google" | "facebook" | null>(null);
+  const [loading, setLoading] = useState<"google" | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  async function go(provider: "google" | "facebook") {
+  async function go(provider: "google") {
     setErr(null);
     setLoading(provider);
     try {
@@ -66,35 +56,19 @@ export function SocialAuthButtons({
 
   return (
     <div>
-      <div className="grid gap-2.5 sm:grid-cols-2">
-        <button
-          type="button"
-          disabled={isDisabled}
-          onClick={() => go("google")}
-          className="group relative flex h-11 items-center justify-center gap-2.5 overflow-hidden rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-slate-600"
-        >
-          {loading === "google" ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <GoogleIcon className="h-5 w-5" />
-          )}
-          <span>Google</span>
-        </button>
-
-        <button
-          type="button"
-          disabled={isDisabled}
-          onClick={() => go("facebook")}
-          className="group relative flex h-11 items-center justify-center gap-2.5 overflow-hidden rounded-lg border border-transparent bg-[#1877F2] text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#166FE5] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading === "facebook" ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <FacebookIcon className="h-5 w-5 rounded-full bg-white" />
-          )}
-          <span>Facebook</span>
-        </button>
-      </div>
+      <button
+        type="button"
+        disabled={isDisabled}
+        onClick={() => go("google")}
+        className="group relative flex h-11 w-full items-center justify-center gap-2.5 overflow-hidden rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-slate-600"
+      >
+        {loading === "google" ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <GoogleIcon className="h-5 w-5" />
+        )}
+        <span>Google</span>
+      </button>
 
       {err && (
         <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">

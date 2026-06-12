@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowRight,
   Check,
+  CheckCircle2,
   GraduationCap,
   Compass,
   FileText,
+  Loader2,
   Target as TargetIcon,
   Sparkles,
   Upload,
@@ -185,6 +188,7 @@ export default function OnboardingWizard() {
   const [isSearchingSkills, setIsSearchingSkills] = useState(false);
   const [uploadedCvId, setUploadedCvId] = useState<string | null>(null);
   const [isUploadingCv, setIsUploadingCv] = useState(false);
+  const [cvUploadError, setCvUploadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [calculatedPaths, setCalculatedPaths] = useState<string[]>([]);
@@ -406,8 +410,19 @@ export default function OnboardingWizard() {
       return;
     }
 
+    const validTypes = ["application/pdf", "image/jpeg", "image/png"];
+    if (!validTypes.includes(file.type)) {
+      setCvUploadError("Vui lòng tải lên tài liệu định dạng PDF hoặc Ảnh (.pdf, .jpg, .jpeg, .png)");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setCvUploadError("File phải nhỏ hơn 5MB");
+      return;
+    }
+
     try {
       setIsUploadingCv(true);
+      setCvUploadError(null);
       const res = await CvApi.uploadCv(file);
       if (res.data) {
         const { cv_id, file_name } = res.data;
@@ -435,7 +450,7 @@ export default function OnboardingWizard() {
       }
     } catch (err) {
       console.error("Lỗi tải CV lên hệ thống:", err);
-      alert("Tải file CV thất bại, vui lòng thử lại!");
+      setCvUploadError("Tải file CV thất bại, vui lòng thử lại!");
     } finally {
       setIsUploadingCv(false);
     }
@@ -558,6 +573,8 @@ export default function OnboardingWizard() {
               updateLevel={updateLevel}
               onCV={handleCvUpload}
               dbSkills={dbSkills}
+              isUploadingCv={isUploadingCv}
+              cvUploadError={cvUploadError}
             />
           )}
           {step === 4 && (
@@ -758,6 +775,8 @@ function Step3({
   updateLevel,
   onCV,
   dbSkills = [],
+  isUploadingCv = false,
+  cvUploadError = null,
 }: {
   skills: { name: string; level: number }[];
   hasCV: boolean;
@@ -769,7 +788,10 @@ function Step3({
   updateLevel: (s: string, lvl: number) => void;
   onCV: (file: File | null) => void;
   dbSkills?: string[];
+  isUploadingCv?: boolean;
+  cvUploadError?: string | null;
 }) {
+  const cvFileInputRef = useRef<HTMLInputElement>(null);
   // Lọc suggestions dựa trực tiếp vào mảng dbSkills nhận từ API, loại bỏ những kĩ năng đã chọn
   const suggestions = useMemo(() => {
     const selectedNames = skills.map((s) => s.name.toLowerCase());
@@ -789,34 +811,53 @@ function Step3({
       </p>
 
       {/* CV Upload */}
-      <div className="mb-5 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center">
-        {hasCV ? (
-          <div className="flex items-center justify-center gap-2">
-            <FileText className="h-4 w-4 text-emerald-600" />
-            <span className="text-sm font-medium text-slate-700">{cvName}</span>
-            <button
-              onClick={() => onCV(null)}
-              className="text-xs text-red-500 hover:underline"
-            >
-              Xoá
-            </button>
-          </div>
-        ) : (
-          <label className="flex cursor-pointer flex-col items-center gap-1.5">
-            <Upload className="h-6 w-6 text-slate-400" />
-            <span className="text-sm font-semibold text-slate-700">
-              Bấm để Tải CV (PDF/DOCX)
-            </span>
-            <span className="text-[11px] text-slate-500">
-              Tối đa 5MB. Tùy chọn.
-            </span>
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx"
-              className="hidden"
-              onChange={(e) => onCV(e.target.files?.[0] ?? null)}
-            />
-          </label>
+      <div className="mb-5">
+        <input
+          type="file"
+          ref={cvFileInputRef}
+          accept=".pdf,.jpg,.jpeg,.png"
+          className="hidden"
+          onChange={(e) => onCV(e.target.files?.[0] ?? null)}
+        />
+        <div
+          onClick={() => !isUploadingCv && cvFileInputRef.current?.click()}
+          className="border-2 border-dashed border-slate-200 rounded-xl px-4 py-3 text-center hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer flex items-center justify-center min-h-[64px]"
+        >
+          {isUploadingCv ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+              <span className="text-xs font-medium text-slate-600">Đang tải lên...</span>
+            </div>
+          ) : hasCV ? (
+            <div className="flex items-center gap-2 w-full justify-center">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+              <span className="text-xs font-semibold text-slate-800 truncate max-w-[200px]">
+                {cvName}
+              </span>
+              <span className="text-[10px] text-emerald-600 font-medium shrink-0">(Hoàn tất)</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); onCV(null); }}
+                className="text-xs text-red-500 hover:underline shrink-0"
+              >
+                Xoá
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-2 text-slate-500">
+                <Upload className="h-4 w-4 text-slate-400" />
+                <span className="text-sm font-semibold text-slate-700">
+                  Bấm để Tải CV (PDF/DOCX)
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-500">Tối đa 5MB. Tùy chọn.</span>
+            </div>
+          )}
+        </div>
+        {cvUploadError && (
+          <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+            <AlertCircle className="h-3.5 w-3.5" /> {cvUploadError}
+          </p>
         )}
       </div>
 

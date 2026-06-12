@@ -11,12 +11,10 @@ import {
   Target,
   BookmarkCheck,
   TrendingUp,
-  Bell,
   ChevronDown,
   Sparkles,
   User,
   Compass,
-  DollarSign,
   Map,
   ChevronRight,
   CheckCircle2,
@@ -25,10 +23,6 @@ import {
   Menu,
   Sun,
   Moon,
-  Telescope,
-  Microscope,
-  Route,
-  Send,
   LogOut,
   Settings,
 } from "lucide-react";
@@ -37,6 +31,7 @@ import {
   useOnboarding,
   type JourneyStage,
 } from "@/contexts/onboarding/onboarding-context";
+import PersonalDashboardApi from "@/api/personal-dashboard";
 import { useTheme } from "@/contexts/theme/theme-context";
 import { useAuth } from "@/contexts/auth/auth-context";
 import { SpotlightTour } from "@/components/career-lens/SpotlightTour";
@@ -47,6 +42,11 @@ import {
 } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { DefaultCvManager } from "../../components/cv-matching/DefaultCvManager";
+
+type AnyJourneyStage = Pick<
+  JourneyStage,
+  "id" | "label" | "desc" | "progress" | "done" | "href"
+>;
 
 type NavItem = {
   href: string;
@@ -147,15 +147,6 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   },
 };
 
-const stageIcons: Record<
-  JourneyStage["id"],
-  React.ComponentType<{ className?: string }>
-> = {
-  explore: Telescope,
-  analyze: Microscope,
-  plan: Route,
-  apply: Send,
-};
 
 function findActive(pathname: string) {
   let best: NavItem | null = null;
@@ -182,6 +173,16 @@ export default function UserLayout({
   const [collapsed, setCollapsed] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
+  const [serverJourney, setServerJourney] = useState<AnyJourneyStage[] | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    PersonalDashboardApi.getJourney()
+      .then((res) => {
+        if (res?.data?.stages) setServerJourney(res.data.stages);
+      })
+      .catch(() => {/* fallback to localStorage journey */});
+  }, [user]);
 
   // Thông tin Thị trường is publicly accessible (no login required)
   const PUBLIC_PATHS = [paths.dashboard];
@@ -307,19 +308,6 @@ export default function UserLayout({
 
       <button
         onClick={() => {
-          localStorage.removeItem("career-lens.tour.v1");
-          setMobileOpen(false);
-          closeDropdown();
-          window.location.reload();
-        }}
-        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
-      >
-        <Sparkles className="h-4 w-4 text-slate-400" />
-        Xem lại hướng dẫn
-      </button>
-
-      <button
-        onClick={() => {
           closeDropdown();
           logout();
           router.replace("/auth/login");
@@ -344,7 +332,7 @@ export default function UserLayout({
               : "gap-3"
           }`}
         >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-md shadow-blue-200">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-md shadow-blue-200 dark:shadow-none">
             <TrendingUp className="h-5 w-5 text-white" />
           </div>
 
@@ -656,7 +644,7 @@ export default function UserLayout({
           )}
         </header>
 
-        <JourneyBar journey={journey} />
+        <JourneyBar journey={serverJourney ?? journey} />
 
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
@@ -667,7 +655,7 @@ export default function UserLayout({
   );
 }
 
-function JourneyBar({ journey }: { journey: JourneyStage[] }) {
+function JourneyBar({ journey }: { journey: AnyJourneyStage[] }) {
   const pathname = usePathname() ?? "/";
   if (pathname.startsWith("/onboarding")) return null;
 
@@ -675,99 +663,116 @@ function JourneyBar({ journey }: { journey: JourneyStage[] }) {
     journey.reduce((s, j) => s + j.progress, 0) / journey.length,
   );
 
+  const firstIncomplete = journey.findIndex((s) => !s.done);
+
   return (
     <div
       data-tour="journey-bar"
-      className="border-b border-slate-200 bg-gradient-to-b from-white to-slate-50 px-4 py-3 dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50 md:px-6"
+      className="border-b border-slate-200 bg-white px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900 md:px-6"
     >
-      <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-          🎯 Hành trình sự nghiệp của bạn
-        </p>
-        <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-          {overall}% hoàn thành
-        </span>
-      </div>
-      <div className="flex items-center gap-1 overflow-x-auto md:gap-2">
-        {journey.map((stage, idx) => {
-          const Icon = stageIcons[stage.id];
-          const isCurrent =
-            !stage.done && journey.findIndex((s) => !s.done) === idx;
-          return (
-            <div
-              key={stage.id}
-              className="flex flex-1 items-center gap-1 md:gap-2"
-            >
-              <Link
-                href={stage.href}
-                title={
-                  isCurrent
-                    ? `Bước tiếp theo: ${stage.desc} → Bấm để bắt đầu`
-                    : stage.desc
-                }
-                className={`group flex min-w-0 flex-1 items-center gap-2 rounded-lg border px-2.5 py-1.5 transition-all md:px-3 md:py-2 ${
-                  stage.done
-                    ? "border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/30"
-                    : isCurrent
-                      ? "border-blue-300 bg-blue-50 ring-2 ring-blue-100 dark:border-blue-800 dark:bg-blue-950/40 dark:ring-blue-900/40"
-                      : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50"
-                }`}
-              >
-                <div
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
-                    stage.done
-                      ? "bg-emerald-500 text-white"
+      <div className="flex items-center gap-3">
+        {/* Label + overall progress */}
+        <div className="hidden shrink-0 items-center gap-2 md:flex">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
+            🎯 Hành trình
+          </p>
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500"
+                style={{ width: `${overall}%` }}
+              />
+            </div>
+            <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 tabular-nums">
+              {overall}%
+            </span>
+          </div>
+        </div>
+
+        <div className="hidden h-4 w-px bg-slate-200 dark:bg-slate-700 md:block" />
+
+        {/* Stage cards */}
+        <div className="flex flex-1 items-center gap-1 overflow-x-auto">
+          {journey.map((stage, idx) => {
+            const isCurrent = !stage.done && firstIncomplete === idx;
+            const isPast = stage.done;
+            const isFuture = !stage.done && !isCurrent;
+
+            return (
+              <div key={stage.id} className="flex items-center gap-1">
+                <Link
+                  href={stage.href}
+                  title={
+                    isCurrent
+                      ? `Bước tiếp theo: ${stage.desc}`
+                      : stage.desc
+                  }
+                  className={`group flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 transition-all duration-150 ${
+                    isPast
+                      ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
                       : isCurrent
-                        ? "bg-blue-600 text-white"
-                        : "bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500"
+                        ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-800 dark:hover:bg-blue-950/60"
+                        : "text-slate-400 hover:bg-slate-50 dark:text-slate-600 dark:hover:bg-slate-800/50"
                   }`}
                 >
-                  {stage.done ? (
-                    <CheckCircle2 className="h-4 w-4" />
-                  ) : (
-                    <Icon className="h-3.5 w-3.5" />
-                  )}
-                </div>
-                <div className="hidden min-w-0 flex-1 sm:block">
-                  <p
-                    className={`truncate text-xs font-semibold ${
-                      stage.done
-                        ? "text-emerald-700 dark:text-emerald-300"
+                  {/* Step number / icon */}
+                  <div
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold transition-all ${
+                      isPast
+                        ? "bg-emerald-500 text-white"
                         : isCurrent
-                          ? "text-blue-700 dark:text-blue-300"
-                          : "text-slate-600 dark:text-slate-300"
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600"
                     }`}
                   >
-                    {idx + 1}. {stage.label}
-                  </p>
-                  {isCurrent ? (
-                    <p className="mt-0.5 truncate text-[10px] font-medium text-blue-500 dark:text-blue-400 flex items-center gap-0.5">
-                      <ArrowRight className="h-2.5 w-2.5 shrink-0" />
-                      {stage.desc}
+                    {isPast ? (
+                      <CheckCircle2 className="h-3 w-3" />
+                    ) : (
+                      <span>{idx + 1}</span>
+                    )}
+                  </div>
+
+                  {/* Label */}
+                  <div className="hidden min-w-0 sm:block">
+                    <p className="text-xs font-semibold leading-tight whitespace-nowrap">
+                      {stage.label}
                     </p>
-                  ) : (
-                    <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          stage.done
-                            ? "bg-emerald-500"
-                            : "bg-gradient-to-r from-blue-500 to-indigo-500"
-                        }`}
-                        style={{ width: `${stage.progress}%` }}
-                      />
-                    </div>
+                    {/* Progress bar for non-current stages */}
+                    {!isCurrent && !isFuture && (
+                      <div className="mt-0.5 h-0.5 w-full overflow-hidden rounded-full bg-emerald-200 dark:bg-emerald-900">
+                        <div className="h-full w-full rounded-full bg-emerald-500" />
+                      </div>
+                    )}
+                    {isCurrent && (
+                      <div className="mt-0.5 h-0.5 w-full overflow-hidden rounded-full bg-blue-100 dark:bg-blue-900">
+                        <div
+                          className="h-full rounded-full bg-blue-500 transition-all"
+                          style={{ width: `${stage.progress}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Progress % on mobile */}
+                  {isCurrent && (
+                    <span className="ml-0.5 text-[10px] font-bold tabular-nums text-blue-500 dark:text-blue-400 sm:hidden">
+                      {stage.progress}%
+                    </span>
                   )}
-                </div>
-                <span className="text-xs font-bold text-slate-500 sm:hidden dark:text-slate-400">
-                  {stage.progress}%
-                </span>
-              </Link>
-              {idx < journey.length - 1 && (
-                <ChevronRight className="hidden h-4 w-4 shrink-0 text-slate-300 sm:block" />
-              )}
-            </div>
-          );
-        })}
+
+                  {/* Arrow hint for current */}
+                  {isCurrent && (
+                    <ArrowRight className="ml-0.5 hidden h-3 w-3 shrink-0 group-hover:translate-x-0.5 transition-transform sm:block" />
+                  )}
+                </Link>
+
+                {idx < journey.length - 1 && (
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-200 dark:text-slate-700" />
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

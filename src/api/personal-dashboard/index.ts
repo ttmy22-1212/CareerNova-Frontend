@@ -8,6 +8,7 @@ import {
   RadarSkillPointDto,
   CategoryGapDto,
   DashboardProgressDto,
+  JourneyProgressDto,
 } from "@/types/personal-dashboard";
 
 export default class PersonalDashboardApi {
@@ -51,5 +52,13 @@ export default class PersonalDashboardApi {
    */
   static async getProgress(): Promise<IBaseResponse<DashboardProgressDto>> {
     return await apiGet("/personal-dashboard/progress");
+  }
+
+  /**
+   * Lấy tiến độ hành trình sự nghiệp 4 bước từ dữ liệu thực trên server
+   * GET /personal-dashboard/journey
+   */
+  static async getJourney(): Promise<IBaseResponse<JourneyProgressDto>> {
+    return await apiGet("/personal-dashboard/journey");
   }
 }

@@ -224,18 +224,33 @@ export function Recommendations() {
   const [viewedJobDetails, setViewedJobDetails] = useState<
     JobDetailResponse[]
   >([]);
+  const [bannerStats, setBannerStats] = useState<{
+    profileCompletion: number;
+    suitableJobs: number;
+    matchScore: number;
+  } | null>(null);
 
   useEffect(() => {
     const fetchApiData = async () => {
       try {
-        const [jobsRes, reportsRes, prioritySkillsRes] = await Promise.all([
-          PersonalDashboardApi.getRecommendedJobs(),
-          RecommendationApi.getSavedReports(),
-          RecommendationApi.getPrioritySkills(4),
-        ]);
+        const [jobsRes, reportsRes, prioritySkillsRes, bannerRes, statsRes] =
+          await Promise.all([
+            PersonalDashboardApi.getRecommendedJobs(),
+            RecommendationApi.getSavedReports(),
+            RecommendationApi.getPrioritySkills(4),
+            PersonalDashboardApi.getBanner(),
+            PersonalDashboardApi.getStatistics(),
+          ]);
         if (jobsRes?.data) setApiJobs(jobsRes.data as RecommendedJob[]);
         if (reportsRes?.data) setApiReports(reportsRes.data);
         if (prioritySkillsRes?.data) setPrioritySkills(prioritySkillsRes.data);
+        if (bannerRes?.data || statsRes?.data) {
+          setBannerStats({
+            profileCompletion: statsRes?.data?.profile_completion_percentage ?? 0,
+            suitableJobs: bannerRes?.data?.suitable_jobs_count ?? 0,
+            matchScore: bannerRes?.data?.match_score ?? statsRes?.data?.match_score ?? 0,
+          });
+        }
       } catch (error) {
         console.error("Failed to sync Đề xuất api:", error);
       }
@@ -414,17 +429,27 @@ export function Recommendations() {
       },
     );
 
-    const structuredApiJobs: PipelineJobItem[] = apiJobs.map((job) => ({
-      job: {
-        job_id: job.job_id,
-        title: job.title,
-        company: { name: job.company_name },
-        location: job.location,
-        work_type: "Full-time",
-        salary: { min_salary: job.salary_text, max_salary: "" },
-      },
-      overall_score: parseMatchRate(job.match_rate) || 85,
-    }));
+    // Cột Quan tâm: Lấy trực tiếp từ tất cả job đã lưu trong DB
+    const bookmarkedItems: PipelineJobItem[] = savedJobsFromProfile
+      .filter((item) => item.job)
+      .map((item) => {
+        const jobId = String(item.job!.job_id);
+        const suggestedJob = apiJobById.get(jobId);
+        return {
+          job: {
+            job_id: jobId,
+            title: item.job!.title,
+            company: { name: item.job!.company?.name || "N/A" },
+            location: item.job!.location || null,
+            work_type: null,
+            salary: {
+              min_salary: suggestedJob?.salary_text || item.job!.salary || "",
+              max_salary: "",
+            },
+          },
+          overall_score: suggestedJob ? parseMatchRate(suggestedJob.match_rate) : null,
+        };
+      });
 
     return {
       // Cột Đang xem: Lấy từ localStorage khi user đã bấm mở job ở trang tìm kiếm
@@ -432,12 +457,9 @@ export function Recommendations() {
         (m) => !profileSavedJobIds.has(String(m.job.job_id)),
       ),
 
-      // Cột Quan tâm: Những công việc gợi ý trong tháng mà USER ĐÃ BẤM LƯU thực tế
-      bookmarked: structuredApiJobs.filter((m) =>
-        profileSavedJobIds.has(String(m.job.job_id)),
-      ),
+      // Cột Quan tâm: Tất cả job user đã lưu từ DB
+      bookmarked: bookmarkedItems,
 
-      // Giữ nguyên các nhánh fallback trống để khớp logic gọi mảng của bạn
       learning: [],
       applied: [],
     };
@@ -490,6 +512,27 @@ export function Recommendations() {
     },
   };
 
+  // ── Computed banner data từ real API ──
+  const topJob = apiJobs[0] ?? null;
+  const topSkill = prioritySkills[0] ?? null;
+
+  const bannerDesc = (() => {
+    if (!topJob && !topSkill && !profile.major) {
+      return "Hoàn thiện hồ sơ và upload CV để nhận phân tích cá nhân hóa từ AI.";
+    }
+    const parts: string[] = [];
+    if (topJob) {
+      const rate = topJob.match_rate ? ` (${topJob.match_rate})` : "";
+      parts.push(`Bạn phù hợp tốt với vị trí ${topJob.title}${rate}.`);
+    } else if (profile.major) {
+      parts.push(`Với chuyên ngành ${profile.major}, bạn có tiềm năng tốt trong lĩnh vực công nghệ.`);
+    }
+    if (topSkill) {
+      parts.push(`Tập trung phát triển kỹ năng ${topSkill.skill_name} để tăng cơ hội phù hợp.`);
+    }
+    return parts.join(" ") || "Upload CV và hoàn thiện hồ sơ để nhận đề xuất chính xác hơn.";
+  })();
+
   const tabs = [
     { key: "overview" as const, label: "Tổng Quan Sự Nghiệp", icon: Sparkles },
     { key: "saved" as const, label: "Đề Xuất", icon: BookmarkCheck },
@@ -504,37 +547,56 @@ export function Recommendations() {
           <div className="absolute -top-8 -right-8 w-64 h-64 bg-white rounded-full" />
           <div className="absolute -bottom-12 left-32 w-40 h-40 bg-white rounded-full" />
         </div>
-        <div className="relative flex items-start justify-between">
-          <div>
+        <div className="relative flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-5 h-5 text-violet-300" />
+              <Sparkles className="w-5 h-5 text-violet-300 shrink-0" />
               <p className="text-violet-200 text-sm font-semibold">
-                Tóm Tắt Sự Nghiệp — Thông Tin Từ AI
+                Tóm Tắt Sự Nghiệp — Phân Tích Dữ Liệu
               </p>
             </div>
-            <p className="text-white font-bold text-lg mb-2 max-w-xl">
-              Bạn có vị trí tốt cho các vai trò Frontend & Full Stack. Tập trung
-              vào công nghệ đám mây để mở khóa các vị trí cấp cao.
+            <p className="text-white font-bold text-lg mb-3 max-w-xl leading-snug">
+              {bannerDesc}
             </p>
-            <div className="flex flex-wrap gap-2 mt-3">
-              <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
-                85% Độ hoàn thiện hồ sơ
-              </span>
-              <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
-                234 Công Việc Phù Hợp
-              </span>
-              <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
-                3 Đề xuất
-              </span>
+            <div className="flex flex-wrap gap-2">
+              {bannerStats ? (
+                <>
+                  <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
+                    {bannerStats.profileCompletion}% Độ hoàn thiện hồ sơ
+                  </span>
+                  {bannerStats.suitableJobs > 0 && (
+                    <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
+                      {bannerStats.suitableJobs} Công việc phù hợp
+                    </span>
+                  )}
+                  {apiJobs.length > 0 && (
+                    <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
+                      {apiJobs.length} Đề xuất hàng đầu
+                    </span>
+                  )}
+                  {bannerStats.matchScore > 0 && (
+                    <span className="px-3 py-1 bg-emerald-400/30 text-emerald-100 text-xs font-semibold rounded-full">
+                      {bannerStats.matchScore}% Điểm phù hợp
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="px-3 py-1 bg-white/20 text-white/60 text-xs font-semibold rounded-full animate-pulse">
+                  Đang tải dữ liệu…
+                </span>
+              )}
             </div>
           </div>
-          <div className="hidden lg:block text-right">
-            <p className="text-violet-200 text-xs mb-1">
-              Phù Hợp Sự Nghiệp Hàng Đầu
-            </p>
-            <p className="text-white font-bold">Senior Frontend Dev</p>
-            <p className="text-violet-200 text-sm">$110K–$140K tb.</p>
-          </div>
+          {topJob && (
+            <div className="hidden lg:block text-right shrink-0">
+              <p className="text-violet-200 text-xs mb-1">Phù Hợp Hàng Đầu</p>
+              <p className="text-white font-bold text-sm leading-tight max-w-[160px] text-right">
+                {topJob.title}
+              </p>
+              <p className="text-violet-200 text-xs mt-0.5">{topJob.salary_text || "Thỏa thuận"}</p>
+              <p className="text-emerald-300 text-xs font-bold mt-1">{topJob.match_rate} phù hợp</p>
+            </div>
+          )}
         </div>
       </div>
 

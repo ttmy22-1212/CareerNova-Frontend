@@ -750,6 +750,11 @@ export function MarketDashboard({
             </p>
           </div>
         </div>
+        {salaryRangesData.length === 0 ? (
+          <p className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500 text-center">
+            Chưa có đủ dữ liệu lương cho bộ lọc này.
+          </p>
+        ) : (
         <ResponsiveContainer width="100%" height={200}>
           <BarChart
             data={salaryRangesData}
@@ -765,12 +770,13 @@ export function MarketDashboard({
               tick={{ fontSize: 10, fill: "#94a3b8" }}
               axisLine={false}
               tickLine={false}
+              tickFormatter={(v: string) => v.length > 14 ? v.slice(0, 13) + "…" : v}
             />
             <YAxis
               tick={{ fontSize: 10, fill: "#94a3b8" }}
               axisLine={false}
               tickLine={false}
-              unit="K"
+              tickFormatter={(v: number) => `${Math.round(v / 1000)}K`}
             />
             <Tooltip
               formatter={(v: any) => [`$${Math.round(v / 1000)}K`, ""]}
@@ -789,6 +795,7 @@ export function MarketDashboard({
             />
           </BarChart>
         </ResponsiveContainer>
+        )}
         <div className="flex items-center gap-5 justify-center mt-2">
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <span className="w-3 h-3 rounded bg-blue-200 inline-block" />
