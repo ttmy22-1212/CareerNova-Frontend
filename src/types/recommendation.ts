@@ -30,6 +30,29 @@ export interface PrioritySkill {
   timeframe: string;
 }
 
+export interface CareerPathSkillGap {
+  skill_id: number;
+  skill_name: string;
+  category: string | null;
+  priority: "critical" | "high" | "medium" | "low";
+}
+
+export interface CareerPathRecommendation {
+  id: string;
+  title: string;
+  search_group: string;
+  current_match: number;
+  target_match: number;
+  readiness_label: string;
+  time_to_ready: string;
+  skill_gaps: CareerPathSkillGap[];
+  salary_range: string;
+  openings_count: number;
+  learning_path_title: string | null;
+  learning_path_id: string | null;
+  href: string;
+}
+
 // Cấu trúc phản hồi bọc qua lớp IBaseResponse quen thuộc
 export interface GetTopJobsResponse {
   data: RecommendedJob[];
@@ -41,4 +64,8 @@ export interface GetSavedReportsResponse {
 
 export interface GetPrioritySkillsResponse {
   data: PrioritySkill[];
+}
+
+export interface GetCareerPathsResponse {
+  data: CareerPathRecommendation[];
 }

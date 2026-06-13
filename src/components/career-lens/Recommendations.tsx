@@ -8,7 +8,6 @@ import {
   BookOpen,
   Briefcase,
   Building2,
-  Users,
   Award,
   Clock,
   DollarSign,
@@ -17,30 +16,28 @@ import {
   BookmarkCheck,
   ExternalLink,
   Star,
-  Download,
   Calendar,
   Filter,
   BarChart3,
   FileText,
   Eye,
   Heart,
-  GraduationCap,
-  CheckCircle2,
   Plus,
 } from "lucide-react";
-import { jobsWithDetails, userProfile } from "@/data/mockData";
-import { getMatchedJobs } from "@/utils/matching";
 import { useOnboarding } from "@/contexts/onboarding/onboarding-context";
 import RecommendationApi from "@/api/recommendation";
 import ProfileApi from "@/api/profile";
 import JobApi from "@/api/job";
 import PersonalDashboardApi from "@/api/personal-dashboard";
+import SkillGapApi from "@/api/skill-gap";
 import {
+  CareerPathRecommendation,
   PrioritySkill,
   RecommendedJob,
   SavedReportItem,
 } from "@/types/recommendation";
 import { JobDetailResponse } from "@/types/job-insight";
+import { SkillGapLearningRecommendationDto } from "@/types/skill-gap";
 
 type PipelineJobItem = {
   job: {
@@ -55,105 +52,6 @@ type PipelineJobItem = {
 };
 
 const VIEWED_JOB_IDS_STORAGE_KEY = "viewed_job_ids";
-
-const matchedJobs = getMatchedJobs(jobsWithDetails, userProfile);
-
-const careerPaths = [
-  {
-    title: "Senior Frontend Developer",
-    emoji: "🖥️",
-    currentMatch: 75,
-    targetMatch: 90,
-    timeToReady: "6–8 months",
-    gaps: [
-      "Advanced React patterns",
-      "Performance optimization",
-      "System design basics",
-    ],
-    avgSalary: "$110K–$140K",
-    openings: 234,
-  },
-  {
-    title: "Full Stack Engineer",
-    emoji: "⚙️",
-    currentMatch: 65,
-    targetMatch: 85,
-    timeToReady: "8–12 months",
-    gaps: ["Backend architecture", "AWS fundamentals", "Database optimization"],
-    avgSalary: "$100K–$130K",
-    openings: 412,
-  },
-  {
-    title: "Tech Lead / Engineering Manager",
-    emoji: "🚀",
-    currentMatch: 50,
-    targetMatch: 80,
-    timeToReady: "12–18 months",
-    gaps: ["Team leadership", "System architecture", "Mentoring & code review"],
-    avgSalary: "$130K–$170K",
-    openings: 98,
-  },
-];
-
-const resources = [
-  {
-    title: "AWS Certified Developer – Associate",
-    type: "Certification",
-    provider: "Amazon Web Services",
-    duration: "3–4 months",
-    cost: "$150",
-    rating: 4.8,
-    url: "#",
-  },
-  {
-    title: "Advanced React Patterns & Best Practices",
-    type: "Course",
-    provider: "Frontend Masters",
-    duration: "4 weeks",
-    cost: "$39/mo",
-    rating: 4.9,
-    url: "#",
-  },
-  {
-    title: "System Design Interview Guide",
-    type: "Course",
-    provider: "Educative.io",
-    duration: "6 weeks",
-    cost: "$59",
-    rating: 4.7,
-    url: "#",
-  },
-  {
-    title: "Docker and Kubernetes: The Complete Guide",
-    type: "Course",
-    provider: "Udemy",
-    duration: "5 weeks",
-    cost: "$19.99",
-    rating: 4.8,
-    url: "#",
-  },
-];
-
-const events = [
-  {
-    event: "React Conf 2026",
-    date: "May 15–16, 2026",
-    location: "Las Vegas, NV",
-    type: "Conference",
-  },
-  {
-    event: "Node.js Interactive",
-    date: "Jun 4, 2026",
-    location: "Online",
-    type: "Virtual",
-  },
-  {
-    event: "Local JS Meetup",
-    date: "Every Thursday",
-    location: "Your City",
-    type: "Meetup",
-  },
-];
 
 const urgencyConfig: Record<
   string,
@@ -208,18 +106,32 @@ const formatPipelineSalary = (
   }`;
 };
 
+const formatCoursePrice = (price: number | null | undefined) => {
+  if (!price || price <= 0) {
+    return "Miễn phí/không rõ";
+  }
+
+  return `${price.toLocaleString("vi-VN")} đ`;
+};
+
 export function Recommendations() {
   const [activeTab, setActiveTab] = useState<
     "overview" | "saved" | "resources"
   >("overview");
-  const { profile, toggleBookmark } = useOnboarding();
-  const router = useRouter(); // Nhớ import useRouter từ "next/navigation"
+  const { profile } = useOnboarding();
+  const router = useRouter();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   // ── HOOKS GỌI API THỰC TẾ TRUYỀN DỮ LIỆU ĐỘNG ──
   const [apiJobs, setApiJobs] = useState<RecommendedJob[]>([]);
   const [apiReports, setApiReports] = useState<SavedReportItem[]>([]);
   const [prioritySkills, setPrioritySkills] = useState<PrioritySkill[]>([]);
+  const [careerPaths, setCareerPaths] = useState<CareerPathRecommendation[]>(
+    [],
+  );
+  const [learningRecommendations, setLearningRecommendations] = useState<
+    SkillGapLearningRecommendationDto[]
+  >([]);
   const [savedJobsFromProfile, setSavedJobsFromProfile] = useState<any[]>([]);
   const [viewedJobDetails, setViewedJobDetails] = useState<
     JobDetailResponse[]
@@ -233,22 +145,37 @@ export function Recommendations() {
   useEffect(() => {
     const fetchApiData = async () => {
       try {
-        const [jobsRes, reportsRes, prioritySkillsRes, bannerRes, statsRes] =
-          await Promise.all([
-            PersonalDashboardApi.getRecommendedJobs(),
-            RecommendationApi.getSavedReports(),
-            RecommendationApi.getPrioritySkills(4),
-            PersonalDashboardApi.getBanner(),
-            PersonalDashboardApi.getStatistics(),
-          ]);
+        const [
+          jobsRes,
+          reportsRes,
+          prioritySkillsRes,
+          careerPathsRes,
+          learningPathsRes,
+          bannerRes,
+          statsRes,
+        ] = await Promise.all([
+          PersonalDashboardApi.getRecommendedJobs(),
+          RecommendationApi.getSavedReports(),
+          RecommendationApi.getPrioritySkills(4),
+          RecommendationApi.getCareerPaths(3),
+          SkillGapApi.getLearningPaths(4),
+          PersonalDashboardApi.getBanner(),
+          PersonalDashboardApi.getStatistics(),
+        ]);
         if (jobsRes?.data) setApiJobs(jobsRes.data as RecommendedJob[]);
         if (reportsRes?.data) setApiReports(reportsRes.data);
         if (prioritySkillsRes?.data) setPrioritySkills(prioritySkillsRes.data);
+        if (careerPathsRes?.data) setCareerPaths(careerPathsRes.data);
+        if (learningPathsRes?.data) {
+          setLearningRecommendations(learningPathsRes.data);
+        }
         if (bannerRes?.data || statsRes?.data) {
           setBannerStats({
-            profileCompletion: statsRes?.data?.profile_completion_percentage ?? 0,
+            profileCompletion:
+              statsRes?.data?.profile_completion_percentage ?? 0,
             suitableJobs: bannerRes?.data?.suitable_jobs_count ?? 0,
-            matchScore: bannerRes?.data?.match_score ?? statsRes?.data?.match_score ?? 0,
+            matchScore:
+              bannerRes?.data?.match_score ?? statsRes?.data?.match_score ?? 0,
           });
         }
       } catch (error) {
@@ -314,75 +241,30 @@ export function Recommendations() {
     };
   }, [loadViewedJobsFromStorage]);
 
-  // Thay thế mảng matchedJobs cục bộ bằng cách map dữ liệu API về đúng Schema UI gốc của bạn
-  const dynamicMatchedJobs = useMemo(() => {
-    if (apiJobs.length === 0) return matchedJobs;
-    return apiJobs.map((job) => ({
-      job: {
-        job_id: job.job_id,
-        title: job.title,
-        company: { name: job.company_name },
-        location: job.location,
-        work_type: "Full-time",
-        salary: { min_salary: job.salary_text, max_salary: "" },
-      },
-      overall_score: parseMatchRate(job.match_rate) || 85,
-      skill_matches: [{ skill_name: "Core Skill", match_level: "strong" }],
-    })) as any;
-  }, [apiJobs]);
-
-  // Thay thế mảng savedReports bằng cách map dữ liệu API báo cáo thực tế
-  // Thay thế mảng savedReports bằng cách map dữ liệu API báo cáo thực tế
   const savedReports = useMemo(() => {
-    if (apiReports.length === 0)
-      return [
-        {
-          id: 1,
-          type: "cv-match",
-          title: `CV Match — ${dynamicMatchedJobs[0]?.job?.title || "Frontend"}`,
-          subtitle: "TechCorp Solutions",
-          score: 85,
-          date: "Apr 18, 2026",
-          tags: ["React"],
-          status: "strong",
-          onViewReport: () => router.push("/skill-gap"),
-        },
-      ];
-
     return apiReports.map((report, idx) => ({
       id: idx + 1,
       type: report.match_type === "cv_job" ? "cv-match" : "gap",
       title: report.report_name,
       subtitle:
         report.match_type === "cv_job"
-          ? "Job-Specific Analysis"
-          : "Role Benchmark",
+          ? "Phân tích theo công việc"
+          : "So khớp theo nhóm nghề",
       score: report.match_score,
       date: report.created_at
-        ? new Date(report.created_at).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })
-        : "N/A",
-      tags: ["Verified Stack"],
+        ? new Date(report.created_at).toLocaleDateString("vi-VN")
+        : "Chưa rõ ngày",
+      tags: ["Dữ liệu từ hệ thống"],
       status: report.match_score >= 80 ? "strong" : "moderate",
 
-      // Hàm xử lý kích hoạt khi bấm nút "View Report"
       onViewReport: async () => {
         try {
           setIsRedirecting(true);
 
-          // 1. Gọi API đặt CV này làm Default (Thay bằng hàm API thực tế của dự án bạn)
           if (report.cv_id) {
             await ProfileApi.setDefaultCv(report.cv_id);
           }
-
-          // 2. Chốt chặn an toàn: Nếu Backend KHÔNG tự động set đúng lượt match bạn muốn,
-          // giải nén dòng dưới đây để ép tuần tự. Nếu Backend đã tự set rồi thì BỎ QUA dòng này.
-          // await RecommendationApi.updateDefaultMatch(report.match_id);
-
-          // 3. Chuyển hướng sang trang phân tích kỹ năng sau khi DB đã cập nhật xong ổn định
+          await ProfileApi.setDefaultMatching(report.match_id);
           router.push("/skill-gap");
         } catch (err) {
           console.error("Lỗi khi thiết lập báo cáo mặc định:", err);
@@ -390,7 +272,7 @@ export function Recommendations() {
         }
       },
     }));
-  }, [apiReports, dynamicMatchedJobs, router]);
+  }, [apiReports, router]);
 
   // Build kanban columns from job data + bookmarks (Giữ nguyên gốc)
   // Tái cấu trúc Kanban Column: Lấy dữ liệu động đối chiếu trực tiếp với API Profile đã lưu
@@ -605,10 +487,10 @@ export function Recommendations() {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-              📋 Job Pipeline của bạn
+              Luồng công việc của bạn
             </h3>
             <p className="mt-0.5 text-xs text-slate-500">
-              Kéo thả (sap tới) — hoặc bấm bookmark/apply trực tiếp từ job card
+              Theo dõi các công việc bạn đã xem gần đây và các công việc đã lưu.
             </p>
           </div>
           <Link
@@ -792,7 +674,7 @@ export function Recommendations() {
                       href="/jobs"
                       className="flex items-center justify-center gap-2 py-2 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
                     >
-                      Xem tất cả {apiJobs.length} jobs phù hợp{" "}
+                      Xem tất cả {apiJobs.length} công việc phù hợp{" "}
                       <ChevronRight className="w-4 h-4" />
                     </Link>
                   </div>
@@ -866,7 +748,7 @@ export function Recommendations() {
                           href="/skill-gap"
                           className="px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-700 transition-colors"
                         >
-                          Bắt đầu học
+                          Xem gợi ý
                         </Link>
                       </div>
                     </div>
@@ -878,91 +760,155 @@ export function Recommendations() {
 
           {/* Career Paths */}
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Award className="w-5 h-5 text-violet-600" />
-              <h2 className="font-bold text-slate-900">Career Path Đề xuất</h2>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-violet-600" />
+                <h2 className="font-bold text-slate-900 dark:text-slate-100">
+                  Lộ trình nghề nghiệp đề xuất
+                </h2>
+              </div>
+              <Link
+                href="/cv-matching"
+                className="hidden text-xs font-semibold text-violet-600 hover:text-violet-700 sm:inline-flex"
+              >
+                Cập nhật phân tích
+              </Link>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {careerPaths.map((path) => (
-                <div
-                  key={path.title}
-                  className="bg-white rounded-xl border border-slate-100 shadow-sm p-5"
+            {careerPaths.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-200 bg-white p-5 text-center dark:border-slate-800 dark:bg-slate-900">
+                <Award className="mx-auto mb-2 h-8 w-8 text-slate-300 dark:text-slate-700" />
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  Chưa có lộ trình nghề nghiệp đề xuất
+                </p>
+                <p className="mx-auto mt-1 max-w-xl text-xs text-slate-500 dark:text-slate-400">
+                  Hãy chọn CV mặc định và chạy so khớp để hệ thống lấy nhóm nghề,
+                  kỹ năng còn thiếu và dữ liệu thị trường phù hợp với bạn.
+                </p>
+                <Link
+                  href="/cv-matching"
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-violet-700"
                 >
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-2xl">{path.emoji}</span>
-                    <h3 className="font-bold text-slate-900 text-sm">
-                      {path.title}
-                    </h3>
-                  </div>
+                  Phân tích CV <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                {careerPaths.map((path) => (
+                  <div
+                    key={path.id}
+                    className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                  >
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-300">
+                          {path.readiness_label}
+                        </p>
+                        <h3 className="mt-1 line-clamp-2 text-sm font-bold text-slate-900 dark:text-slate-100">
+                          {path.title}
+                        </h3>
+                      </div>
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-600 dark:bg-violet-950/40 dark:text-violet-300">
+                        <Award className="h-4 w-4" />
+                      </div>
+                    </div>
 
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between text-xs mb-1.5">
-                      <span className="text-slate-500">Readiness</span>
-                      <span className="font-bold text-slate-900">
-                        {path.currentMatch}% → {path.targetMatch}%
-                      </span>
-                    </div>
-                    <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="absolute h-full bg-violet-500 rounded-full transition-all"
-                        style={{ width: `${path.currentMatch}%` }}
-                      />
-                      <div
-                        className="absolute top-0 bottom-0 w-0.5 bg-violet-800 rounded-full"
-                        style={{ left: `${path.targetMatch}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[10px] mt-1 text-slate-400">
-                      <span>Hiện tại</span>
-                      <span>Mục tiêu</span>
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <p className="text-xs font-semibold text-slate-700 mb-1.5">
-                      Kỹ năng cần phát triển:
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {path.gaps.map((gap) => (
-                        <span
-                          key={gap}
-                          className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-medium rounded"
-                        >
-                          {gap}
+                    <div className="mb-3">
+                      <div className="mb-1.5 flex items-center justify-between text-xs">
+                        <span className="text-slate-500">Mức độ sẵn sàng</span>
+                        <span className="font-bold text-slate-900 dark:text-slate-100">
+                          {path.current_match}% → {path.target_match}%
                         </span>
-                      ))}
+                      </div>
+                      <div className="relative h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                        <div
+                          className="absolute h-full rounded-full bg-violet-500 transition-all"
+                          style={{
+                            width: `${Math.min(path.current_match, 100)}%`,
+                          }}
+                        />
+                        <div
+                          className="absolute bottom-0 top-0 w-0.5 rounded-full bg-violet-900 dark:bg-violet-200"
+                          style={{
+                            left: `${Math.min(path.target_match, 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <div className="mt-1 flex justify-between text-[10px] text-slate-400">
+                        <span>Hiện tại</span>
+                        <span>Mục tiêu</span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="border-t border-slate-100 pt-3 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1 text-slate-500">
-                        <Clock className="w-3 h-3" /> Thời gian chuẩn bị
-                      </span>
-                      <span className="font-semibold text-slate-900">
-                        {path.timeToReady}
-                      </span>
+                    <div className="mb-3">
+                      <p className="mb-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Kỹ năng nên bổ sung:
+                      </p>
+                      {path.skill_gaps.length === 0 ? (
+                        <span className="inline-flex rounded bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+                          Chưa có khoảng cách nổi bật
+                        </span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {path.skill_gaps.map((gap) => {
+                            const tone = urgencyConfig[gap.priority];
+                            return (
+                              <span
+                                key={`${path.id}-${gap.skill_id}`}
+                                className={`rounded px-2 py-0.5 text-[10px] font-medium ${tone.bg} ${tone.text}`}
+                              >
+                                {gap.skill_name}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1 text-slate-500">
-                        <DollarSign className="w-3 h-3" /> Mức lương trung bình
-                      </span>
-                      <span className="font-bold text-emerald-600">
-                        {path.avgSalary}
-                      </span>
+
+                    <div className="space-y-1.5 border-t border-slate-100 pt-3 dark:border-slate-800">
+                      <div className="flex items-center justify-between gap-3 text-xs">
+                        <span className="flex items-center gap-1 text-slate-500">
+                          <Clock className="h-3 w-3" /> Thời gian chuẩn bị
+                        </span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">
+                          {path.time_to_ready}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 text-xs">
+                        <span className="flex items-center gap-1 text-slate-500">
+                          <DollarSign className="h-3 w-3" /> Khoảng lương
+                        </span>
+                        <span className="text-right font-bold text-emerald-600">
+                          {path.salary_range}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 text-xs">
+                        <span className="flex items-center gap-1 text-slate-500">
+                          <Briefcase className="h-3 w-3" /> Cơ hội đang mở
+                        </span>
+                        <span className="font-semibold text-blue-700 dark:text-blue-300">
+                          {path.openings_count.toLocaleString("vi-VN")} công việc
+                        </span>
+                      </div>
+                      {path.learning_path_title && (
+                        <p className="line-clamp-1 text-xs text-slate-500">
+                          Lộ trình liên quan:{" "}
+                          <span className="font-semibold text-slate-700 dark:text-slate-300">
+                            {path.learning_path_title}
+                          </span>
+                        </p>
+                      )}
                     </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1 text-slate-500">
-                        <Briefcase className="w-3 h-3" /> Công việc đang mở
-                      </span>
-                      <span className="font-semibold text-blue-700">
-                        {path.openings.toLocaleString()} công việc
-                      </span>
-                    </div>
+
+                    <Link
+                      href={path.href}
+                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                    >
+                      Xem gợi ý hành động <ChevronRight className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Events */}
@@ -1004,7 +950,25 @@ export function Recommendations() {
               Bộ lọc
             </button>
           </div>
-          {savedReports.map((report) => (
+          {savedReports.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center">
+              <FileText className="mx-auto mb-3 h-9 w-9 text-slate-300" />
+              <p className="text-sm font-bold text-slate-900">
+                Chưa có báo cáo đề xuất
+              </p>
+              <p className="mx-auto mt-1 max-w-lg text-xs text-slate-500">
+                Chạy phân tích CV hoặc mở một báo cáo matching để hệ thống lưu
+                lịch sử đề xuất thật cho hồ sơ của bạn.
+              </p>
+              <Link
+                href="/cv-matching"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+              >
+                Phân tích CV <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          ) : (
+            savedReports.map((report) => (
             <div
               key={report.id}
               className="bg-white rounded-xl border border-slate-100 shadow-sm p-5"
@@ -1055,7 +1019,7 @@ export function Recommendations() {
                           : "bg-amber-100 text-amber-700"
                     }`}
                   >
-                    {report.score}% Match
+                    {report.score}% phù hợp
                   </span>
                   <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
                     <Calendar className="w-3 h-3" />
@@ -1070,11 +1034,12 @@ export function Recommendations() {
                   className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  {isRedirecting ? "Connecting..." : "View Report"}
+                  {isRedirecting ? "Đang mở..." : "Xem báo cáo"}
                 </button>
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
       )}
 
@@ -1082,62 +1047,116 @@ export function Recommendations() {
       {activeTab === "resources" && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {resources.map((r) => (
-              <div
-                key={r.title}
-                className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          r.type === "Certification"
-                            ? "bg-violet-100 text-violet-700"
-                            : r.type === "Course"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-emerald-100 text-emerald-700"
-                        }`}
-                      >
-                        {r.type}
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-slate-900 text-sm">
-                      {r.title}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {r.provider}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-bold text-slate-900 text-sm">{r.cost}</p>
-                    <div className="flex items-center gap-0.5 text-amber-400 justify-end mt-0.5">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-3 h-3 ${i < Math.floor(r.rating) ? "fill-amber-400" : "fill-slate-200 text-slate-200"}`}
-                        />
-                      ))}
-                      <span className="text-[10px] text-slate-500 ml-0.5">
-                        {r.rating}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <Clock className="w-3 h-3" />
-                    {r.duration}
-                  </div>
-                  <a
-                    href={r.url}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors"
-                  >
-                    Xem <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
+            {learningRecommendations.length === 0 ? (
+              <div className="col-span-full rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center">
+                <BookOpen className="mx-auto mb-3 h-9 w-9 text-slate-300" />
+                <p className="text-sm font-bold text-slate-900">
+                  Chưa có tài nguyên học tập đề xuất
+                </p>
+                <p className="mx-auto mt-1 max-w-lg text-xs text-slate-500">
+                  Chạy phân tích khoảng cách kỹ năng để hệ thống đề xuất khóa
+                  học và lộ trình phù hợp với CV mặc định.
+                </p>
               </div>
-            ))}
+            ) : (
+              learningRecommendations.map((recommendation) => {
+                const primaryCourse = recommendation.courses[0];
+                const primaryPath = recommendation.paths[0];
+                const resourceTitle =
+                  primaryCourse?.title ||
+                  primaryPath?.title ||
+                  `Bổ sung ${recommendation.skill_name}`;
+                const resourceProvider =
+                  primaryCourse?.provider ||
+                  (primaryPath ? "Lộ trình học" : "Nova");
+                const resourceDuration =
+                  primaryCourse?.duration ||
+                  primaryPath?.duration ||
+                  recommendation.estimated_time;
+                const resourceRating = primaryCourse?.rating || 0;
+                const resourceUrl =
+                  primaryCourse?.source_url ||
+                  `/roadmap?skill=${encodeURIComponent(
+                    recommendation.skill_name,
+                  )}`;
+                const isExternal = resourceUrl.startsWith("http");
+
+                return (
+                  <div
+                    key={recommendation.id}
+                    className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              recommendation.status === "Missing"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-amber-100 text-amber-700"
+                            }`}
+                          >
+                            {recommendation.status === "Missing"
+                              ? "Đang thiếu"
+                              : "Khớp một phần"}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-bold">
+                            {recommendation.skill_name}
+                          </span>
+                        </div>
+                        <h3 className="font-bold text-slate-900 text-sm">
+                          {resourceTitle}
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {resourceProvider}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-bold text-slate-900 text-sm">
+                          {primaryCourse
+                            ? formatCoursePrice(primaryCourse.price)
+                            : "Lộ trình"}
+                        </p>
+                        {resourceRating > 0 && (
+                          <div className="flex items-center gap-0.5 text-amber-400 justify-end mt-0.5">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-3 h-3 ${
+                                  i < Math.floor(resourceRating)
+                                    ? "fill-amber-400"
+                                    : "fill-slate-200 text-slate-200"
+                                }`}
+                              />
+                            ))}
+                            <span className="text-[10px] text-slate-500 ml-0.5">
+                              {resourceRating}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <p className="mb-3 line-clamp-2 text-xs text-slate-500">
+                      {recommendation.impact}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                        <Clock className="w-3 h-3" />
+                        {resourceDuration}
+                      </div>
+                      <a
+                        href={resourceUrl}
+                        target={isExternal ? "_blank" : undefined}
+                        rel={isExternal ? "noreferrer" : undefined}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors"
+                      >
+                        Xem <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
 
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 text-center">

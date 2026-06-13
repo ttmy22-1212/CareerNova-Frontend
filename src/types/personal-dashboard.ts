@@ -48,17 +48,17 @@ export interface DashboardProgressDto {
 }
 
 export interface JourneyStageDto {
-  id: "explore" | "analyze" | "plan" | "apply";
+  id: "explore" | "analyze" | "resources" | "saved";
   label: string;
   desc: string;
-  progress: number;
+  progress?: number;
   done: boolean;
   href: string;
 }
 
 export interface JourneyProgressDto {
   stages: JourneyStageDto[];
-  overall: number;
+  overall?: number;
 }
 
 export interface SkillsRadarFilterDto {

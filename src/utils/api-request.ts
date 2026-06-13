@@ -83,6 +83,7 @@ const processQueue = (error: any, token: string | null = null) => {
 const apiFetch = async (
   input: RequestInfo | URL,
   init?: RequestInit | undefined,
+  responseType: "json" | "blob" = "json",
 ): Promise<any> => {
   try {
     let response = await fetch(input, init);
@@ -114,7 +115,7 @@ const apiFetch = async (
               headersObj.set("Authorization", "Bearer " + newToken);
               newInit.headers = headersObj;
 
-              resolve(apiFetch(input, newInit)); // Chạy lại API ban đầu với token mới
+              resolve(apiFetch(input, newInit, responseType)); // Chạy lại API ban đầu với token mới
             },
             reject: (err: any) => reject(err),
           });
@@ -150,7 +151,7 @@ const apiFetch = async (
           headersObj.set("Authorization", "Bearer " + access_token);
           newInit.headers = headersObj;
 
-          return await apiFetch(input, newInit);
+          return await apiFetch(input, newInit, responseType);
         } else {
           throw new Error("Refresh token invalid");
         }
@@ -177,9 +178,14 @@ const apiFetch = async (
       );
     }
 
-    const text = await response.text();
     if (typeof window !== "undefined")
       window.dispatchEvent(new Event("online"));
+
+    if (responseType === "blob") {
+      return await response.blob();
+    }
+
+    const text = await response.text();
     return JSON.parse(text, reviver);
   } catch (error) {
     if (typeof window !== "undefined") {
@@ -239,4 +245,16 @@ export const apiGet = async (query: string, body?: any) => {
     method: "GET",
     headers,
   });
+};
+
+export const apiGetBlob = async (query: string, body?: any) => {
+  const headers = await getRequestHeaders("GET");
+  return await apiFetch(
+    getRequestUrl(query, body),
+    {
+      method: "GET",
+      headers,
+    },
+    "blob",
+  );
 };

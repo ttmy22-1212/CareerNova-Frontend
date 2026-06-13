@@ -30,6 +30,7 @@ import {
 } from "recharts";
 
 import MarketDashboardApi from "@/api/market-dashboard";
+import PersonalDashboardApi from "@/api/personal-dashboard";
 import {
   DashboardFilterDto,
   FilterOptionDto,
@@ -42,8 +43,6 @@ import {
   RisingSkillItemDto,
 } from "@/types/market-dashboard";
 
-import { userProfile } from "@/data/mockData";
-import { getMatchedJobs, analyzeSkillGaps } from "@/utils/matching";
 import { useOnboarding } from "@/contexts/onboarding/onboarding-context";
 
 const SKILL_COLORS = [
@@ -112,6 +111,11 @@ export function MarketDashboard({
   const [risingSkillsData, setRisingSkillsData] = useState<
     RisingSkillItemDto[]
   >([]);
+  const [personalInsight, setPersonalInsight] = useState<{
+    highMatchCount: number;
+    missingSkills: number;
+    profileCompletion: number;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const { strength } = useOnboarding();
@@ -217,14 +221,37 @@ export function MarketDashboard({
     fetchDashboardData();
   }, [region, timePeriod, jobType]);
 
-  // Kiểu dữ liệu Insight cá nhân (Dành cho user đã đăng nhập)
-  const personalMatched = isLoggedIn ? getMatchedJobs([], userProfile) : [];
-  const highMatchCount = personalMatched.filter(
-    (m) => m.overall_score >= 70,
-  ).length;
-  const personalGaps = isLoggedIn ? analyzeSkillGaps([], userProfile) : [];
-  const missingSkills = personalGaps.filter((g) => !g.user_has).length;
-  const topMissingSkill = personalGaps.find((g) => !g.user_has)?.skill_name;
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setPersonalInsight(null);
+      return;
+    }
+
+    async function fetchPersonalInsight() {
+      try {
+        const [bannerRes, statsRes] = await Promise.all([
+          PersonalDashboardApi.getBanner(),
+          PersonalDashboardApi.getStatistics(),
+        ]);
+
+        setPersonalInsight({
+          highMatchCount: bannerRes?.data?.suitable_jobs_count ?? 0,
+          missingSkills: statsRes?.data?.missing_skills_count ?? 0,
+          profileCompletion:
+            statsRes?.data?.profile_completion_percentage ?? strength,
+        });
+      } catch (err) {
+        console.error("Lỗi khi tải insight cá nhân:", err);
+        setPersonalInsight(null);
+      }
+    }
+
+    fetchPersonalInsight();
+  }, [isLoggedIn, strength]);
+
+  const highMatchCount = personalInsight?.highMatchCount ?? 0;
+  const missingSkills = personalInsight?.missingSkills ?? 0;
+  const profileCompletion = personalInsight?.profileCompletion ?? strength;
 
   return (
     <div className="p-6 space-y-6">
@@ -289,19 +316,19 @@ export function MarketDashboard({
               <Link
                 href="/skill-gap"
                 className="flex items-center gap-2 rounded-lg border border-orange-300 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700 hover:bg-orange-100 transition-colors dark:bg-orange-950/30 dark:text-orange-300 dark:border-orange-800"
-              >
-                <TrendingUp className="w-3.5 h-3.5" />
-                Thiếu {missingSkills} kỹ năng — bắt đầu với {topMissingSkill}
-                <ArrowRight className="w-3 h-3" />
-              </Link>
-            )}
-            {strength < 50 && (
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+                Còn {missingSkills} kỹ năng cần ưu tiên
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          )}
+            {profileCompletion < 50 && (
               <Link
                 href="/onboarding/welcome"
                 className="flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-100 transition-colors dark:bg-violet-950/30 dark:text-violet-300 dark:border-violet-800"
               >
                 <BarChart3 className="w-3.5 h-3.5" />
-                Hoàn thiện hồ sơ ({strength}%) để xem insight đầy đủ
+                Hoàn thiện hồ sơ ({profileCompletion}%) để xem insight đầy đủ
                 <ArrowRight className="w-3 h-3" />
               </Link>
             )}

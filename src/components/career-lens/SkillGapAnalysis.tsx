@@ -86,6 +86,17 @@ const priorityConfig: Record<
   low: { label: "Bổ sung", color: "text-blue-700", bg: "bg-blue-100" },
 };
 
+const normalizePercent = (value: number | string | null | undefined) => {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    return 0;
+  }
+
+  const percent = numericValue <= 1 ? numericValue * 100 : numericValue;
+  return Math.min(Math.round(percent), 100);
+};
+
 function RadarCategoryDropdown({
   categories,
   selected,
@@ -330,7 +341,7 @@ export function SkillGapAnalysis() {
   }, [matchSkillCategory, profile?.default_match?.match_id]);
 
   const matchRadarData = matchRadarSkills.map((s: any) => {
-    let youScore = Math.round((s.similarity || 0) * 100);
+    let youScore = normalizePercent(s.similarity);
     if (youScore === 0) youScore = 0.1;
 
     return {

@@ -29,7 +29,6 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { userProfile } from "@/data/mockData";
 import CvApi from "@/api/cv";
 import MatchingApi from "@/api/matching";
 import profileApi from "@/api/profile";
@@ -135,6 +134,17 @@ const getSkillLevel = (proficiency: number | null): string => {
   return "Người mới";
 };
 
+const normalizePercent = (value: number | string | null | undefined) => {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    return 0;
+  }
+
+  const percent = numericValue <= 1 ? numericValue * 100 : numericValue;
+  return Math.min(Math.round(percent), 100);
+};
+
 function ScoreRing({ score, size = 96 }: { score: number; size?: number }) {
   const r = (size - 12) / 2;
   const circ = 2 * Math.PI * r;
@@ -229,7 +239,7 @@ export function CVMatching() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [isUpdatingDefault, setIsUpdatingDefault] = useState<boolean>(false);
 
-  // ── THÊM ĐOẠN QUẢN LÝ UPLOAD CHO Ô BÊN PHẢI (JOB DESCRIPTION SOURCE) ──
+  // ── THÊM ĐOẠN QUẢN LÝ UPLOAD CV NHANH CHO Ô BÊN PHẢI ──
   const [rightFile, setRightFile] = useState<File | null>(null);
   const [isUploadingRight, setIsUploadingRight] = useState(false);
   const [rightUploadError, setRightUploadError] = useState("");
@@ -331,9 +341,11 @@ export function CVMatching() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fetchMatchingsForCv = async () => {
+  const fetchMatchingsForCv = async (cvId = activeCv?.cv_id) => {
+    if (!cvId) return;
+
     try {
-      const res = await MatchingApi.getAllMatches();
+      const res = await MatchingApi.getAllMatches(cvId);
       if (res?.data) {
         setAllMatchings(res.data);
       }
@@ -364,7 +376,7 @@ export function CVMatching() {
         ...(analyzeResult.gap_report?.missing_skills || []),
       ].map((s: any) => ({
         subject: s.skill_name,
-        you: Math.round((s.similarity || 0) * 100),
+        you: normalizePercent(s.similarity),
         required: 100,
       }));
 
@@ -381,28 +393,26 @@ export function CVMatching() {
     ];
 
     const mappedResult = {
-      overallScore: Math.round(
-        (parseFloat(backendData.match_score) || 0) * 100,
-      ),
+      overallScore: normalizePercent(backendData.match_score),
       jobTitle: backendData.job_title || backendData.search_group || "",
       company: backendData.company_name || "",
       analysis: {
         strongMatches: (backendData.radar_data || [])
-          .filter((s: MatchedSkillDetail) => s.similarity >= 0.7)
+          .filter((s: MatchedSkillDetail) => normalizePercent(s.similarity) >= 70)
           .map((s: MatchedSkillDetail) => ({
             skill: s.skill_name,
-            cvLevel: getSkillLevel(s.similarity * 100),
+            cvLevel: getSkillLevel(normalizePercent(s.similarity)),
             required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
-            match: Math.round(s.similarity * 100),
+            match: normalizePercent(s.similarity),
             years: 1,
           })),
         partialMatches: (
           backendData.gap_report?.partially_matched_skills || []
         ).map((s: any) => ({
           skill: s.skill_name,
-          cvLevel: getSkillLevel(s.similarity * 100),
+          cvLevel: getSkillLevel(normalizePercent(s.similarity)),
           required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
-          match: Math.round(s.similarity * 100),
+          match: normalizePercent(s.similarity),
           years: 0,
         })),
         missingSkills: (backendData.gap_report?.missing_skills || []).map(
@@ -413,19 +423,9 @@ export function CVMatching() {
           }),
         ),
       },
-      experience: {
-        required: "3+ năm",
-        yours: `${userProfile.experience_years} năm`,
-        match: Math.min((userProfile.experience_years / 5) * 100, 100),
-      },
-      education: {
-        required: "Cử nhân ngành Khoa học Máy tính hoặc liên quan",
-        yours: userProfile.education_level,
-        match: 100,
-      },
       radarData: allSkillsForRadar.map((s: any) => ({
         subject: s.skill_name,
-        you: Math.round((s.similarity || 0) * 100),
+        you: normalizePercent(s.similarity),
         required: 100,
       })),
     };
@@ -494,7 +494,7 @@ export function CVMatching() {
         ];
 
         const formattedData = combinedSkills.map((s: any) => {
-          let youScore = Math.round((s.similarity || 0) * 100);
+          let youScore = normalizePercent(s.similarity);
 
           if (youScore === 0) {
             youScore = 0.1;
@@ -555,7 +555,7 @@ export function CVMatching() {
 
         setShowResultModal(true);
 
-        await fetchMatchingsForCv();
+        await fetchMatchingsForCv(targetCvId);
       }
     } catch (err) {
       console.error("Lỗi khi tính toán đối sánh:", err);
@@ -571,9 +571,12 @@ export function CVMatching() {
     if (!activeCv?.cv_id) return;
     try {
       await profileApi.setDefaultCv(activeCv.cv_id);
+      if (analyzeResult?.match_id) {
+        await profileApi.setDefaultMatching(analyzeResult.match_id);
+      }
 
       await fetchConfigAndProfileData();
-      await fetchMatchingsForCv();
+      await fetchMatchingsForCv(activeCv.cv_id);
 
       // Đóng popup
       setShowResultModal(false);
@@ -611,7 +614,7 @@ export function CVMatching() {
       if (res) {
         // Tự động kích hoạt cơ chế đồng bộ tải lại dữ liệu UI mới nhất từ API getMe
         await fetchConfigAndProfileData();
-        await fetchMatchingsForCv();
+        await fetchMatchingsForCv(cvId);
       }
     } catch (err) {
       console.error("Lỗi cập nhật CV mặc định:", err);
@@ -675,8 +678,8 @@ export function CVMatching() {
   };
 
   const modeButtons: { key: InputMode; label: string; icon: any }[] = [
-    { key: "role", label: "Role Benchmark", icon: BarChart3 },
-    { key: "url", label: "Job URL", icon: LinkIcon },
+    { key: "role", label: "Nhóm nghề", icon: BarChart3 },
+    { key: "url", label: "URL công việc", icon: LinkIcon },
   ];
 
   const toggleSection = (s: string) =>
@@ -842,12 +845,12 @@ export function CVMatching() {
               </div>
             </div>
 
-            {/* CỘT BÊN PHẢI: JD INPUT & UPLOAD JD */}
+            {/* CỘT BÊN PHẢI: UPLOAD CV NHANH VÀ CẤU HÌNH MATCHING */}
             <div className="space-y-4">
-              {/* Hàng 1: Khối Upload tài liệu JD độc lập */}
+              {/* Hàng 1: Khối Upload CV nhanh */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
-                  Tải Mô tả công việc (JD)
+                  Tải CV mới
                 </label>
                 <input
                   type="file"
@@ -883,7 +886,7 @@ export function CVMatching() {
                     <div className="flex items-center gap-2 text-slate-500">
                       <Upload className="w-4 h-4 text-slate-400" />
                       <p className="text-xs font-medium">
-                        Tải lên CV của bạn (.pdf, .jpg, .png)
+                        Tải lên CV để phân tích (.pdf, .jpg, .png)
                       </p>
                     </div>
                   )}
@@ -899,7 +902,7 @@ export function CVMatching() {
               <div className="space-y-2.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
-                    Nguồn Mô tả Công việc
+                    Nguồn so khớp
                   </label>
                   <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl mb-2">
                     {modeButtons.map((b) => (
@@ -1023,14 +1026,14 @@ export function CVMatching() {
                 onChange={(e) => handleSelectHistoryMatching(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 px-3 py-2 text-xs rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 font-medium"
               >
-                <option value="">-- Chọn lần phân tích phù hợp --</option>
+                  <option value="">-- Chọn lần phân tích phù hợp --</option>
                 {allMatchings.map((match) => (
                   <option key={match.match_id} value={match.match_id}>
-                    {match.search_group || "Benchmark Role"} (
-                    {Math.round((parseFloat(match.match_score) || 0) * 100)}%) -{" "}
+                    {match.search_group || "Nhóm nghề"} (
+                    {normalizePercent(match.match_score)}%) -{" "}
                     {new Date(
                       match.created_at || match.uploaded_at,
-                    ).toLocaleDateString()}
+                    ).toLocaleDateString("vi-VN")}
                   </option>
                 ))}
               </select>
@@ -1438,21 +1441,19 @@ export function CVMatching() {
         analyzeResult &&
         (() => {
           // Trích xuất và chuẩn hóa dữ liệu từ analyzeResult cho Modal
-          const modalScore = Math.round(
-            (parseFloat(analyzeResult.match_score) || 0) * 100,
-          );
+          const modalScore = normalizePercent(analyzeResult.match_score);
           const modalRadarData = [
             ...(analyzeResult.radar_data || []),
             ...(analyzeResult.gap_report?.partially_matched_skills || []),
             ...(analyzeResult.gap_report?.missing_skills || []),
           ].map((s: any) => ({
             subject: s.skill_name,
-            you: Math.round((s.similarity || 0) * 100),
+            you: normalizePercent(s.similarity),
             required: 100,
           }));
 
           const strongMatches = (analyzeResult.radar_data || []).filter(
-            (s: any) => s.similarity >= 0.7,
+            (s: any) => normalizePercent(s.similarity) >= 70,
           );
           const partialMatches =
             analyzeResult.gap_report?.partially_matched_skills || [];
@@ -1517,7 +1518,7 @@ export function CVMatching() {
                               className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full"
                             >
                               {item.skill_name} (
-                              {Math.round(item.similarity * 100)}%)
+                              {normalizePercent(item.similarity)}%)
                             </span>
                           ))
                         ) : (
@@ -1543,7 +1544,7 @@ export function CVMatching() {
                               className="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full"
                             >
                               {item.skill_name} (
-                              {Math.round(item.similarity * 100)}%)
+                              {normalizePercent(item.similarity)}%)
                             </span>
                           ))
                         ) : (

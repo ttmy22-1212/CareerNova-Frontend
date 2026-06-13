@@ -67,6 +67,26 @@ const interests: {
   { value: "qa", label: "QA / Test", Icon: Bug, tone: "lime" },
 ];
 
+const interestLabelMap = interests.reduce(
+  (acc, item) => {
+    acc[item.value] = item.label;
+    return acc;
+  },
+  {} as Record<CareerInterest, string>,
+);
+
+const careerResultOrder: CareerInterest[] = [
+  "frontend",
+  "backend",
+  "fullstack",
+  "mobile",
+  "data",
+  "ai_ml",
+  "devops",
+  "cybersecurity",
+  "qa",
+];
+
 const goals: { value: Goal; label: string; desc: string; Icon: any }[] = [
   {
     value: "internship",
@@ -96,21 +116,30 @@ const goals: { value: Goal; label: string; desc: string; Icon: any }[] = [
 
 const quizQuestions: {
   q: string;
-  options: { text: string; tags: CareerInterest[] }[];
+  options: {
+    text: string;
+    weights: Partial<Record<CareerInterest, number>>;
+  }[];
 }[] = [
   {
     q: "Bạn thích làm việc với gì hơn?",
     options: [
       {
         text: "Giao diện người dùng đẹp, tương tác mượt",
-        tags: ["frontend", "mobile"],
+        weights: { frontend: 2, mobile: 1 },
       },
       {
         text: "Logic phức tạp, hệ thống chịu tải lớn",
-        tags: ["backend", "devops"],
+        weights: { backend: 2, devops: 1 },
       },
-      { text: "Số liệu, thuật toán, mô hình dự đoán", tags: ["data", "ai_ml"] },
-      { text: "Bảo mật, audit, tìm lỗ hổng", tags: ["cybersecurity", "qa"] },
+      {
+        text: "Số liệu, thuật toán, mô hình dự đoán",
+        weights: { data: 2, ai_ml: 1 },
+      },
+      {
+        text: "Bảo mật, audit, tìm lỗ hổng",
+        weights: { cybersecurity: 2, qa: 1 },
+      },
     ],
   },
   {
@@ -118,32 +147,41 @@ const quizQuestions: {
     options: [
       {
         text: "Visual & sáng tạo — thích thấy kết quả ngay",
-        tags: ["frontend", "mobile"],
+        weights: { frontend: 2, mobile: 1 },
       },
       {
         text: "Logic & cấu trúc — thích tối ưu, refactor",
-        tags: ["backend", "fullstack"],
+        weights: { backend: 2, fullstack: 1 },
       },
       {
         text: "Tỉ mỉ & phân tích — thích đào sâu data",
-        tags: ["data", "ai_ml"],
+        weights: { data: 2, ai_ml: 1, qa: 1 },
       },
       {
         text: "Hệ thống & tự động — thích hạ tầng",
-        tags: ["devops", "cybersecurity"],
+        weights: { devops: 2, cybersecurity: 1 },
       },
     ],
   },
   {
     q: "Khi gặp lỗi, bạn thường?",
     options: [
-      { text: "Inspect element, thử nhiều UI khác nhau", tags: ["frontend"] },
-      { text: "Đọc log, debug step-by-step", tags: ["backend", "fullstack"] },
+      {
+        text: "Inspect element, thử nhiều UI khác nhau",
+        weights: { frontend: 2, mobile: 1 },
+      },
+      {
+        text: "Đọc log, debug step-by-step",
+        weights: { backend: 2, fullstack: 1 },
+      },
       {
         text: "Phân tích pattern, viết test reproduce",
-        tags: ["qa", "backend"],
+        weights: { qa: 2, backend: 1 },
       },
-      { text: "Dựng môi trường môi phỏng để cô lập", tags: ["devops"] },
+      {
+        text: "Dựng môi trường mô phỏng để cô lập",
+        weights: { devops: 2, cybersecurity: 1 },
+      },
     ],
   },
   {
@@ -151,26 +189,85 @@ const quizQuestions: {
     options: [
       {
         text: "Senior Engineer, làm sản phẩm cho hàng triệu user",
-        tags: ["fullstack", "frontend", "backend"],
+        weights: { fullstack: 2, frontend: 1, backend: 1, mobile: 1 },
       },
-      { text: "ML Engineer / Data Scientist", tags: ["ai_ml", "data"] },
-      { text: "Cloud Architect / SRE", tags: ["devops"] },
-      { text: "Security Researcher / Pentester", tags: ["cybersecurity"] },
+      {
+        text: "ML Engineer / Data Scientist",
+        weights: { ai_ml: 2, data: 1 },
+      },
+      {
+        text: "Cloud Architect / SRE",
+        weights: { devops: 2, backend: 1 },
+      },
+      {
+        text: "Security Researcher / Pentester",
+        weights: { cybersecurity: 2 },
+      },
+      {
+        text: "QA Lead / Automation Architect",
+        weights: { qa: 2, backend: 1 },
+      },
     ],
   },
   {
     q: "Sản phẩm nào bạn thích build nhất?",
     options: [
-      { text: "Web app SaaS, dashboard", tags: ["frontend", "fullstack"] },
-      { text: "Mobile app trên store", tags: ["mobile"] },
-      { text: "Recommendation engine, chatbot AI", tags: ["ai_ml", "data"] },
+      {
+        text: "Web app SaaS, dashboard",
+        weights: { frontend: 2, fullstack: 1 },
+      },
+      {
+        text: "Mobile app trên store",
+        weights: { mobile: 2, frontend: 1 },
+      },
+      {
+        text: "Recommendation engine, chatbot AI",
+        weights: { ai_ml: 2, data: 1 },
+      },
       {
         text: "API service, microservices, tool nội bộ",
-        tags: ["backend", "devops"],
+        weights: { backend: 2, devops: 1 },
+      },
+      {
+        text: "Test automation, monitoring, security tooling",
+        weights: { qa: 2, cybersecurity: 1, devops: 1 },
       },
     ],
   },
 ];
+
+const isQuizComplete = (answers: number[]) =>
+  quizQuestions.every((question, qIdx) => {
+    const answer = answers[qIdx];
+    return Number.isInteger(answer) && answer >= 0 && answer < question.options.length;
+  });
+
+const getCareerQuizSuggestions = (answers: number[]): CareerInterest[] => {
+  const scores = new Map<CareerInterest, number>(
+    careerResultOrder.map((career) => [career, 0]),
+  );
+
+  answers.forEach((optIdx, qIdx) => {
+    const option = quizQuestions[qIdx]?.options[optIdx];
+    if (!option) return;
+
+    Object.entries(option.weights).forEach(([career, weight]) => {
+      const key = career as CareerInterest;
+      scores.set(key, (scores.get(key) ?? 0) + Number(weight || 0));
+    });
+  });
+
+  return careerResultOrder
+    .map((career) => ({
+      career,
+      score: scores.get(career) ?? 0,
+      order: careerResultOrder.indexOf(career),
+    }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.order - b.order)
+    .slice(0, 3)
+    .map((item) => item.career);
+};
 
 export default function OnboardingWizard() {
   const router = useRouter();
@@ -191,7 +288,7 @@ export default function OnboardingWizard() {
   const [cvUploadError, setCvUploadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showResult, setShowResult] = useState(false);
-  const [calculatedPaths, setCalculatedPaths] = useState<string[]>([]);
+  const [calculatedPaths, setCalculatedPaths] = useState<CareerInterest[]>([]);
 
   // 1. Kiểm tra trạng thái Onboarding từ database khi vừa tải trang
   useEffect(() => {
@@ -310,15 +407,13 @@ export default function OnboardingWizard() {
   const finish = async () => {
     try {
       setIsLoading(true);
-      const tally = new Map<CareerInterest, number>();
-      quizAnswers.forEach((optIdx, qIdx) => {
-        const opt = quizQuestions[qIdx]?.options[optIdx];
-        opt?.tags.forEach((t) => tally.set(t, (tally.get(t) ?? 0) + 1));
-      });
-      const suggested = Array.from(tally.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([t]) => t);
+      const suggested = getCareerQuizSuggestions(quizAnswers);
+      const selectedOrientation = profile.interests.join(",");
+      const quizOrientation = suggested.join(",");
+      const orientation =
+        selectedOrientation || quizOrientation
+          ? `${selectedOrientation}${quizOrientation ? `|${quizOrientation}` : ""}`
+          : undefined;
 
       setProfile({
         quizDone: true,
@@ -326,6 +421,10 @@ export default function OnboardingWizard() {
         completedAt: new Date().toISOString(),
       });
 
+      await ProfileApi.updateOnboardingProgress({
+        current_step: 5,
+        orientation,
+      });
       await ProfileApi.completeOnboarding();
 
       setCalculatedPaths(suggested); // Lưu kết quả vào state để hiện lên UI
@@ -343,7 +442,7 @@ export default function OnboardingWizard() {
     if (step === 2) return !!profile.year && profile.interests.length > 0;
     if (step === 3) return profile.topSkills.length >= 3;
     if (step === 4) return !!profile.goal;
-    if (step === 5) return quizAnswers.length === quizQuestions.length;
+    if (step === 5) return isQuizComplete(quizAnswers);
     return false;
   }, [step, profile, quizAnswers, isLoading, isUploadingCv, isSearchingSkills]);
 
@@ -353,8 +452,8 @@ export default function OnboardingWizard() {
       setIsSearchingSkills(true);
       const res = await JobApi.getSkills({ q: value.trim() });
 
-      if (res.data && Array.isArray(res.data)) {
-        const skillNames = res.data.map((s: any) => s.skill_name || s.name);
+      if (res.data?.data && Array.isArray(res.data.data)) {
+        const skillNames = res.data.data.map((s: any) => s.skill_name || s.name);
         setDbSkills(skillNames);
       }
     } catch (err) {
@@ -380,8 +479,8 @@ export default function OnboardingWizard() {
     try {
       setIsSearchingSkills(true);
       const res = await JobApi.getSkills({ q: "" });
-      if (res.data && Array.isArray(res.data)) {
-        const skillNames = res.data.map((s: any) => s.skill_name || s.name);
+      if (res.data?.data && Array.isArray(res.data.data)) {
+        const skillNames = res.data.data.map((s: any) => s.skill_name || s.name);
         setDbSkills(skillNames);
       }
     } catch (err) {
@@ -474,9 +573,9 @@ export default function OnboardingWizard() {
             {calculatedPaths.map((path) => (
               <div
                 key={path}
-                className="capitalize py-3 px-4 rounded-xl border border-blue-100 bg-blue-50/50 font-semibold text-blue-700 text-sm tracking-wide shadow-sm"
+                className="py-3 px-4 rounded-xl border border-blue-100 bg-blue-50/50 font-semibold text-blue-700 text-sm tracking-wide shadow-sm"
               >
-                🚀 {path}
+                🚀 {interestLabelMap[path] ?? path}
               </div>
             ))}
           </div>

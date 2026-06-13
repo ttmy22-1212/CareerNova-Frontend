@@ -55,7 +55,7 @@ export default class PersonalDashboardApi {
   }
 
   /**
-   * Lấy tiến độ hành trình sự nghiệp 4 bước từ dữ liệu thực trên server
+   * Lấy trạng thái hành trình sự nghiệp 4 bước từ dữ liệu thực trên server
    * GET /personal-dashboard/journey
    */
   static async getJourney(): Promise<IBaseResponse<JourneyProgressDto>> {

@@ -33,7 +33,7 @@ const STEPS: Step[] = [
   {
     target: "journey-bar",
     title: "🗺️ Hành trình sự nghiệp",
-    desc: "Thanh 4 bước theo dõi tiến trình từ Khám phá → Phân tích → Lộ trình → Apply jobs. Bấm vào từng ô để đến tính năng tương ứng — ô sẽ sáng xanh khi bạn hoàn thành.",
+    desc: "Thanh 4 bước theo đúng luồng hiện có: khám phá hồ sơ, phân tích CV, lưu tài nguyên học và lưu cơ hội việc làm để xem lại.",
     placement: "bottom",
     tip: "Bấm trực tiếp vào từng bước để xem",
   },

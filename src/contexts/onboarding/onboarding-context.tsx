@@ -80,19 +80,19 @@ interface Ctx {
   strength: number;
   /** Per-item checklist with action hint + target route. */
   checklist: ChecklistItem[];
-  /** 4-stage career journey progress. */
+  /** 4-stage product journey. */
   journey: JourneyStage[];
   /** Toggle bookmark on a job id. */
   toggleBookmark: (jobId: string) => void;
 }
 
 export interface JourneyStage {
-  id: "explore" | "analyze" | "plan" | "apply";
+  id: "explore" | "analyze" | "resources" | "saved";
   label: string;
   desc: string;
   done: boolean;
-  /** 0-100 progress within this stage. */
-  progress: number;
+  /** Kept for older server responses. The current UI does not show percent. */
+  progress?: number;
   href: string;
 }
 
@@ -188,51 +188,36 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const isOnboarded =
     !!profile.completedAt || (!!profile.major && profile.interests.length > 0);
 
-  const exploreScore =
-    (profile.major ? 33 : 0) +
-    (profile.interests.length > 0 ? 33 : 0) +
-    (profile.quizDone && profile.suggestedPaths.length > 0 ? 34 : 0);
-
-  const analyzeScore =
-    (profile.topSkills.length >= 1 ? 50 : 0) + (profile.hasUploadedCV ? 50 : 0);
-
-  const planScore =
-    (profile.suggestedPaths.length > 0 ? 60 : 0) + (profile.goal ? 40 : 0);
-
-  // Đã loại bỏ hoàn toàn các chỉ số liên quan đến appliedJobIds (chỉ giữ lại bookmarkedJobIds)
-  const applyScore = Math.min(100, profile.bookmarkedJobIds.length * 20);
-
   const journey: JourneyStage[] = [
     {
       id: "explore",
-      label: "Khám phá",
-      desc: "Xác định ngành & định hướng",
-      done: exploreScore >= 100,
-      progress: Math.min(100, exploreScore),
+      label: "Khám phá hồ sơ",
+      desc: "Ngành học, năm học và định hướng",
+      done:
+        !!profile.major &&
+        profile.year !== null &&
+        profile.interests.length > 0,
       href: "/onboarding/welcome",
     },
     {
       id: "analyze",
       label: "Phân tích",
-      desc: "Đánh giá skill & CV",
-      done: analyzeScore >= 100,
-      progress: Math.min(100, analyzeScore),
+      desc: "CV, kỹ năng và khoảng cách cần bổ sung",
+      done: profile.topSkills.length >= 1 || profile.hasUploadedCV,
       href: "/skill-gap",
     },
     {
-      id: "plan",
-      label: "Lộ trình",
-      desc: "Xây kế hoạch học tập",
-      done: planScore >= 100,
-      progress: Math.min(100, planScore),
+      id: "resources",
+      label: "Tài nguyên học",
+      desc: "Lưu khóa học hoặc lộ trình tham khảo",
+      done: profile.suggestedPaths.length > 0 || !!profile.goal,
       href: "/roadmap",
     },
     {
-      id: "apply",
-      label: "Apply jobs",
-      desc: "Lưu công việc quan tâm",
-      done: applyScore >= 100,
-      progress: Math.min(100, applyScore),
+      id: "saved",
+      label: "Cơ hội đã lưu",
+      desc: "Lưu URL việc làm để xem lại",
+      done: profile.bookmarkedJobIds.length > 0,
       href: "/jobs",
     },
   ];

@@ -1,6 +1,7 @@
 import { apiGet } from "@/utils/api-request";
 import { IBaseResponse } from "@/types/apis";
 import {
+  CareerPathRecommendation,
   PrioritySkill,
   RecommendedJob,
   SavedReportItem,
@@ -23,6 +24,16 @@ export default class RecommendationApi {
     limit = 4,
   ): Promise<IBaseResponse<PrioritySkill[]>> {
     return await apiGet("/recommendation/priority-skills", { limit });
+  }
+
+  /**
+   * Lấy hướng nghề đề xuất dựa trên CV mặc định và lịch sử so khớp
+   * GET /recommendation/career-paths
+   */
+  static async getCareerPaths(
+    limit = 3,
+  ): Promise<IBaseResponse<CareerPathRecommendation[]>> {
+    return await apiGet("/recommendation/career-paths", { limit });
   }
 
   /**

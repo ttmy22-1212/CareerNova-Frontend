@@ -23,7 +23,6 @@ import {
   Bookmark,
 } from "lucide-react";
 import JobApi from "@/api/job";
-import CvApi from "@/api/cv";
 import { JobDetailResponse } from "@/types/job-insight";
 import ProfileApi from "@/api/profile";
 
@@ -31,6 +30,14 @@ const typeColors: Record<string, string> = {
   "Full-time": "bg-blue-100 text-blue-700",
   Remote: "bg-emerald-100 text-emerald-700",
   Hybrid: "bg-violet-100 text-violet-700",
+  "Part-time": "bg-amber-100 text-amber-700",
+};
+
+const workTypeLabels: Record<string, string> = {
+  "Full-time": "Toàn thời gian",
+  Remote: "Làm việc từ xa",
+  Hybrid: "Linh hoạt",
+  "Part-time": "Bán thời gian",
 };
 
 export function JobDetail() {
@@ -46,10 +53,10 @@ export function JobDetail() {
     min: string | number | undefined,
     max: string | number | undefined,
   ) => {
-    if (!min && !max) return "Negotiable";
+    if (!min && !max) return "Thỏa thuận";
     const toK = (val: string | number) => Math.round(Number(val) / 1000) + "K";
-    if (min && max) return `$${toK(min)}–$${toK(max)}`;
-    return min ? `$${toK(min)}+` : `Up to $${toK(max!)}`;
+    if (min && max) return `${toK(min)}-${toK(max)}`;
+    return min ? `Từ ${toK(min)}` : `Đến ${toK(max!)}`;
   };
 
   const loadJobDetail = useCallback(async () => {
@@ -58,12 +65,13 @@ export function JobDetail() {
     try {
       let activeCvId: string | undefined = undefined;
       try {
-        const cvRes = await CvApi.getMyCvs();
-        if (cvRes?.data && cvRes.data.length > 0) {
-          activeCvId = cvRes.data[0].cv_id;
-        }
+        const profileRes = await ProfileApi.getMe();
+        activeCvId =
+          profileRes?.data?.default_cv?.cv_id ||
+          profileRes?.data?.latest_cv?.cv_id ||
+          profileRes?.data?.all_cvs?.[0]?.cv_id;
       } catch (cvErr) {
-        console.error("Error fetching CV:", cvErr);
+        console.error("Không lấy được CV mặc định:", cvErr);
       }
 
       const res = await JobApi.findOne(id, activeCvId);
@@ -102,19 +110,19 @@ export function JobDetail() {
   const responsibilities = useMemo(() => {
     if (!job?.title) return [];
     return [
-      `Design and develop solutions according to ${job.title} best practices`,
-      "Collaborate with cross-functional teams to define, design, and ship new features",
-      "Write clean, maintainable, well-tested, and documented code",
-      "Participate in code reviews and contribute to team knowledge sharing",
-      "Optimize applications for maximum speed, scalability, and security",
+      `Thiết kế và phát triển giải pháp phù hợp với yêu cầu của vị trí ${job.title}`,
+      "Phối hợp với các nhóm liên quan để làm rõ yêu cầu và triển khai tính năng",
+      "Viết mã rõ ràng, dễ bảo trì, có kiểm thử và tài liệu cần thiết",
+      "Tham gia review code và chia sẻ kiến thức trong nhóm",
+      "Tối ưu hiệu năng, khả năng mở rộng và bảo mật của sản phẩm",
     ];
   }, [job?.title]);
 
   const requirements = useMemo(() => {
     return [
-      `${job?.formatted_experience_level || "3+ years"} of professional experience`,
-      "Strong problem-solving and communication skills",
-      "Bachelor's degree in Computer Science or equivalent experience",
+      `${job?.formatted_experience_level || "Từ 3 năm"} kinh nghiệm liên quan`,
+      "Có tư duy giải quyết vấn đề và kỹ năng giao tiếp tốt",
+      "Ưu tiên nền tảng Công nghệ thông tin hoặc kinh nghiệm tương đương",
     ];
   }, [job?.formatted_experience_level]);
 
@@ -192,7 +200,9 @@ export function JobDetail() {
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Briefcase className="w-4 h-4 text-slate-400" />
-                    {job!.work_type}
+                    {job!.work_type
+                      ? workTypeLabels[job!.work_type] || job!.work_type
+                      : "Chưa rõ hình thức"}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <DollarSign className="w-4 h-4 text-slate-400" />
@@ -200,13 +210,18 @@ export function JobDetail() {
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Clock className="w-4 h-4 text-slate-400" />
-                    Đăng ngày {new Date(job!.listed_time!).toLocaleDateString()}
+                    Đăng ngày{" "}
+                    {job!.listed_time
+                      ? new Date(job!.listed_time).toLocaleDateString("vi-VN")
+                      : "chưa rõ"}
                   </span>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${typeColors[job!.work_type!] || "bg-slate-100 text-slate-600"}`}
-                  >
-                    {job!.work_type}
-                  </span>
+                  {job!.work_type && (
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${typeColors[job!.work_type] || "bg-slate-100 text-slate-600"}`}
+                    >
+                      {workTypeLabels[job!.work_type] || job!.work_type}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -362,15 +377,29 @@ export function JobDetail() {
             <div className="flex items-center justify-between text-xs text-slate-500 mb-4">
               <span className="flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" />
-                Nộp hồ sơ trước ngày{" "}
+                Hạn nhận hồ sơ{" "}
                 {job!.expiry_time
-                  ? new Date(job!.expiry_time).toLocaleDateString()
-                  : "31/05/2026"}
+                  ? new Date(job!.expiry_time).toLocaleDateString("vi-VN")
+                  : "chưa rõ"}
               </span>
             </div>
-            <button className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-sm hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md shadow-blue-200 mb-3">
-              Nộp đơn ngay
-            </button>
+            {job!.job_posting_url ? (
+              <a
+                href={job!.job_posting_url}
+                target="_blank"
+                rel="noreferrer"
+                className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-3 text-sm font-semibold text-white shadow-md shadow-blue-200 transition-all hover:from-blue-700 hover:to-indigo-700"
+              >
+                Mở tin tuyển dụng gốc <ExternalLink className="h-4 w-4" />
+              </a>
+            ) : (
+              <button
+                disabled
+                className="mb-3 w-full rounded-xl bg-slate-100 py-3 text-sm font-semibold text-slate-400"
+              >
+                Chưa có URL tuyển dụng
+              </button>
+            )}
             <Link
               href="/cv-matching"
               className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-violet-50 text-violet-700 border border-violet-200 rounded-xl font-semibold text-sm hover:bg-violet-100 transition-colors"

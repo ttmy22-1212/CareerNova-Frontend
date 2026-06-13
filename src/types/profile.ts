@@ -24,16 +24,23 @@ export interface OnboardingCompleteResponse {
   onboarding_completed: boolean;
 }
 
+export interface ResetOnboardingResponse {
+  message: string;
+  current_step: number;
+  onboarding_completed: boolean;
+  deleted_virtual_cvs: number;
+}
+
 export interface UpdateProfilePayload {
-  full_name?: string;
-  avatar_url?: string;
+  full_name?: string | null;
+  avatar_url?: string | null;
   allow_default_cv_matching?: boolean;
-  major?: string;
-  school?: string;
+  major?: string | null;
+  school?: string | null;
   current_year?: number | null;
-  orientation?: string;
-  objective?: string;
-  target_salary?: number;
+  orientation?: string | null;
+  objective?: string | null;
+  target_salary?: number | null;
   prefer_remote?: boolean;
 }
 

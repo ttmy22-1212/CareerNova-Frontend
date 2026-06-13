@@ -16,7 +16,6 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import JobApi, { GetJobsQueryDto } from "@/api/job";
-import CvApi from "@/api/cv";
 import { JobListItem } from "@/types/job-insight";
 import ProfileApi from "@/api/profile";
 import PersonalDashboardApi from "@/api/personal-dashboard";
@@ -24,11 +23,11 @@ import PersonalDashboardApi from "@/api/personal-dashboard";
 type DisplayJobItem = JobListItem & { salary_text?: string };
 
 const jobTypes = [
-  "Tất cả",
-  "Toàn thời gian",
-  "Làm việc từ xa",
-  "linh hoạt",
-  "Bán thời gian",
+  { label: "Tất cả", value: "" },
+  { label: "Toàn thời gian", value: "Full-time" },
+  { label: "Làm việc từ xa", value: "Remote" },
+  { label: "Linh hoạt", value: "Hybrid" },
+  { label: "Bán thời gian", value: "Part-time" },
 ];
 
 const experienceLevels = [
@@ -39,10 +38,21 @@ const experienceLevels = [
 ];
 
 const typeColors: Record<string, string> = {
+  "Full-time": "bg-blue-100 text-blue-700",
+  Remote: "bg-emerald-100 text-emerald-700",
+  Hybrid: "bg-violet-100 text-violet-700",
+  "Part-time": "bg-amber-100 text-amber-700",
   "Toàn thời gian": "bg-blue-100 text-blue-700",
   "Làm việc từ xa": "bg-emerald-100 text-emerald-700",
-  "linh hoạt": "bg-violet-100 text-violet-700",
+  "Linh hoạt": "bg-violet-100 text-violet-700",
   "Bán thời gian": "bg-amber-100 text-amber-700",
+};
+
+const workTypeLabels: Record<string, string> = {
+  "Full-time": "Toàn thời gian",
+  Remote: "Làm việc từ xa",
+  Hybrid: "Linh hoạt",
+  "Part-time": "Bán thời gian",
 };
 
 const VIEWED_JOB_IDS_STORAGE_KEY = "viewed_job_ids";
@@ -60,7 +70,7 @@ const formatSalaryRange = (
   min: number | string | null,
   max: number | string | null,
 ) => {
-  if (!min && !max) return "Negotiable";
+  if (!min && !max) return "Thỏa thuận";
   const toK = (val: number | string) => {
     const num = Number(val);
     return num >= 1000000
@@ -68,16 +78,15 @@ const formatSalaryRange = (
       : Math.round(num / 1000) + "K";
   };
   if (min && max) return `${toK(min)}–${toK(max)}`;
-  return min ? `${toK(min)}+` : `Up to ${toK(max!)}`;
+  return min ? `Từ ${toK(min)}` : `Đến ${toK(max!)}`;
 };
 
 export function JobSearch() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedType, setSelectedType] = useState("Tất cả");
+  const [selectedType, setSelectedType] = useState("");
   const [selectedExp, setSelectedExp] = useState("Mọi cấp độ");
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<string>("match_score");
-  const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -96,7 +105,16 @@ export function JobSearch() {
     if (sortBy === "match_score") {
       setIsRecommendedMode(true);
       try {
-        const res = await PersonalDashboardApi.getRecommendedJobs();
+        const [res, savedJobsRes] = await Promise.all([
+          PersonalDashboardApi.getRecommendedJobs(),
+          ProfileApi.getSavedJobs().catch(() => ({ data: [] })),
+        ]);
+        const savedJobIds = new Set(
+          (savedJobsRes?.data || [])
+            .map((item) => String(item.job?.job_id || ""))
+            .filter(Boolean),
+        );
+
         if (res?.data) {
           const mapped: DisplayJobItem[] = res.data.map((r) => {
             const rateNum = parseInt(r.match_rate ?? "", 10);
@@ -109,7 +127,7 @@ export function JobSearch() {
               salary_text: r.salary_text,
               skills: [],
               match_score: Number.isFinite(rateNum) ? rateNum : null,
-              is_saved: false,
+              is_saved: savedJobIds.has(String(r.job_id)),
               // Job base fields
               company_id: null,
               skills_desc: null,
@@ -147,12 +165,13 @@ export function JobSearch() {
     try {
       let activeCvId: string | undefined = undefined;
       try {
-        const cvRes = await CvApi.getMyCvs();
-        if (cvRes?.data && cvRes.data.length > 0) {
-          activeCvId = cvRes.data[0].cv_id;
-        }
+        const profileRes = await ProfileApi.getMe();
+        activeCvId =
+          profileRes?.data?.default_cv?.cv_id ||
+          profileRes?.data?.latest_cv?.cv_id ||
+          profileRes?.data?.all_cvs?.[0]?.cv_id;
       } catch (cvErr) {
-        console.error("Không lấy được danh sách CV:", cvErr);
+        console.error("Không lấy được CV mặc định:", cvErr);
       }
 
       const query: GetJobsQueryDto = {
@@ -161,7 +180,7 @@ export function JobSearch() {
         sortBy: sortBy,
         sortOrder: "desc",
         ...(searchTerm && { q: searchTerm }),
-        ...(selectedType !== "Tất cả" && { work_type: selectedType }),
+        ...(selectedType && { work_type: selectedType }),
         ...(selectedExp !== "Mọi cấp độ" && { experience_level: selectedExp }),
         ...(activeCvId && { cv_id: activeCvId }),
         ...(minMatch !== undefined && { min_match: minMatch }),
@@ -192,19 +211,6 @@ export function JobSearch() {
     }, 500);
     return () => clearTimeout(timer);
   }, [loadJobs]);
-
-  const toggleSave = (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    setSavedJobs((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
 
   const handleToggleSaveJobInList = async (
     jobId: string,
@@ -336,15 +342,15 @@ export function JobSearch() {
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {jobTypes.map((t) => (
             <button
-              key={t}
-              onClick={() => setSelectedType(t)}
+              key={t.value || "all"}
+              onClick={() => setSelectedType(t.value)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                selectedType === t
+                selectedType === t.value
                   ? "bg-blue-600 text-white shadow-sm"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              {t}
+              {t.label}
             </button>
           ))}
           <div className="w-px bg-slate-200 mx-1 h-4" />
@@ -433,11 +439,11 @@ export function JobSearch() {
         <div className="flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-2.5 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300">
           <span className="text-base">✨</span>
           <span>
-            <strong>Jobs gợi ý từ phân tích CV của bạn</strong> — Chỉ hiển thị
+            <strong>Công việc gợi ý từ phân tích CV của bạn</strong> — Chỉ hiển thị
             công việc có độ phù hợp ≥70% với CV mặc định.{" "}
             {total === 0 && !loading && (
               <span className="text-blue-500">
-                Chưa có dữ liệu — hãy upload CV và chạy So khớp CV trước.
+                Chưa có dữ liệu — hãy tải CV và chạy so khớp CV trước.
               </span>
             )}
           </span>
@@ -498,7 +504,7 @@ export function JobSearch() {
           <button
             onClick={() => {
               setSearchTerm("");
-              setSelectedType("Tất cả");
+              setSelectedType("");
               setSelectedExp("Mọi cấp độ");
               setMinMatch(undefined);
             }}
@@ -532,7 +538,7 @@ export function JobSearch() {
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${typeColors[job.work_type] || "bg-slate-100 text-slate-600"}`}
                           >
-                            {job.work_type}
+                            {workTypeLabels[job.work_type] || job.work_type}
                           </span>
                         )}
                       </div>

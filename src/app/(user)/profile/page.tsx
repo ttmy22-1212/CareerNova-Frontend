@@ -105,6 +105,36 @@ const providerMeta: Record<AuthProvider, { label: string; tone: string }> = {
   },
 };
 
+type ProfileEditForm = {
+  fullName: string;
+  school: string;
+  major: StudentMajor | "";
+  year: StudentYear | "";
+  interests: CareerInterest[];
+  goal: Goal | "";
+  targetSalary: string;
+  preferRemote: boolean;
+};
+
+const EMPTY_EDIT_FORM: ProfileEditForm = {
+  fullName: "",
+  school: "",
+  major: "",
+  year: "",
+  interests: [],
+  goal: "",
+  targetSalary: "",
+  preferRemote: false,
+};
+
+const studentYears: StudentYear[] = [1, 2, 3, 4, 5];
+const majorOptions = Object.entries(majorLabels) as [StudentMajor, string][];
+const interestOptions = Object.entries(interestLabels) as [
+  CareerInterest,
+  string,
+][];
+const goalOptions = Object.entries(goalLabels) as [Goal, string][];
+
 function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("vi-VN", {
     year: "numeric",
@@ -144,6 +174,12 @@ export default function ProfilePage() {
   const [allowMatching, setAllowMatching] = useState<boolean>(false);
   const [togglingMatching, setTogglingMatching] = useState<boolean>(false);
   const [defaultCvId, setDefaultCvId] = useState<string | null>(null);
+  const [editForm, setEditForm] =
+    useState<ProfileEditForm>(EMPTY_EDIT_FORM);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [resettingOnboarding, setResettingOnboarding] = useState(false);
+  const [exportingProfilePdf, setExportingProfilePdf] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -233,6 +269,139 @@ export default function ProfilePage() {
       return 0;
     });
   }, [allCvs, defaultCvId]);
+
+  useEffect(() => {
+    if (!openEditDialog) return;
+    setEditError(null);
+    setEditForm({
+      fullName: user?.full_name || "",
+      school: profile.university || "",
+      major: profile.major || "",
+      year: profile.year || "",
+      interests: profile.interests || [],
+      goal: profile.goal || "",
+      targetSalary: profile.targetSalaryUSD
+        ? String(profile.targetSalaryUSD)
+        : "",
+      preferRemote: profile.preferRemote,
+    });
+  }, [openEditDialog, profile, user]);
+
+  const toggleEditInterest = (interest: CareerInterest) => {
+    setEditForm((prev) => {
+      const exists = prev.interests.includes(interest);
+      if (exists) {
+        return {
+          ...prev,
+          interests: prev.interests.filter((item) => item !== interest),
+        };
+      }
+
+      return {
+        ...prev,
+        interests: [...prev.interests, interest].slice(0, 3),
+      };
+    });
+  };
+
+  const handleSaveProfileDialog = async () => {
+    const trimmedName = editForm.fullName.trim();
+    const trimmedSchool = editForm.school.trim();
+    const salaryValue =
+      editForm.targetSalary.trim() === ""
+        ? null
+        : Number(editForm.targetSalary);
+
+    if (!trimmedName) {
+      setEditError("Họ và tên không được để trống.");
+      return;
+    }
+
+    if (
+      salaryValue !== null &&
+      (!Number.isFinite(salaryValue) || salaryValue < 0)
+    ) {
+      setEditError("Mức lương mục tiêu phải là số không âm.");
+      return;
+    }
+
+    const selectedOrientation = editForm.interests.join(",");
+    const quizOrientation = profile.suggestedPaths.join(",");
+    const orientation =
+      selectedOrientation || quizOrientation
+        ? `${selectedOrientation}${quizOrientation ? `|${quizOrientation}` : ""}`
+        : null;
+
+    try {
+      setSavingProfile(true);
+      setEditError(null);
+      await updateProfile({
+        full_name: trimmedName,
+        school: trimmedSchool || null,
+        major: editForm.major || null,
+        current_year: editForm.year ? Number(editForm.year) : null,
+        orientation,
+        objective: editForm.goal || null,
+        target_salary: salaryValue,
+        prefer_remote: editForm.preferRemote,
+      });
+
+      setProfile({
+        major: editForm.major || null,
+        university: trimmedSchool,
+        year: editForm.year || null,
+        interests: editForm.interests,
+        goal: editForm.goal || null,
+        targetSalaryUSD: salaryValue,
+        preferRemote: editForm.preferRemote,
+      });
+      setOpenEditDialog(false);
+    } catch (err) {
+      console.error("Lỗi khi cập nhật hồ sơ:", err);
+      setEditError(
+        err instanceof Error ? err.message : "Không thể cập nhật hồ sơ.",
+      );
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleResetOnboarding = async () => {
+    const ok = confirm(
+      "Xoá dữ liệu onboarding trên hệ thống và làm lại từ đầu? CV upload thật vẫn được giữ lại.",
+    );
+    if (!ok) return;
+
+    try {
+      setResettingOnboarding(true);
+      setEditError(null);
+      await ProfileApi.resetOnboarding();
+      reset();
+      setOpenEditDialog(false);
+      router.replace("/onboarding/welcome");
+    } catch (err) {
+      console.error("Xoá onboarding thất bại:", err);
+      setEditError(
+        err instanceof Error ? err.message : "Không thể xoá onboarding.",
+      );
+    } finally {
+      setResettingOnboarding(false);
+    }
+  };
+
+  const handleExportProfilePdf = async () => {
+    try {
+      setExportingProfilePdf(true);
+      setEditError(null);
+      const blob = await ProfileApi.exportProfilePdf();
+      downloadBlob(blob, `ho-so-careernova-${Date.now()}.pdf`);
+    } catch (err) {
+      console.error("Xuất PDF hồ sơ thất bại:", err);
+      setEditError(err instanceof Error ? err.message : "Không thể xuất PDF hồ sơ.");
+    } finally {
+      setExportingProfilePdf(false);
+    }
+  };
 
   const handleSetDefault = async (cvId: string) => {
     try {
@@ -1018,9 +1187,13 @@ export default function ProfilePage() {
             </DialogDescription>
           </DialogHeader>
 
-          {/* CONTENT BODY: Chỉ cuộn vùng này, pr-6 tạo khoảng cách an toàn với scrollbar */}
           <div className="flex-1 overflow-y-auto pl-6 pr-6 py-4 space-y-4 divide-y divide-slate-100 dark:divide-slate-800 min-h-0">
-            {/* 1. Phần thông tin cá nhân */}
+            {editError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+                {editError}
+              </div>
+            )}
+
             <div className="space-y-3 pb-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Thông tin cơ bản
@@ -1032,10 +1205,15 @@ export default function ProfilePage() {
                   </label>
                   <input
                     type="text"
-                    defaultValue={user?.full_name || ""}
+                    value={editForm.fullName}
+                    onChange={(event) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        fullName: event.target.value,
+                      }))
+                    }
                     placeholder="Nhập họ tên..."
                     className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                    id="dialog-edit-name"
                   />
                 </div>
                 <div>
@@ -1044,10 +1222,15 @@ export default function ProfilePage() {
                   </label>
                   <input
                     type="text"
-                    defaultValue={profile.university || ""}
+                    value={editForm.school}
+                    onChange={(event) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        school: event.target.value,
+                      }))
+                    }
                     placeholder="Nhập tên trường học..."
                     className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                    id="dialog-edit-school"
                   />
                 </div>
               </div>
@@ -1056,6 +1239,134 @@ export default function ProfilePage() {
                   Địa chỉ Email: <strong>{user?.email ?? "—"}</strong>
                 </span>
               </div>
+            </div>
+
+            <div className="space-y-3 py-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Onboarding & định hướng
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Ngành học
+                  </label>
+                  <select
+                    value={editForm.major}
+                    onChange={(event) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        major: event.target.value as StudentMajor | "",
+                      }))
+                    }
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  >
+                    <option value="">Chưa chọn</option>
+                    {majorOptions.map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Năm học
+                  </label>
+                  <select
+                    value={editForm.year}
+                    onChange={(event) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        year: event.target.value
+                          ? (Number(event.target.value) as StudentYear)
+                          : "",
+                      }))
+                    }
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  >
+                    <option value="">Chưa chọn</option>
+                    {studentYears.map((year) => (
+                      <option key={year} value={year}>
+                        Năm {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Định hướng quan tâm
+                  </label>
+                  <span className="text-[11px] text-slate-400">
+                    {editForm.interests.length}/3
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {interestOptions.map(([value, label]) => {
+                    const selected = editForm.interests.includes(value);
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => toggleEditInterest(value)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          selected
+                            ? "border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-500 dark:bg-blue-950/30 dark:text-blue-300"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Mục tiêu nghề nghiệp
+                  </label>
+                  <select
+                    value={editForm.goal}
+                    onChange={(event) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        goal: event.target.value as Goal | "",
+                      }))
+                    }
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  >
+                    <option value="">Chưa chọn</option>
+                    {goalOptions.map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Lương mục tiêu / năm
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={editForm.targetSalary}
+                    onChange={(event) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        targetSalary: event.target.value,
+                      }))
+                    }
+                    placeholder="Ví dụ: 12000"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+              </div>
+
               <div className="flex items-center justify-between pt-2">
                 <div>
                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -1066,18 +1377,24 @@ export default function ProfilePage() {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() =>
-                    setProfile({ preferRemote: !profile.preferRemote })
+                    setEditForm((prev) => ({
+                      ...prev,
+                      preferRemote: !prev.preferRemote,
+                    }))
                   }
                   className={`relative h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors ${
-                    profile.preferRemote
+                    editForm.preferRemote
                       ? "bg-blue-600"
                       : "bg-slate-300 dark:bg-slate-700"
                   }`}
                 >
                   <span
                     className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                      profile.preferRemote ? "translate-x-5" : "translate-x-0"
+                      editForm.preferRemote
+                        ? "translate-x-5"
+                        : "translate-x-0"
                     }`}
                   />
                 </button>
@@ -1178,19 +1495,16 @@ export default function ProfilePage() {
             {/* 4. Vùng nguy hiểm */}
             <div className="pt-4 pb-2 flex flex-wrap gap-2">
               <button
-                onClick={() => {
-                  if (
-                    confirm(
-                      "Xoá toàn bộ hồ sơ onboarding? Hành động này không thể hoàn tác.",
-                    )
-                  ) {
-                    reset();
-                    setOpenEditDialog(false);
-                  }
-                }}
+                onClick={handleResetOnboarding}
+                disabled={resettingOnboarding}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
               >
-                <Trash2 className="h-3.5 w-3.5" /> Xoá Onboarding
+                {resettingOnboarding ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+                Xoá Onboarding
               </button>
               <DeleteAccountDialog
                 requirePassword={user?.provider === "password"}
@@ -1202,10 +1516,16 @@ export default function ProfilePage() {
                 }}
               />
               <button
-                onClick={() => exportData(profile, user)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                onClick={handleExportProfilePdf}
+                disabled={exportingProfilePdf}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
               >
-                <Download className="h-3.5 w-3.5" /> Xuất JSON
+                {exportingProfilePdf ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
+                {exportingProfilePdf ? "Đang xuất PDF..." : "Xuất PDF hồ sơ"}
               </button>
             </div>
           </div>
@@ -1214,38 +1534,17 @@ export default function ProfilePage() {
           <DialogFooter className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-end gap-2">
             <button
               onClick={() => setOpenEditDialog(false)}
+              disabled={savingProfile}
               className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
             >
               Hủy bỏ
             </button>
             <button
-              onClick={async () => {
-                const nameInp = document.getElementById(
-                  "dialog-edit-name",
-                ) as HTMLInputElement;
-                const schoolInp = document.getElementById(
-                  "dialog-edit-school",
-                ) as HTMLInputElement;
-
-                try {
-                  await updateProfile({
-                    full_name: nameInp?.value.trim() || user?.full_name,
-                    school: schoolInp?.value.trim() || undefined,
-                    prefer_remote: profile.preferRemote,
-                  });
-
-                  setProfile({
-                    ...profile,
-                    university: schoolInp?.value.trim() || profile.university,
-                  });
-
-                  setOpenEditDialog(false);
-                } catch (err) {
-                  console.error("Lỗi khi cập nhật hồ sơ:", err);
-                }
-              }}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm"
+              onClick={handleSaveProfileDialog}
+              disabled={savingProfile}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm disabled:opacity-60"
             >
+              {savingProfile && <RefreshCw className="h-4 w-4 animate-spin" />}
               Xác nhận lưu
             </button>
           </DialogFooter>
@@ -2051,24 +2350,11 @@ function DeleteAccountDialog({
 
 /* ---------- Helpers ---------- */
 
-function exportData(
-  profile: ReturnType<typeof useOnboarding>["profile"],
-  user: ReturnType<typeof useAuth>["user"],
-) {
-  const blob = new Blob(
-    [
-      JSON.stringify(
-        { exportedAt: new Date().toISOString(), user, profile },
-        null,
-        2,
-      ),
-    ],
-    { type: "application/json" },
-  );
+function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `career-lens-profile-${Date.now()}.json`;
+  a.download = fileName;
   a.click();
   URL.revokeObjectURL(url);
 }

@@ -1,10 +1,17 @@
-import { apiGet, apiPatch, apiPost, apiDelete } from "@/utils/api-request";
+import {
+  apiGet,
+  apiPatch,
+  apiPost,
+  apiDelete,
+  apiGetBlob,
+} from "@/utils/api-request";
 import { IBaseResponse } from "@/types/apis";
 import {
   OnboardingStatusResponse,
   UpdateOnboardingProgressPayload,
   UpdateOnboardingProgressResponse,
   OnboardingCompleteResponse,
+  ResetOnboardingResponse,
   UserProfileResponse,
   UpdateProfilePayload,
   ChangePasswordPayload,
@@ -55,6 +62,16 @@ export default class ProfileApi {
   }
 
   /**
+   * DELETE /profile/onboarding
+   * Reset dữ liệu onboarding về trạng thái ban đầu, giữ lại CV upload thật.
+   */
+  static async resetOnboarding(): Promise<
+    IBaseResponse<ResetOnboardingResponse>
+  > {
+    return await apiDelete("/profile/onboarding", {});
+  }
+
+  /**
    * PATCH /profile/me
    * Cập nhật thông tin cơ bản (Đổi tên hiển thị, Avatar...) từ trang cài đặt
    */
@@ -80,6 +97,14 @@ export default class ProfileApi {
    */
   static async getActivity(): Promise<IBaseResponse<any>> {
     return await apiGet("/profile/activity");
+  }
+
+  /**
+   * GET /profile/export.pdf
+   * Tải PDF hồ sơ cá nhân và lịch sử matching do backend render.
+   */
+  static async exportProfilePdf(): Promise<Blob> {
+    return await apiGetBlob("/profile/export.pdf");
   }
 
   /**

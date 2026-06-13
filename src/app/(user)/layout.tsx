@@ -45,7 +45,7 @@ import { DefaultCvManager } from "../../components/cv-matching/DefaultCvManager"
 
 type AnyJourneyStage = Pick<
   JourneyStage,
-  "id" | "label" | "desc" | "progress" | "done" | "href"
+  "id" | "label" | "desc" | "done" | "href"
 >;
 
 type NavItem = {
@@ -351,7 +351,8 @@ export default function UserLayout({
         {!collapsed && (
           <button
             onClick={() => setCollapsed(true)}
-            className="ml-auto hidden rounded-lg p-2 hover:bg-slate-100 md:block dark:hover:bg-slate-800"
+            aria-label="Thu nhỏ menu"
+            className="ml-auto hidden rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 md:block dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
           >
             <ChevronRight className="h-4 w-4 rotate-180" />
           </button>
@@ -659,10 +660,6 @@ function JourneyBar({ journey }: { journey: AnyJourneyStage[] }) {
   const pathname = usePathname() ?? "/";
   if (pathname.startsWith("/onboarding")) return null;
 
-  const overall = Math.round(
-    journey.reduce((s, j) => s + j.progress, 0) / journey.length,
-  );
-
   const firstIncomplete = journey.findIndex((s) => !s.done);
 
   return (
@@ -671,27 +668,14 @@ function JourneyBar({ journey }: { journey: AnyJourneyStage[] }) {
       className="border-b border-slate-200 bg-white px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900 md:px-6"
     >
       <div className="flex items-center gap-3">
-        {/* Label + overall progress */}
         <div className="hidden shrink-0 items-center gap-2 md:flex">
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
-            🎯 Hành trình
+            Hành trình
           </p>
-          <div className="flex items-center gap-1.5">
-            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500"
-                style={{ width: `${overall}%` }}
-              />
-            </div>
-            <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 tabular-nums">
-              {overall}%
-            </span>
-          </div>
         </div>
 
         <div className="hidden h-4 w-px bg-slate-200 dark:bg-slate-700 md:block" />
 
-        {/* Stage cards */}
         <div className="flex flex-1 items-center gap-1 overflow-x-auto">
           {journey.map((stage, idx) => {
             const isCurrent = !stage.done && firstIncomplete === idx;
@@ -707,7 +691,7 @@ function JourneyBar({ journey }: { journey: AnyJourneyStage[] }) {
                       ? `Bước tiếp theo: ${stage.desc}`
                       : stage.desc
                   }
-                  className={`group flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 transition-all duration-150 ${
+                  className={`group flex items-center gap-2 rounded-lg px-2.5 py-1.5 transition-all duration-150 ${
                     isPast
                       ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
                       : isCurrent
@@ -722,45 +706,33 @@ function JourneyBar({ journey }: { journey: AnyJourneyStage[] }) {
                         ? "bg-emerald-500 text-white"
                         : isCurrent
                           ? "bg-blue-600 text-white"
-                          : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600"
+                      : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600"
                     }`}
                   >
                     {isPast ? (
                       <CheckCircle2 className="h-3 w-3" />
+                    ) : isCurrent ? (
+                      <ArrowRight className="h-3 w-3" />
                     ) : (
                       <span>{idx + 1}</span>
                     )}
                   </div>
 
-                  {/* Label */}
                   <div className="hidden min-w-0 sm:block">
                     <p className="text-xs font-semibold leading-tight whitespace-nowrap">
                       {stage.label}
                     </p>
-                    {/* Progress bar for non-current stages */}
-                    {!isCurrent && !isFuture && (
-                      <div className="mt-0.5 h-0.5 w-full overflow-hidden rounded-full bg-emerald-200 dark:bg-emerald-900">
-                        <div className="h-full w-full rounded-full bg-emerald-500" />
-                      </div>
-                    )}
-                    {isCurrent && (
-                      <div className="mt-0.5 h-0.5 w-full overflow-hidden rounded-full bg-blue-100 dark:bg-blue-900">
-                        <div
-                          className="h-full rounded-full bg-blue-500 transition-all"
-                          style={{ width: `${stage.progress}%` }}
-                        />
-                      </div>
-                    )}
+                    <p
+                      className={`mt-0.5 max-w-[150px] truncate text-[10px] leading-tight ${
+                        isFuture
+                          ? "text-slate-400 dark:text-slate-500"
+                          : "text-current opacity-75"
+                      }`}
+                    >
+                      {stage.desc}
+                    </p>
                   </div>
 
-                  {/* Progress % on mobile */}
-                  {isCurrent && (
-                    <span className="ml-0.5 text-[10px] font-bold tabular-nums text-blue-500 dark:text-blue-400 sm:hidden">
-                      {stage.progress}%
-                    </span>
-                  )}
-
-                  {/* Arrow hint for current */}
                   {isCurrent && (
                     <ArrowRight className="ml-0.5 hidden h-3 w-3 shrink-0 group-hover:translate-x-0.5 transition-transform sm:block" />
                   )}

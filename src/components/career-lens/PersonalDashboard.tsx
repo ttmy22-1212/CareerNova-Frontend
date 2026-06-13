@@ -58,6 +58,17 @@ const typeColors: Record<string, string> = {
   "Part-time": "bg-amber-100 text-amber-700",
 };
 
+const normalizePercent = (value: number | string | null | undefined) => {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    return 0;
+  }
+
+  const percent = numericValue <= 1 ? numericValue * 100 : numericValue;
+  return Math.min(Math.round(percent), 100);
+};
+
 function RadarCategoryDropdown({
   categories,
   selected,
@@ -319,7 +330,7 @@ export function PersonalDashboard() {
       (s: any) => ({
         skill_name: s.skill_name,
         weight: s.weight ?? 0,
-        user_score: Math.round((s.similarity ?? 0) * 100),
+        user_score: normalizePercent(s.similarity),
         type: "partial" as const,
       }),
     );
@@ -370,7 +381,7 @@ export function PersonalDashboard() {
   const incompleteTasks = currentChecklist.filter((c) => !c.is_completed);
 
   const radarData = radarSkills.map((s: any) => {
-    let youScore = Math.round((s.similarity || 0) * 100);
+    let youScore = normalizePercent(s.similarity);
     if (youScore === 0) {
       youScore = 0.1; // Chốt chặn cấp 2 của CVMatching để tránh mất nét chart
     }

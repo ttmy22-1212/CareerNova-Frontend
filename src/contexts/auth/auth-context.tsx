@@ -30,6 +30,18 @@ type AuthUser = {
   current_step: number;
 };
 
+type UpdateProfilePatch = {
+  full_name?: string | null;
+  avatarUrl?: string | null;
+  target_salary?: number | null;
+  prefer_remote?: boolean;
+  school?: string | null;
+  major?: string | null;
+  current_year?: number | null;
+  orientation?: string | null;
+  objective?: string | null;
+};
+
 type AuthState = {
   user: AuthUser | null;
   ready: boolean;
@@ -41,14 +53,7 @@ type AuthState = {
   ) => Promise<RegisterResponse>;
   loginWithProvider: (provider: "google" | "facebook") => Promise<void>;
   logout: () => void;
-  updateProfile: (
-    patch: Partial<
-      Pick<
-        AuthUser,
-        "full_name" | "avatarUrl" | "target_salary" | "prefer_remote" | "school"
-      >
-    >,
-  ) => Promise<void>;
+  updateProfile: (patch: UpdateProfilePatch) => Promise<void>;
   changePassword: (
     currentPassword: string,
     newPassword: string,
@@ -255,18 +260,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateProfile = useCallback(
-    async (
-      patch: Partial<
-        Pick<
-          AuthUser,
-          | "full_name"
-          | "avatarUrl"
-          | "target_salary"
-          | "prefer_remote"
-          | "school"
-        >
-      >,
-    ) => {
+    async (patch: UpdateProfilePatch) => {
       if (!user) return;
 
       const ProfileApiInstance = (await import("@/api/profile")).default;
@@ -275,12 +269,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         full_name: patch.full_name,
         avatar_url: patch.avatarUrl,
         school: patch.school,
+        major: patch.major,
+        current_year: patch.current_year,
+        orientation: patch.orientation,
+        objective: patch.objective,
         target_salary: patch.target_salary,
         prefer_remote: patch.prefer_remote,
       });
 
       if (res.data) {
-        setUser((prev) => (prev ? { ...prev, ...patch } : null));
+        setUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                ...(patch.full_name !== undefined && {
+                  full_name: patch.full_name || prev.full_name,
+                }),
+                ...(patch.avatarUrl !== undefined && {
+                  avatarUrl: patch.avatarUrl || undefined,
+                }),
+                ...(patch.target_salary !== undefined && {
+                  target_salary: patch.target_salary ?? 0,
+                }),
+                ...(patch.prefer_remote !== undefined && {
+                  prefer_remote: !!patch.prefer_remote,
+                }),
+                ...(patch.school !== undefined && {
+                  school: patch.school || "",
+                }),
+              }
+            : null,
+        );
       }
     },
     [user],

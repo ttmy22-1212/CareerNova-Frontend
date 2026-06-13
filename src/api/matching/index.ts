@@ -24,8 +24,8 @@ export default class MatchingApi {
     return await apiPost("/matching/analyze", dto);
   }
 
-  static async getAllMatches(): Promise<GetAllMatchesResponse> {
-    return await apiGet("/matching/history");
+  static async getAllMatches(cvId?: string): Promise<GetAllMatchesResponse> {
+    return await apiGet("/matching/history", cvId ? { cv_id: cvId } : undefined);
   }
 
   static async getMatchDetail(
