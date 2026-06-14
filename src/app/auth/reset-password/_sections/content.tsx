@@ -69,8 +69,8 @@ const AuthResetPasswordContent = () => {
     e.preventDefault();
     setError("");
 
-    if (password.length < 8) {
-      setError("Mật khẩu phải có ít nhất 8 ký tự.");
+    if (password.length < 6) {
+      setError("Mật khẩu phải có ít nhất 6 ký tự.");
       return;
     }
     if (password !== confirmPassword) {
@@ -99,7 +99,7 @@ const AuthResetPasswordContent = () => {
         Tạo mật khẩu mới
       </h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        Nhập mật khẩu mới cho tài khoản của bạn. Tối thiểu 8 ký tự.
+        Nhập mật khẩu mới cho tài khoản của bạn. Tối thiểu 6 ký tự.
       </p>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
@@ -115,7 +115,7 @@ const AuthResetPasswordContent = () => {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Ít nhất 8 ký tự"
+              placeholder="Ít nhất 6 ký tự"
               className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-10 text-sm placeholder:text-slate-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
             <button
