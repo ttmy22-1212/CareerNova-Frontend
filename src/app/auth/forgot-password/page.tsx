@@ -3,19 +3,26 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Mail, Loader2, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { apiPost } from "@/utils/api-request";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    // FRONTEND MOCK: simulate sending reset email. Hook up to BE later.
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    setSent(true);
+    setError("");
+    try {
+      await apiPost("/auth/forgot-password", { email });
+      setSent(true);
+    } catch (err: any) {
+      setError(typeof err === "string" ? err : "Có lỗi xảy ra. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (sent) {
@@ -68,6 +75,10 @@ export default function ForgotPasswordPage() {
             />
           </div>
         </div>
+
+        {error && (
+          <p className="text-sm text-red-500">{error}</p>
+        )}
 
         <button
           type="submit"
