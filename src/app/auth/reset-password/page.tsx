@@ -1,5 +1,10 @@
-import AuthResetPasswordContent from './_sections/content';
+import { Suspense } from "react";
+import AuthResetPasswordContent from "./_sections/content";
 
 export default function ResetPasswordPage() {
-  return <AuthResetPasswordContent />;
+  return (
+    <Suspense>
+      <AuthResetPasswordContent />
+    </Suspense>
+  );
 }

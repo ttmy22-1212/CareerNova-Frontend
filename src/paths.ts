@@ -3,6 +3,7 @@ export const paths = {
     login: "/auth/login",
     register: "/auth/register",
     forgotPassword: "/auth/forgot-password",
+    resetPassword: "/auth/reset-password",
     verifyRequest: "/auth/verify-request",
   },
   emailVerified: "/email-verified",

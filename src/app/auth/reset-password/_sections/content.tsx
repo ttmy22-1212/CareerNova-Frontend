@@ -1,167 +1,180 @@
 "use client";
 
-import {
-  Box,
-  Button,
-  TextField,
-  Typography,
-  Link as MuiLink,
-  InputAdornment,
-  IconButton,
-  Stack,
-} from "@mui/material";
-import Image from "next/image";
-import Link from "next/link";
 import { useState } from "react";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
-import { paths } from "@/paths";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Eye, EyeOff, Lock, Loader2, CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react";
+import { apiPost } from "@/utils/api-request";
 
 const AuthResetPasswordContent = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
+
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  if (!token) {
+    return (
+      <>
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/40">
+          <AlertCircle className="h-6 w-6" />
+        </div>
+        <h1 className="mt-4 text-2xl font-bold text-slate-900 dark:text-slate-100">
+          Link không hợp lệ
+        </h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu lại.
+        </p>
+        <Link
+          href="/auth/forgot-password"
+          className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Yêu cầu đặt lại mật khẩu
+        </Link>
+      </>
+    );
+  }
+
+  if (success) {
+    return (
+      <>
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
+          <CheckCircle2 className="h-6 w-6" />
+        </div>
+        <h1 className="mt-4 text-2xl font-bold text-slate-900 dark:text-slate-100">
+          Đặt lại thành công!
+        </h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Mật khẩu của bạn đã được cập nhật. Bạn có thể đăng nhập bằng mật khẩu mới.
+        </p>
+        <Link
+          href="/auth/login"
+          className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Đăng nhập ngay
+        </Link>
+      </>
+    );
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    if (password.length < 8) {
+      setError("Mật khẩu phải có ít nhất 8 ký tự.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Mật khẩu xác nhận không khớp.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await apiPost("/auth/reset-password", { token, newPassword: password });
+      setSuccess(true);
+    } catch (err: any) {
+      setError(
+        typeof err === "string"
+          ? err
+          : "Link đã hết hạn hoặc không hợp lệ. Vui lòng yêu cầu đặt lại mật khẩu mới."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <Box display='flex' minHeight='100vh'>
-      {/* Bên trái - Form Đặt lại mật khẩu */}
-      <Stack
-        flex={1}
-        px={6}
-        py={8}
-        spacing={3}
-        alignItems='center'
-        justifyContent='center'
-        bgcolor='white'
+    <>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+        Tạo mật khẩu mới
+      </h1>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        Nhập mật khẩu mới cho tài khoản của bạn. Tối thiểu 8 ký tự.
+      </p>
+
+      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+        {/* Mật khẩu mới */}
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+            Mật khẩu mới
+          </label>
+          <div className="relative">
+            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type={showPassword ? "text" : "password"}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Ít nhất 8 ký tự"
+              className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-10 text-sm placeholder:text-slate-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Xác nhận mật khẩu */}
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+            Xác nhận mật khẩu
+          </label>
+          <div className="relative">
+            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Nhập lại mật khẩu"
+              className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-10 text-sm placeholder:text-slate-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <p className="text-sm text-red-500">{error}</p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+        >
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          Đặt lại mật khẩu
+        </button>
+      </form>
+
+      <Link
+        href="/auth/login"
+        className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400"
       >
-        <Image
-          src='/images/logo.png'
-          alt='Logo CareerLens'
-          width={140}
-          height={40}
-        />
-
-        <Box textAlign='center'>
-          <Typography variant='h5' fontWeight='bold'>
-            Tạo mật khẩu mới
-          </Typography>
-          <Typography variant='body2' color='text.secondary' mt={1}>
-            Nhập mật khẩu mới cho tài khoản của bạn
-          </Typography>
-        </Box>
-
-        <Stack spacing={2} width='100%' maxWidth={320}>
-          {/* Mật khẩu mới */}
-          <TextField
-            type={showPassword ? "text" : "password"}
-            label='Mật khẩu mới'
-            placeholder='Ít nhất 8 ký tự'
-            fullWidth
-            variant='outlined'
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                borderRadius: "12px",
-                backgroundColor: "#F9FAFB",
-                "&.Mui-focused fieldset": {
-                  borderColor: "#6366F1",
-                  boxShadow: "0 0 0 2px rgba(99, 102, 241, 0.2)",
-                },
-              },
-            }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position='end'>
-                  <IconButton
-                    onClick={() => setShowPassword(!showPassword)}
-                    edge='end'
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
-
-          {/* Xác nhận mật khẩu */}
-          <TextField
-            type={showConfirmPassword ? "text" : "password"}
-            label='Xác nhận mật khẩu'
-            placeholder='Nhập lại mật khẩu'
-            fullWidth
-            variant='outlined'
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                borderRadius: "12px",
-                backgroundColor: "#F9FAFB",
-                "&.Mui-focused fieldset": {
-                  borderColor: "#6366F1",
-                  boxShadow: "0 0 0 2px rgba(99, 102, 241, 0.2)",
-                },
-              },
-            }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position='end'>
-                  <IconButton
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    edge='end'
-                  >
-                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
-
-          <Button
-            variant='contained'
-            fullWidth
-            sx={{
-              py: 1.5,
-              borderRadius: "12px",
-              textTransform: "none",
-              fontWeight: 600,
-              backgroundColor: "#6366F1",
-              "&:hover": {
-                backgroundColor: "#4F46E5",
-              },
-            }}
-          >
-            Đặt lại mật khẩu
-          </Button>
-        </Stack>
-
-        <Typography variant='body2' mt={2}>
-          Quay về{" "}
-          <MuiLink component={Link} href={paths.auth.login} underline='hover'>
-            Đăng nhập
-          </MuiLink>
-        </Typography>
-      </Stack>
-
-      {/* Bên phải - Minh họa */}
-      <Stack
-        flex={1}
-        bgcolor='#F9FAFB'
-        spacing={1}
-        alignItems='center'
-        justifyContent='center'
-        textAlign='center'
-        px={4}
-      >
-        <Typography variant='h5' fontWeight='bold'>
-          Bảo mật là ưu tiên hàng đầu
-        </Typography>
-        <Typography variant='body2' color='text.secondary'>
-          Hãy chắc chắn rằng bạn chọn một mật khẩu mạnh và dễ nhớ 💡
-        </Typography>
-        <Image
-          src='/images/login-illustration.png'
-          alt='Reset Password Illustration'
-          width={300}
-          height={300}
-          suppressHydrationWarning
-        />
-      </Stack>
-    </Box>
+        <ArrowLeft className="h-4 w-4" />
+        Quay lại đăng nhập
+      </Link>
+    </>
   );
 };
 

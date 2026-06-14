@@ -44,7 +44,6 @@ import {
   useOnboarding,
 } from "@/contexts/onboarding/onboarding-context";
 import { useAuth, type AuthProvider } from "@/contexts/auth/auth-context";
-import { jobsWithDetails } from "@/data/mockData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -1695,85 +1694,6 @@ function Row({ label, done }: { label: string; done: boolean }) {
   );
 }
 
-function ActivityList({
-  icon: Icon,
-  tone,
-  title,
-  count,
-  href,
-  jobs,
-  emptyHref,
-  emptyLabel,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  tone: "amber" | "violet";
-  title: string;
-  count: number;
-  href: string;
-  jobs: typeof jobsWithDetails;
-  emptyHref: string;
-  emptyLabel: string;
-}) {
-  const toneMap = {
-    amber:
-      "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300",
-    violet:
-      "bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300",
-  };
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div
-            className={`flex h-7 w-7 items-center justify-center rounded-lg ${toneMap[tone]}`}
-          >
-            <Icon className="h-3.5 w-3.5" />
-          </div>
-          <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-            {title} ({count})
-          </h2>
-        </div>
-        {count > 0 && (
-          <Link
-            href={href}
-            className="text-xs font-semibold text-blue-600 hover:underline"
-          >
-            Xem tất cả →
-          </Link>
-        )}
-      </div>
-      {jobs.length === 0 ? (
-        <Empty href={emptyHref} label={emptyLabel} />
-      ) : (
-        <ul className="space-y-2">
-          {jobs.map((j) => (
-            <li key={j.job_id}>
-              <Link
-                href={`/jobs/${j.job_id}`}
-                className="flex items-center gap-3 rounded-lg border border-slate-100 p-2.5 transition-colors hover:border-blue-300 hover:bg-blue-50/50 dark:border-slate-800 dark:hover:border-blue-800 dark:hover:bg-blue-950/20"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 text-xs font-bold text-slate-500 dark:from-slate-700 dark:to-slate-800 dark:text-slate-400">
-                  {j.company.name.slice(0, 2).toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    {j.title}
-                  </p>
-                  <p className="truncate text-xs text-slate-500">
-                    <Briefcase className="mr-1 inline h-3 w-3" />
-                    {j.company.name}
-                    {j.location ? ` · ${j.location}` : ""}
-                  </p>
-                </div>
-                <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
 
 /* ---------- Edit dialogs ---------- */
 
