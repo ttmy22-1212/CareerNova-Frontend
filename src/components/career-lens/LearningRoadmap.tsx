@@ -59,8 +59,6 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
 
     LearningRoadmapApi.getRoadmap(filters)
       .then((res) => {
-        console.log("ROADMAP RESPONSE:", res);
-
         if (!res) {
           setLearningPaths([]);
           setPathsLoading(false);

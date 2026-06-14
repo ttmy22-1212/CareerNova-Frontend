@@ -6,18 +6,11 @@ import {
   Sparkles,
   Target,
   TrendingUp,
-  Zap,
   BarChart3,
   CheckCircle2,
-  MapPin,
-  Clock,
-  Users,
   Award,
   Rocket,
-  Shield,
   ChevronRight,
-  Star,
-  Play,
   FileText,
   Briefcase,
   BookOpen,
@@ -65,16 +58,11 @@ export function LandingPage() {
       </header>
 
       {/* ── Hero ── */}
-      <section className="relative py-16 sm:py-24 lg:py-32 px-4">
-        <div className="absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-100 rounded-full blur-3xl opacity-20" />
-          <div className="absolute bottom-0 right-0 w-80 h-80 bg-indigo-100 rounded-full blur-3xl opacity-20" />
-        </div>
-
+      <section className="relative py-16 sm:py-24 lg:py-32 px-4 bg-slate-50">
         <div className="max-w-5xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-full text-sm font-semibold text-blue-700 mb-6">
             <Sparkles className="w-4 h-4" />
-            Nền tảng tuyên dụng thông minh cho IT
+            Nền tảng tuyển dụng thông minh cho IT
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 mb-6 leading-tight">
@@ -101,47 +89,76 @@ export function LandingPage() {
               href="/dashboard"
               className="flex items-center gap-2 px-6 py-3 bg-slate-100 text-slate-900 rounded-lg font-semibold hover:bg-slate-200 transition-all"
             >
-              <Play className="w-4 h-4" />
+              <BarChart3 className="w-4 h-4" />
               Xem Thông tin Thị trường
             </Link>
           </div>
 
           <p className="text-sm text-slate-500 mb-12">
-            ✨ Không cần thẻ tín dụng. Hoàn tác onboarding miễn phí trong 5
-            phút.
+            Tạo hồ sơ, tải CV và xem insight nghề nghiệp trong vài bước.
           </p>
 
-          {/* Hero image placeholder */}
           <div className="relative rounded-2xl overflow-hidden border border-slate-200 shadow-2xl bg-slate-50">
-            <div className="aspect-video flex items-center justify-center">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-3">
-                  <Play className="w-8 h-8 text-blue-600 ml-1" />
-                </div>
-                <p className="text-sm text-slate-500">Xem demo (1:30)</p>
+            <div className="aspect-video p-5 sm:p-8 text-left bg-white">
+              <div className="h-full grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  {
+                    icon: FileText,
+                    title: "CV matching",
+                    desc: "Tính điểm phù hợp với từng job",
+                  },
+                  {
+                    icon: Briefcase,
+                    title: "Job gợi ý",
+                    desc: "Xếp hạng theo CV mặc định",
+                  },
+                  {
+                    icon: Target,
+                    title: "Skill gap",
+                    desc: "Xác định kỹ năng còn thiếu",
+                  },
+                  {
+                    icon: BarChart3,
+                    title: "Market dashboard",
+                    desc: "Theo dõi lương và nhu cầu tuyển dụng",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.title}
+                    className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100">
+                      <item.icon className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <p className="text-sm font-bold text-slate-900">
+                      {item.title}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">{item.desc}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Social Proof ── */}
+      {/* ── Product Signals ── */}
       <section className="py-12 px-4 border-t border-b border-slate-200 bg-slate-50">
         <div className="max-w-5xl mx-auto">
           <p className="text-center text-sm font-semibold text-slate-500 mb-6">
-            ĐƯỢC TIN TƯỞNG BỞI
+            DỮ LIỆU SỬ DỤNG TRONG SẢN PHẨM
           </p>
           <div className="flex flex-wrap items-center justify-center gap-8">
-            {["TechCorp", "DataFlow", "CloudSys", "DesignLab"].map(
-              (company) => (
-                <div
-                  key={company}
-                  className="text-slate-400 font-semibold text-sm"
-                >
-                  {company}
-                </div>
-              ),
-            )}
+            {[
+              "Việc làm IT",
+              "Kỹ năng từ JD",
+              "Mức lương chuẩn hóa",
+              "CV matching",
+            ].map((signal) => (
+              <div key={signal} className="text-slate-500 font-semibold text-sm">
+                {signal}
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -242,8 +259,8 @@ export function LandingPage() {
               },
               {
                 icon: Award,
-                title: "Peer Comparison",
-                desc: "So sánh với bạn cùng ngành",
+                title: "Salary Insights",
+                desc: "Mức lương theo vị trí",
               },
             ].map((item, i) => (
               <div
@@ -341,60 +358,47 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── Testimonials ── */}
+      {/* ── Use Cases ── */}
       <section className="py-20 px-4 bg-slate-50">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">
-              Sinh viên nói gì?
+              Các luồng sử dụng chính
             </h2>
             <p className="text-slate-600">
-              Được yêu thích bởi hàng ngàn sinh viên IT Việt Nam
+              Chọn hướng phân tích phù hợp với mục tiêu nghề nghiệp hiện tại
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
-                name: "Phạm Minh Đức",
-                role: "CS năm 3, HUST",
-                text: "Sau khi dùng Career Nova, tôi biết chính xác kỹ năng nào cần học để match với các job senior. Tăng từ 45% match lên 78% trong 2 tháng.",
-                rating: 5,
+                icon: FileText,
+                title: "Bắt đầu từ CV",
+                text: "Tải CV để hệ thống đọc kỹ năng, tính match score và gợi ý những job phù hợp hơn với hồ sơ hiện tại.",
               },
               {
-                name: "Nguyễn Thảo Vy",
-                role: "Fresh grad, HCM",
-                text: "Rất helpful! Dashboard hiển thị rõ ràng, gợi ý job phù hợp, + learning paths cụ thể. Tìm được job phù hợp sau 3 tuần.",
-                rating: 5,
+                icon: Target,
+                title: "Xác định skill gap",
+                text: "Xem kỹ năng còn thiếu hoặc mới khớp một phần, sau đó mở lộ trình học tương ứng để ưu tiên cải thiện.",
               },
               {
-                name: "Trương Quốc Huy",
-                role: "Working professional",
-                text: "Phân tích kỹ năng giúp tôi hiểu nên focus vào kỹ năng nào để tăng lương. Rất cụ thể, data-driven.",
-                rating: 5,
+                icon: TrendingUp,
+                title: "Theo dõi thị trường",
+                text: "Dùng dashboard thị trường để xem vị trí, kỹ năng và mức lương đang nổi bật trong dữ liệu tuyển dụng.",
               },
-            ].map((testimonial, i) => (
+            ].map((item) => (
               <div
-                key={i}
+                key={item.title}
                 className="p-6 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
               >
-                <div className="flex gap-0.5 mb-3">
-                  {[...Array(testimonial.rating)].map((_, j) => (
-                    <Star
-                      key={j}
-                      className="w-4 h-4 fill-yellow-400 text-yellow-400"
-                    />
-                  ))}
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                  <item.icon className="h-5 w-5 text-blue-600" />
                 </div>
-                <p className="text-slate-700 text-sm mb-4 italic">
-                  "{testimonial.text}"
+                <p className="font-semibold text-slate-900 text-sm">
+                  {item.title}
                 </p>
-                <div>
-                  <p className="font-semibold text-slate-900 text-sm">
-                    {testimonial.name}
-                  </p>
-                  <p className="text-xs text-slate-500">{testimonial.role}</p>
-                </div>
+                <p className="mt-2 text-sm text-slate-600">{item.text}</p>
               </div>
             ))}
           </div>
@@ -408,8 +412,8 @@ export function LandingPage() {
             Sẵn sàng tìm công việc IT phù hợp?
           </h2>
           <p className="text-lg text-slate-600 mb-8">
-            Hơn 2,000 sinh viên đã dùng Career Nova để tìm được công việc ưng ý.
-            Bạn tiếp theo?
+            Tạo hồ sơ, tải CV và dùng dữ liệu thị trường hiện có để tìm hướng
+            đi phù hợp hơn.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -429,8 +433,7 @@ export function LandingPage() {
           </div>
 
           <p className="text-xs text-slate-500 mt-6">
-            💳 Không cần thẻ tín dụng • 📧 Miễn phí mãi mãi • ✅ Hoàn tất
-            onboarding trong 5 phút
+            Tạo tài khoản và hoàn tất onboarding trong vài bước.
           </p>
         </div>
       </section>
@@ -438,7 +441,7 @@ export function LandingPage() {
       {/* ── Footer ── */}
       <footer className="py-12 px-4 border-t border-slate-200 bg-slate-50">
         <div className="max-w-5xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
+          <div className="grid md:grid-cols-2 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600" />
@@ -459,50 +462,13 @@ export function LandingPage() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="hover:text-slate-900">
+                  <Link href="/jobs" className="hover:text-slate-900">
                     Tìm kiếm việc làm
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="hover:text-slate-900">
+                  <Link href="/skill-gap" className="hover:text-slate-900">
                     Skill Gap
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-semibold text-slate-900 text-sm mb-3">
-                Công ty
-              </p>
-              <ul className="space-y-2 text-xs text-slate-600">
-                <li>
-                  <Link href="#" className="hover:text-slate-900">
-                    Về chúng tôi
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-slate-900">
-                    Blog
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-slate-900">
-                    Liên hệ
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-semibold text-slate-900 text-sm mb-3">Legal</p>
-              <ul className="space-y-2 text-xs text-slate-600">
-                <li>
-                  <Link href="#" className="hover:text-slate-900">
-                    Privacy Policy
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-slate-900">
-                    Terms of Service
                   </Link>
                 </li>
               </ul>
@@ -511,17 +477,6 @@ export function LandingPage() {
 
           <div className="border-t border-slate-200 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
             <p>&copy; 2026 Career Nova Platform. All rights reserved.</p>
-            <div className="flex items-center gap-4 mt-4 sm:mt-0">
-              <a href="#" className="hover:text-slate-700">
-                Twitter
-              </a>
-              <a href="#" className="hover:text-slate-700">
-                LinkedIn
-              </a>
-              <a href="#" className="hover:text-slate-700">
-                Facebook
-              </a>
-            </div>
           </div>
         </div>
       </footer>

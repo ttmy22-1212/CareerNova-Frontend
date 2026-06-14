@@ -11,7 +11,6 @@ import {
   ArrowRight,
   ChevronRight,
   MapPin,
-  Clock,
   Building2,
   Zap,
   CheckCircle2,
@@ -21,9 +20,6 @@ import {
   AlertCircle,
   Award,
   Flame,
-  XCircle,
-  Eye,
-  ExternalLink,
 } from "lucide-react";
 import {
   RadarChart,
@@ -50,13 +46,6 @@ import MatchingApi from "@/api/matching";
 import { MatchCategoryResponse } from "@/types/matching";
 import LearningRoadmapApi from "@/api/learning-roadmap";
 import { CourseItemDto } from "@/types/learning-roadmap";
-
-const typeColors: Record<string, string> = {
-  "Full-time": "bg-blue-100 text-blue-700",
-  Remote: "bg-emerald-100 text-emerald-700",
-  Hybrid: "bg-violet-100 text-violet-700",
-  "Part-time": "bg-amber-100 text-amber-700",
-};
 
 const normalizePercent = (value: number | string | null | undefined) => {
   const numericValue = Number(value);
@@ -418,7 +407,10 @@ export function PersonalDashboard() {
       href: "/jobs",
       icon: Briefcase,
       title: `${totalSuitableCount} jobs phù hợp với bạn`,
-      desc: `Match cao nhất · Cập nhật hôm nay`,
+      desc:
+        avgMatchScore > 0
+          ? `${avgMatchScore}% match với CV mặc định`
+          : "Dựa trên CV mặc định",
       color: "from-emerald-500 to-emerald-600",
       badge: "Mới",
     },
@@ -444,14 +436,11 @@ export function PersonalDashboard() {
               {incompleteTasks.slice(0, 3).map((task, idx) => (
                 <Link
                   key={idx}
-                  href="#"
+                  href="/onboarding/welcome"
                   className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 transition-colors"
                 >
                   <Circle className="h-3 w-3" />
                   {task.step_name}
-                  <span className="rounded-md bg-violet-500 px-1.5 py-0.5 text-[10px] font-bold">
-                    +15%
-                  </span>
                 </Link>
               ))}
               {incompleteTasks.length > 3 && (
@@ -712,68 +701,69 @@ export function PersonalDashboard() {
         {/* Tab: Jobs */}
         {activeTab === "jobs" && (
           <div className="divide-y divide-slate-50">
-            {recommendedJobs.map((job) => (
-              <Link
-                key={job.job_id}
-                href={`/jobs/${job.job_id}`}
-                className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors group"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-700 transition-colors">
-                      {job.title}
+            {recommendedJobs.length === 0 ? (
+              <div className="px-5 py-10 text-center">
+                <p className="text-sm font-semibold text-slate-700">
+                  Chưa có jobs gợi ý
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Tải CV hoặc chạy matching mặc định để hệ thống tính job phù
+                  hợp với hồ sơ của bạn.
+                </p>
+                <Link
+                  href="/cv-matching"
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                >
+                  Phân tích CV <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            ) : (
+              recommendedJobs.map((job) => (
+                <Link
+                  key={job.job_id}
+                  href={`/jobs/${job.job_id}`}
+                  className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors group"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-700 transition-colors">
+                        {job.title}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-slate-500 mb-1.5">
+                      <span className="flex items-center gap-1">
+                        <Building2 className="w-3 h-3" />
+                        {job.company_name}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {job.location}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right flex flex-col items-end gap-1">
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
+                      {job.match_rate}
+                    </span>
+                    <p className="text-xs font-semibold text-slate-900">
+                      {job.salary_text}
                     </p>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${typeColors["Full-time"]}`}
-                    >
-                      Full-time
-                    </span>
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-slate-500 mb-1.5">
-                    <span className="flex items-center gap-1">
-                      <Building2 className="w-3 h-3" />
-                      {job.company_name}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {job.location}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      Vừa cập nhật
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-medium">
-                      Docker
-                    </span>
-                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-medium">
-                      Kubernetes
-                    </span>
-                  </div>
-                </div>
-                <div className="shrink-0 text-right flex flex-col items-end gap-1">
-                  <span
-                    className={`px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700`}
-                  >
-                    {job.match_rate}
-                  </span>
-                  <p className="text-xs font-semibold text-slate-900">
-                    {job.salary_text}
-                  </p>
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
-                </div>
-              </Link>
-            ))}
-            <div className="px-5 py-3">
-              <Link
-                href="/jobs"
-                className="flex items-center justify-center gap-2 py-2 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-              >
-                Xem tất cả {personalMatchedCount} jobs phù hợp{" "}
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
+                </Link>
+              ))
+            )}
+            {recommendedJobs.length > 0 && (
+              <div className="px-5 py-3">
+                <Link
+                  href="/jobs"
+                  className="flex items-center justify-center gap-2 py-2 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  Xem tất cả {personalMatchedCount} jobs phù hợp{" "}
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            )}
           </div>
         )}
 
@@ -964,7 +954,7 @@ export function PersonalDashboard() {
                 {currentChecklist.map((c, idx) => (
                   <li key={idx}>
                     <Link
-                      href="#"
+                      href="/onboarding/welcome"
                       className={`flex items-center gap-3 p-2.5 rounded-lg transition-colors ${
                         c.is_completed
                           ? "text-slate-400"
@@ -981,11 +971,6 @@ export function PersonalDashboard() {
                       >
                         {c.step_name}
                       </span>
-                      {!c.is_completed && (
-                        <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-bold">
-                          +15%
-                        </span>
-                      )}
                     </Link>
                   </li>
                 ))}

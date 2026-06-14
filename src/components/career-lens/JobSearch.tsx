@@ -19,6 +19,7 @@ import JobApi, { GetJobsQueryDto } from "@/api/job";
 import { JobListItem } from "@/types/job-insight";
 import ProfileApi from "@/api/profile";
 import PersonalDashboardApi from "@/api/personal-dashboard";
+import { formatSalaryRange } from "@/utils/salary";
 
 type DisplayJobItem = JobListItem & { salary_text?: string };
 
@@ -31,7 +32,7 @@ const jobTypes = [
 ];
 
 const experienceLevels = [
-  { label: "Mọi cấp độ", value: "Any Level" },
+  { label: "Mọi cấp độ", value: "" },
   { label: "Junior", value: "Junior" },
   { label: "Cấp độ Trung bình", value: "Mid" },
   { label: "Senior", value: "Senior" },
@@ -66,25 +67,10 @@ const matchColor = (m: number | null) => {
       : "bg-amber-100 text-amber-700";
 };
 
-const formatSalaryRange = (
-  min: number | string | null,
-  max: number | string | null,
-) => {
-  if (!min && !max) return "Thỏa thuận";
-  const toK = (val: number | string) => {
-    const num = Number(val);
-    return num >= 1000000
-      ? Math.round(num / 1000000) + "M"
-      : Math.round(num / 1000) + "K";
-  };
-  if (min && max) return `${toK(min)}–${toK(max)}`;
-  return min ? `Từ ${toK(min)}` : `Đến ${toK(max!)}`;
-};
-
 export function JobSearch() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("");
-  const [selectedExp, setSelectedExp] = useState("Mọi cấp độ");
+  const [selectedExp, setSelectedExp] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<string>("match_score");
 
@@ -181,7 +167,7 @@ export function JobSearch() {
         sortOrder: "desc",
         ...(searchTerm && { q: searchTerm }),
         ...(selectedType && { work_type: selectedType }),
-        ...(selectedExp !== "Mọi cấp độ" && { experience_level: selectedExp }),
+        ...(selectedExp && { experience_level: selectedExp }),
         ...(activeCvId && { cv_id: activeCvId }),
         ...(minMatch !== undefined && { min_match: minMatch }),
       };
@@ -505,7 +491,7 @@ export function JobSearch() {
             onClick={() => {
               setSearchTerm("");
               setSelectedType("");
-              setSelectedExp("Mọi cấp độ");
+              setSelectedExp("");
               setMinMatch(undefined);
             }}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
@@ -555,10 +541,7 @@ export function JobSearch() {
                           <DollarSign className="w-3.5 h-3.5" />
                           {(job as DisplayJobItem).salary_text
                             ? (job as DisplayJobItem).salary_text
-                            : formatSalaryRange(
-                                job.salary?.min_salary!,
-                                job.salary?.max_salary!,
-                              )}
+                            : formatSalaryRange(job.salary)}
                         </span>
                         {job.listed_time && (
                           <span className="flex items-center gap-1">

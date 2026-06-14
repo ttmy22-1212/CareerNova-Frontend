@@ -66,18 +66,10 @@ export default function AuthLayout({
           </div>
 
           <div className="relative flex items-center gap-3 text-xs text-white/70">
-            <div className="flex -space-x-2">
-              {["A", "M", "L"].map((c, i) => (
-                <div
-                  key={c}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white ring-2 ring-blue-600"
-                  style={{ background: ["#a78bfa", "#22d3ee", "#fb923c"][i] }}
-                >
-                  {c}
-                </div>
-              ))}
-            </div>
-            <span>Hơn 2,400+ sinh viên IT đang sử dụng</span>
+            <span className="rounded-full bg-white/15 px-3 py-1 font-semibold text-white ring-1 ring-white/20">
+              Career Nova
+            </span>
+            <span>CV matching, skill gap và market insight trong một luồng</span>
           </div>
         </aside>
 
@@ -99,21 +91,8 @@ export default function AuthLayout({
               {children}
             </div>
             <p className="mt-4 text-center text-xs text-slate-400">
-              Bằng việc tiếp tục, bạn đồng ý với{" "}
-              <a
-                href="#"
-                className="hover:text-slate-600 hover:underline dark:hover:text-slate-300"
-              >
-                Điều khoản
-              </a>{" "}
-              và{" "}
-              <a
-                href="#"
-                className="hover:text-slate-600 hover:underline dark:hover:text-slate-300"
-              >
-                Chính sách bảo mật
-              </a>
-              .
+              Bằng việc tiếp tục, bạn đồng ý với điều khoản sử dụng và chính
+              sách bảo mật của Career Nova.
             </p>
           </div>
         </main>

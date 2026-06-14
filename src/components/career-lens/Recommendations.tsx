@@ -17,7 +17,6 @@ import {
   ExternalLink,
   Star,
   Calendar,
-  Filter,
   BarChart3,
   FileText,
   Eye,
@@ -38,6 +37,7 @@ import {
 } from "@/types/recommendation";
 import { JobDetailResponse } from "@/types/job-insight";
 import { SkillGapLearningRecommendationDto } from "@/types/skill-gap";
+import { formatSalaryRange } from "@/utils/salary";
 
 type PipelineJobItem = {
   job: {
@@ -67,12 +67,6 @@ const urgencyConfig: Record<
   low: { label: "Theo dõi", bg: "bg-slate-100", text: "text-slate-600" },
 };
 
-const typeColors: Record<string, string> = {
-  "Full-time": "bg-blue-100 text-blue-700",
-  Remote: "bg-emerald-100 text-emerald-700",
-  Hybrid: "bg-violet-100 text-violet-700",
-};
-
 const parseMatchRate = (matchRate?: string | null) => {
   const parsedRate = Number.parseInt(String(matchRate || ""), 10);
   return Number.isFinite(parsedRate) ? parsedRate : null;
@@ -97,13 +91,7 @@ const readViewedJobIds = () => {
 const formatPipelineSalary = (
   salary: JobDetailResponse["salary"] | null | undefined,
 ) => {
-  if (!salary || (!salary.min_salary && !salary.max_salary)) {
-    return "Thỏa thuận";
-  }
-
-  return `${salary.min_salary || 0} - ${salary.max_salary || 0} ${
-    salary.currency || "VND"
-  }`;
+  return formatSalaryRange(salary);
 };
 
 const formatCoursePrice = (price: number | null | undefined) => {
@@ -637,11 +625,6 @@ export function Recommendations() {
                           <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-700 transition-colors">
                             {job.title}
                           </p>
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${typeColors["Full-time"]}`}
-                          >
-                            Full-time
-                          </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                           <span className="flex items-center gap-1">
@@ -651,10 +634,6 @@ export function Recommendations() {
                           <span className="flex items-center gap-1">
                             <MapPin className="w-3 h-3" />
                             {job.location}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            Vừa cập nhật
                           </span>
                         </div>
                       </div>
@@ -945,10 +924,6 @@ export function Recommendations() {
             <p className="text-sm text-slate-600">
               {savedReports.length} Đề xuất
             </p>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-              <Filter className="w-3.5 h-3.5" />
-              Bộ lọc
-            </button>
           </div>
           {savedReports.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center">
