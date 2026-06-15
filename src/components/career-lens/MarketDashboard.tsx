@@ -765,15 +765,15 @@ export function MarketDashboard({
         </div>
       </div>
 
-      {/* ── Salary by Role (⚠️ Đã xóa nhãn phụ Mid-level theo đặc tả mới của BA) ── */}
+      {/* ── Salary by Skill Category ── */}
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="font-semibold text-slate-900">
-              Mức Lương theo Vị Trí
+              Mức Lương theo Nhóm Kỹ Năng
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Hệ thống phân bố lương (USD/năm) gộp mọi cấp độ
+              Top 7 nhóm kỹ năng có dữ liệu lương hợp lệ (USD/năm)
             </p>
           </div>
         </div>
@@ -782,46 +782,48 @@ export function MarketDashboard({
             Chưa có đủ dữ liệu lương cho bộ lọc này.
           </p>
         ) : (
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart
-            data={salaryRangesData}
-            margin={{ top: 5, right: 20, bottom: 5, left: -10 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="#f1f5f9"
-              vertical={false}
-            />
-            <XAxis
-              dataKey="role"
-              tick={{ fontSize: 10, fill: "#94a3b8" }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(v: string) => v.length > 14 ? v.slice(0, 13) + "…" : v}
-            />
-            <YAxis
-              tick={{ fontSize: 10, fill: "#94a3b8" }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(v: number) => `${Math.round(v / 1000)}K`}
-            />
-            <Tooltip
-              formatter={(v: any) => [`$${Math.round(v / 1000)}K`, ""]}
-            />
-            <Bar
-              dataKey="min_salary"
-              name="Mức Lương Tối Thiểu"
-              fill="#bfdbfe"
-              radius={[4, 4, 0, 0]}
-            />
-            <Bar
-              dataKey="max_salary"
-              name="Mức Lương Tối Đa"
-              fill="#3b82f6"
-              radius={[4, 4, 0, 0]}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart
+              data={salaryRangesData}
+              margin={{ top: 5, right: 20, bottom: 5, left: -10 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#f1f5f9"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="role"
+                tick={{ fontSize: 10, fill: "#94a3b8" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v: string) =>
+                  v.length > 14 ? `${v.slice(0, 13)}…` : v
+                }
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: "#94a3b8" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v: number) => `${Math.round(v / 1000)}K`}
+              />
+              <Tooltip
+                formatter={(v: any) => [`$${Math.round(v / 1000)}K`, ""]}
+              />
+              <Bar
+                dataKey="min_salary"
+                name="Mức Lương Tối Thiểu"
+                fill="#bfdbfe"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar
+                dataKey="max_salary"
+                name="Mức Lương Tối Đa"
+                fill="#3b82f6"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
         )}
         <div className="flex items-center gap-5 justify-center mt-2">
           <div className="flex items-center gap-1.5 text-xs text-slate-500">

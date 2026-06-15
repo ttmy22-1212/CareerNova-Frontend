@@ -65,7 +65,7 @@ export default class MarketDashboardApi {
 
   /**
    * GET /dashboard/salary-ranges
-   * Dải phân bố lương Min-Max theo vị trí công việc gộp All Levels (Salary Ranges)
+   * Dải phân bố lương Min-Max theo nhóm kỹ năng gộp All Levels (Salary Ranges)
    */
   static async getSalaryRanges(
     filters: DashboardFilterDto,
