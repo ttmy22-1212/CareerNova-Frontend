@@ -173,6 +173,7 @@ export default function ProfilePage() {
   const [allowMatching, setAllowMatching] = useState<boolean>(false);
   const [togglingMatching, setTogglingMatching] = useState<boolean>(false);
   const [defaultCvId, setDefaultCvId] = useState<string | null>(null);
+  const [profileTab, setProfileTab] = useState("overview");
   const [editForm, setEditForm] =
     useState<ProfileEditForm>(EMPTY_EDIT_FORM);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -629,7 +630,11 @@ export default function ProfilePage() {
       </div>
 
       <div className="mx-auto mt-6 max-w-5xl px-4 md:px-6">
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs
+          value={profileTab}
+          onValueChange={setProfileTab}
+          className="w-full"
+        >
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview">Tổng quan</TabsTrigger>
             <TabsTrigger value="skills">Skills &amp; CV</TabsTrigger>
@@ -638,6 +643,66 @@ export default function ProfilePage() {
 
           {/* OVERVIEW */}
           <TabsContent value="overview" className="mt-5 space-y-5">
+            {/* CV đang dùng để so khớp — xương sống của toàn app */}
+            {(() => {
+              const defaultCv = sortedCvs.find(
+                (c: any) => c.cv_id === defaultCvId,
+              );
+              return (
+                <div
+                  className={`flex flex-wrap items-center gap-3 rounded-2xl border p-4 ${
+                    defaultCv
+                      ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/60 dark:bg-emerald-950/20"
+                      : "border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/20"
+                  }`}
+                >
+                  <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                      defaultCv
+                        ? "bg-emerald-500 text-white"
+                        : "bg-amber-500 text-white"
+                    }`}
+                  >
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {defaultCv ? (
+                      <>
+                        <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                          CV đang dùng để so khớp:{" "}
+                          <span className="text-emerald-700 dark:text-emerald-400">
+                            {defaultCv.file_name}
+                          </span>
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Mọi gợi ý việc làm & độ phù hợp đều dựa trên CV này.
+                          {allowMatching
+                            ? " Đang bật so khớp tự động."
+                            : " So khớp tự động đang tắt."}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                          Chưa có CV để so khớp
+                        </p>
+                        <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                          Tải CV để mở khóa gợi ý việc làm & phân tích kỹ năng cá
+                          nhân hóa.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setProfileTab("skills")}
+                    className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 transition-colors dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
+                  >
+                    {defaultCv ? "Đổi CV" : "Quản lý CV"}
+                  </button>
+                </div>
+              );
+            })()}
+
             <div className="grid gap-5 md:grid-cols-3">
               <Card icon={Compass} title="Định hướng quan tâm" tone="blue">
                 {profile.interests.length === 0 ? (
@@ -1460,6 +1525,10 @@ export default function ProfilePage() {
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Cho phép hệ thống tự động phân tích CV và gợi ý việc làm phù
                   hợp trên Dashboard, Phân tích kỹ năng và Khuyến nghị
+                </p>
+                <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                  🔒 CV chỉ dùng để phân tích cho riêng bạn — không chia sẻ với
+                  bên thứ ba. Bạn có thể tắt hoặc xóa CV bất cứ lúc nào.
                 </p>
               </div>
               <button

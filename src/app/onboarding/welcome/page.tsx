@@ -298,7 +298,7 @@ export default function OnboardingWizard() {
         if (res.data) {
           const { onboarding_completed, current_step } = res.data;
           if (onboarding_completed) {
-            router.push(paths.dashboard);
+            router.push(paths.personalDashboard);
             return;
           }
           if (
@@ -451,9 +451,8 @@ export default function OnboardingWizard() {
     try {
       setIsSearchingSkills(true);
       const res = await JobApi.getSkills({ q: value.trim() });
-
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        const skillNames = res.data.data.map((s: any) => s.skill_name || s.name);
+      if (Array.isArray(res.data)) {
+        const skillNames = res.data.map((s: any) => s.skill_name || s.name);
         setDbSkills(skillNames);
       }
     } catch (err) {
@@ -479,8 +478,8 @@ export default function OnboardingWizard() {
     try {
       setIsSearchingSkills(true);
       const res = await JobApi.getSkills({ q: "" });
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        const skillNames = res.data.data.map((s: any) => s.skill_name || s.name);
+      if (Array.isArray(res.data)) {
+        const skillNames = res.data.map((s: any) => s.skill_name || s.name);
         setDbSkills(skillNames);
       }
     } catch (err) {
@@ -580,11 +579,39 @@ export default function OnboardingWizard() {
             ))}
           </div>
 
+          {/* Bắc cầu sang lộ trình nghề nghiệp dựa trên CV (data-driven) */}
+          <div className="mb-3 rounded-xl border border-violet-100 bg-violet-50/60 p-4 text-left">
+            <p className="text-sm font-bold text-violet-900">
+              Muốn biết mình <span className="underline">thực sự</span> hợp hướng
+              nào?
+            </p>
+            <p className="mt-0.5 mb-3 text-xs text-violet-700">
+              {profile.hasUploadedCV
+                ? "Xem lộ trình nghề nghiệp dựa trên CV thật của bạn — kèm mức độ sẵn sàng và kỹ năng cần bổ sung."
+                : "Tải CV để hệ thống đối soát và gợi ý vai trò phù hợp nhất với năng lực thật của bạn."}
+            </p>
+            <button
+              onClick={() =>
+                router.push(
+                  profile.hasUploadedCV
+                    ? paths.recommendations
+                    : paths.cvMatching,
+                )
+              }
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-violet-300 transition-all hover:opacity-90"
+            >
+              {profile.hasUploadedCV
+                ? "Xem lộ trình nghề nghiệp đề xuất"
+                : "Tải CV & xem vai trò phù hợp"}
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+
           <button
-            onClick={() => router.push(paths.dashboard)}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-blue-300 transition-all hover:opacity-90"
+            onClick={() => router.push(paths.personalDashboard)}
+            className="w-full text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors"
           >
-            Đi tới Dashboard <ArrowRight className="h-4 w-4" />
+            Để sau, đi tới trang cá nhân
           </button>
         </div>
       </div>
@@ -633,6 +660,10 @@ export default function OnboardingWizard() {
               ),
             )}
           </div>
+          <p className="mt-2 text-center text-[11px] text-slate-400">
+            Tiến độ được lưu tự động — bạn có thể thoát và quay lại bất cứ lúc
+            nào.
+          </p>
         </div>
 
         {/* Step body */}
@@ -702,11 +733,11 @@ export default function OnboardingWizard() {
           </button>
 
           <button
-            onClick={() => router.push(paths.dashboard)}
+            onClick={() => router.push(paths.personalDashboard)}
             disabled={isLoading}
             className="text-xs font-medium text-slate-500 hover:text-slate-700 disabled:opacity-40"
           >
-            Bỏ qua, vào ngay dashboard
+            Bỏ qua, vào trang cá nhân
           </button>
 
           {step < TOTAL_STEPS ? (
@@ -956,6 +987,13 @@ function Step3({
         {cvUploadError && (
           <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
             <AlertCircle className="h-3.5 w-3.5" /> {cvUploadError}
+          </p>
+        )}
+        {hasCV && skills.length > 0 && (
+          <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+            Đã nhận diện {skills.length} kỹ năng từ CV của bạn — kiểm tra & bổ
+            sung bên dưới.
           </p>
         )}
       </div>

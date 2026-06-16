@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { NextStepBanner } from "./NextStepBanner";
 import {
   Target,
   BookOpen,
@@ -205,11 +206,13 @@ const CustomRadarTooltip = ({ active, payload }: any) => {
       <div className="rounded-lg border border-slate-200 bg-white p-3 text-xs font-medium shadow-xl">
         <p className="mb-1 flex items-center gap-1 font-semibold text-slate-900">
           <span>{data.subject}</span>
-          {data.matchedVia && (
-            <span className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-normal text-violet-500">
-              (khớp qua {data.matchedVia})
-            </span>
-          )}
+          {data.matchedVia &&
+            data.matchedVia.toLowerCase() !==
+              (data.subject || "").toLowerCase() && (
+              <span className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-normal text-violet-500">
+                (khớp qua {data.matchedVia})
+              </span>
+            )}
         </p>
         <p className="text-blue-600">Bạn có: {data.you}%</p>
         <p className="text-emerald-600">
@@ -477,6 +480,52 @@ export function SkillGapAnalysis() {
                   <div className="mt-4 flex min-h-[200px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/70 text-xs text-slate-400">
                     Không có dữ liệu phân tích kỹ năng cho danh mục này
                   </div>
+                ) : matchRadarData.length < 3 ? (
+                  <div className="mt-4 space-y-4">
+                    <p className="text-[11px] text-slate-500">
+                      Nhóm này có ít kỹ năng — hiển thị dạng thanh để dễ so sánh
+                      với mức yêu cầu.
+                    </p>
+                    {matchRadarData.map((d: any) => (
+                      <div key={d.subject}>
+                        <div className="mb-1 flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-1.5 font-semibold text-slate-800">
+                            {d.subject}
+                            {d.matchedVia &&
+                              d.matchedVia.toLowerCase() !==
+                                d.subject.toLowerCase() && (
+                                <span className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-normal text-violet-500">
+                                  khớp qua {d.matchedVia}
+                                </span>
+                              )}
+                          </span>
+                          <span className="font-bold text-blue-600">
+                            {d.you}%
+                          </span>
+                        </div>
+                        <div className="relative h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className="absolute inset-y-0 left-0 bg-emerald-100"
+                            style={{ width: `${d.required ?? 100}%` }}
+                          />
+                          <div
+                            className="absolute inset-y-0 left-0 rounded-full bg-blue-500"
+                            style={{ width: `${d.you}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-4 pt-1 text-[11px] text-slate-500">
+                      <span className="flex items-center gap-1.5">
+                        <span className="inline-block h-2 w-3 rounded bg-blue-500" />
+                        Bạn
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="inline-block h-2 w-3 rounded bg-emerald-100" />
+                        Yêu cầu thị trường
+                      </span>
+                    </div>
+                  </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={240}>
                     <RadarChart
@@ -528,9 +577,24 @@ export function SkillGapAnalysis() {
                 </div>
               </>
             ) : (
-              <div className="flex min-h-[200px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/70 px-4 text-center text-xs text-slate-400">
-                Chưa có kết quả so khớp CV mặc định để hiển thị radar cá nhân
-                hóa
+              <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-200 bg-white/70 px-4 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
+                  <Target className="w-6 h-6 text-blue-400" />
+                </div>
+                <p className="text-sm font-semibold text-slate-700">
+                  Chưa có dữ liệu khoảng trống kỹ năng
+                </p>
+                <p className="text-xs text-slate-500 max-w-xs">
+                  Tải CV và chạy đối soát để xem bạn còn thiếu kỹ năng nào so với
+                  thị trường.
+                </p>
+                <Link
+                  href="/cv-matching"
+                  className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
+                >
+                  Bắt đầu đối soát CV
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
             )}
           </div>
@@ -723,11 +787,16 @@ export function SkillGapAnalysis() {
                               </div>
                               <div className="flex items-center justify-between mt-1">
                                 <span className="text-[10px] text-slate-400">
-                                  Bạn: {skill.user_rate}%
+                                  Bạn: {skill.user_rate}% · Thị trường:{" "}
+                                  {skill.market_rate}%
                                 </span>
-                                <span className="text-[10px] text-slate-400">
-                                  Thị trường: {skill.market_rate}%
-                                </span>
+                                <Link
+                                  href={`/roadmap?skill=${encodeURIComponent(skill.skill_name)}`}
+                                  className="text-[10px] font-semibold text-blue-600 hover:underline flex items-center gap-0.5 shrink-0"
+                                >
+                                  Học ngay
+                                  <ArrowRight className="w-2.5 h-2.5" />
+                                </Link>
                               </div>
                             </div>
                           </div>
@@ -977,6 +1046,13 @@ export function SkillGapAnalysis() {
           )}
         </div>
       </div>
+
+      <NextStepBanner
+        href="/roadmap"
+        title="Đã thấy khoảng trống — giờ lấp đầy nó"
+        desc="Xem lộ trình học & khóa học gợi ý cho những kỹ năng bạn còn thiếu."
+        cta="Tới Lộ trình học"
+      />
     </div>
   );
 }

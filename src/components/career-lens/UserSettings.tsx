@@ -557,6 +557,17 @@ export function UserSettings() {
                     Xóa tài khoản
                   </Link>
                 </div>
+
+                <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
+                  Kiểm soát việc dùng CV để so khớp việc làm trong{" "}
+                  <Link
+                    href="/profile"
+                    className="font-semibold text-blue-600 hover:underline"
+                  >
+                    Hồ sơ → Skills &amp; CV
+                  </Link>
+                  .
+                </p>
               </div>
 
               {profile?.auth_providers?.length ? (

@@ -29,6 +29,11 @@ import {
   Radar,
   ResponsiveContainer,
   Tooltip,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
 } from "recharts";
 
 import PersonalDashboardApi from "@/api/personal-dashboard";
@@ -156,11 +161,14 @@ const CustomRadarTooltip = ({ active, payload }: any) => {
       <div className="bg-white p-3 border border-slate-200 shadow-xl rounded-lg text-xs font-medium">
         <p className="text-slate-900 font-semibold mb-1 flex items-center gap-1">
           <span>{data.subject}</span>
-          {data.matchedVia && (
-            <span className="text-violet-500 font-normal text-[10px] bg-violet-50 px-1.5 py-0.5 rounded">
-              (khớp qua {data.matchedVia})
-            </span>
-          )}
+          {data.matchedVia &&
+            data.matchedVia.toLowerCase() !==
+              (data.subject || "").toLowerCase() &&
+            data.you >= 60 && (
+              <span className="text-violet-500 font-normal text-[10px] bg-violet-50 px-1.5 py-0.5 rounded">
+                (liên quan tới {data.matchedVia})
+              </span>
+            )}
         </p>
         <p className="text-blue-600">Bạn có: {data.you}%</p>
         <p className="text-emerald-600">
@@ -195,6 +203,7 @@ export function PersonalDashboard() {
   const [progress, setProgress] = useState<DashboardProgressDto | null>(null);
   const [roadmapCourses, setRoadmapCourses] = useState<CourseItemDto[]>([]);
   const [isLoadingRoadmap, setIsLoadingRoadmap] = useState(false);
+  const [matchHistory, setMatchHistory] = useState<any[]>([]);
 
   // Kích hoạt gọi API khi vào trang lần đầu
 
@@ -227,6 +236,14 @@ export function PersonalDashboard() {
       }
       if (bannerRes.data) setBanner(bannerRes.data);
       if (statsRes.data) setStatistics(statsRes.data);
+
+      // Lịch sử match để vẽ tiến bộ theo thời gian
+      try {
+        const historyRes = await MatchingApi.getAllMatches();
+        if (Array.isArray(historyRes?.data)) setMatchHistory(historyRes.data);
+      } catch {
+        /* không chặn dashboard nếu lỗi lịch sử */
+      }
       if (jobsRes.data) setRecommendedJobs(jobsRes.data);
       if (chartRes.data) setSkillsChart(chartRes.data);
       if (progressRes.data) setProgress(progressRes.data);
@@ -324,10 +341,36 @@ export function PersonalDashboard() {
       }),
     );
 
+    // Ưu tiên = trọng số × mức còn thiếu (missing score 0 → ưu tiên cao nhất)
+    const priority = (s: any) => s.weight * (1 - s.user_score / 100);
     return [...missing, ...partial]
-      .sort((a, b) => b.weight - a.weight)
+      .sort((a, b) => priority(b) - priority(a))
       .slice(0, 7);
   }, [profile?.default_match?.gap_report]);
+
+  // Tiến bộ điểm phù hợp theo thời gian (từ lịch sử match)
+  const progressChart = useMemo(() => {
+    const points = (matchHistory || [])
+      .filter((m) => m.match_score != null && m.created_at)
+      .map((m) => ({
+        ts: new Date(m.created_at).getTime(),
+        score: normalizePercent(m.match_score),
+      }))
+      .sort((a, b) => a.ts - b.ts)
+      .map((p) => ({
+        label: new Date(p.ts).toLocaleDateString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+        }),
+        score: p.score,
+      }));
+    return points;
+  }, [matchHistory]);
+
+  const progressDelta =
+    progressChart.length >= 2
+      ? progressChart[progressChart.length - 1].score - progressChart[0].score
+      : 0;
 
   // Fetch khóa học gợi ý dựa trên skill thiếu hụt nặng nhất
   useEffect(() => {
@@ -364,6 +407,48 @@ export function PersonalDashboard() {
   const totalSuitableCount =
     banner?.suitable_jobs_count ?? personalMatchedCount;
   const avgMatchScore = banner?.match_score ?? 0;
+  const hasMatched = avgMatchScore > 0 || !!profile?.default_match?.match_id;
+
+  // ── Hành trình của bạn: nối các bước rời rạc thành 1 chuỗi giá trị ──
+  const journeySteps = [
+    {
+      href: hasCV ? "/profile" : "/cv-matching",
+      icon: FileText,
+      label: "Hồ sơ & CV",
+      meta: hasCV ? `Hoàn thiện ${strength}%` : "Chưa có CV",
+      done: hasCV && strength >= 80,
+    },
+    {
+      href: "/cv-matching",
+      icon: Target,
+      label: "Đối soát CV",
+      meta: hasMatched ? `Match ${avgMatchScore}%` : "Chưa chạy",
+      done: hasMatched,
+    },
+    {
+      href: "/skill-gap",
+      icon: AlertCircle,
+      label: "Khoảng trống kỹ năng",
+      meta: hasMatched
+        ? `${statistics?.missing_skills_count ?? 0} kỹ năng thiếu`
+        : "Cần đối soát trước",
+      done: hasMatched,
+    },
+    {
+      href: "/roadmap",
+      icon: BookOpen,
+      label: "Lộ trình học",
+      meta: "Xem khóa học gợi ý",
+      done: false,
+    },
+    {
+      href: "/jobs",
+      icon: Briefcase,
+      label: "Tìm việc phù hợp",
+      meta: `${totalSuitableCount} việc phù hợp`,
+      done: totalSuitableCount > 0,
+    },
+  ];
 
   // Khớp nối cấu trúc checklist cũ từ API mới để giữ nguyên UI lặp
   const currentChecklist = progress?.checklist ?? [];
@@ -552,28 +637,115 @@ export function PersonalDashboard() {
         </div>
       </div>
 
-      {/* ── No CV Warning ── */}
+
+      {/* ── Hành trình của bạn ── */}
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-blue-600" />
+            Hành trình của bạn
+          </h3>
+          <span className="text-xs text-slate-400">
+            Làm theo thứ tự để tận dụng tối đa
+          </span>
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {journeySteps.map((s, i) => (
+            <div key={s.label} className="flex items-center shrink-0">
+              <Link
+                href={s.href}
+                className="group flex flex-col gap-2 w-[150px] p-3 rounded-xl border border-slate-100 bg-slate-50/60 hover:border-blue-300 hover:bg-blue-50/50 transition-all"
+              >
+                <div className="flex items-center justify-between">
+                  <div
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      s.done
+                        ? "bg-emerald-100 text-emerald-600"
+                        : "bg-blue-100 text-blue-600"
+                    }`}
+                  >
+                    <s.icon className="w-4 h-4" />
+                  </div>
+                  {s.done ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  ) : (
+                    <span className="text-[11px] font-bold text-slate-400">
+                      {i + 1}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-800 leading-tight group-hover:text-blue-700">
+                    {s.label}
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{s.meta}</p>
+                </div>
+              </Link>
+              {i < journeySteps.length - 1 && (
+                <ChevronRight className="w-4 h-4 text-slate-300 mx-0.5 shrink-0" />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Thẻ Bắt đầu cho user chưa có CV (tránh loạn thông tin) ── */}
       {!hasCV && (
-        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-amber-800">
-              Chưa có CV — Gợi ý chưa được cá nhân hóa
-            </p>
-            <p className="text-xs text-amber-700 mt-0.5">
-              Tải CV (PDF/DOCX) để hệ thống tính toán điểm match chính xác với
-              từng job.
-            </p>
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-slate-900">
+            Bắt đầu trong 3 bước
+          </h3>
+          <p className="text-sm text-slate-500 mt-0.5 mb-5">
+            Tải CV để mở khóa toàn bộ insight cá nhân — chỉ mất vài phút.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+            {[
+              {
+                n: 1,
+                icon: Upload,
+                title: "Tải CV của bạn",
+                desc: "Hệ thống tự trích xuất kỹ năng.",
+              },
+              {
+                n: 2,
+                icon: Target,
+                title: "Xem khoảng trống",
+                desc: "Đối soát với yêu cầu thị trường.",
+              },
+              {
+                n: 3,
+                icon: BookOpen,
+                title: "Nhận lộ trình học",
+                desc: "Gợi ý kỹ năng cần bổ sung.",
+              },
+            ].map((s) => (
+              <div
+                key={s.n}
+                className="rounded-xl border border-slate-100 bg-slate-50 p-4"
+              >
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600">
+                  <s.icon className="h-4 w-4 text-white" />
+                </div>
+                <p className="text-sm font-semibold text-slate-900">
+                  {s.n}. {s.title}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">{s.desc}</p>
+              </div>
+            ))}
           </div>
           <Link
             href="/cv-matching"
-            className="shrink-0 px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-blue-700 transition-all hover:-translate-y-0.5"
           >
-            Tải CV
+            <Upload className="h-4 w-4" />
+            Tải CV & bắt đầu
           </Link>
         </div>
       )}
 
+      {/* Các khối dưới chỉ hiện khi đã có CV — tránh dồn thông tin rỗng cho user mới */}
+      {hasCV && (
+        <>
       {/* ── Quick Stats ── */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {[
@@ -791,8 +963,23 @@ export function PersonalDashboard() {
               </div>
 
               {radarData.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center border border-dashed border-slate-200 rounded-xl bg-white/70 text-xs text-slate-400 min-h-[200px]">
-                  Không có dữ liệu phân tích kỹ năng cho danh mục này
+                <div className="flex-1 flex flex-col items-center justify-center gap-3 border border-dashed border-slate-200 rounded-xl bg-white/70 px-4 text-center min-h-[200px]">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
+                    <Target className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-700">
+                    Chưa có dữ liệu phân tích kỹ năng
+                  </p>
+                  <p className="text-xs text-slate-500 max-w-xs">
+                    Tải CV và chạy đối soát để xem radar kỹ năng cá nhân của bạn.
+                  </p>
+                  <Link
+                    href="/cv-matching"
+                    className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
+                  >
+                    Bắt đầu đối soát CV
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={240}>
@@ -905,12 +1092,20 @@ export function PersonalDashboard() {
                           }}
                         />
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-1">
-                        Trọng số:{" "}
-                        <span className="font-semibold text-slate-600">
-                          {Math.round((item.weight ?? 0) * 100)}%
-                        </span>
-                      </p>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-[10px] text-slate-400">
+                          Trọng số:{" "}
+                          <span className="font-semibold text-slate-600">
+                            {Math.round((item.weight ?? 0) * 100)}%
+                          </span>
+                        </p>
+                        <Link
+                          href={`/roadmap?skill=${encodeURIComponent(item.skill_name)}`}
+                          className="text-[10px] font-semibold text-blue-600 hover:underline flex items-center gap-0.5"
+                        >
+                          Học ngay <ChevronRight className="w-3 h-3" />
+                        </Link>
+                      </div>
                     </div>
                   ))
                 )}
@@ -929,7 +1124,88 @@ export function PersonalDashboard() {
 
         {/* Tab: Progress */}
         {activeTab === "progress" && (
-          <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="p-5 space-y-6">
+            {/* Tiến bộ điểm phù hợp theo thời gian */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-900">
+                    Tiến bộ điểm phù hợp
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Điểm match qua các lần phân tích CV của bạn
+                  </p>
+                </div>
+                {progressChart.length >= 2 && (
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                      progressDelta >= 0
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {progressDelta >= 0 ? "+" : ""}
+                    {progressDelta}% so với lần đầu
+                  </span>
+                )}
+              </div>
+              {progressChart.length >= 2 ? (
+                <ResponsiveContainer width="100%" height={180}>
+                  <AreaChart
+                    data={progressChart}
+                    margin={{ top: 5, right: 10, bottom: 0, left: -20 }}
+                  >
+                    <defs>
+                      <linearGradient
+                        id="progGrad"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#3b82f6"
+                          stopOpacity={0.25}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#3b82f6"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      domain={[0, 100]}
+                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip formatter={(v: any) => [`${v}%`, "Điểm phù hợp"]} />
+                    <Area
+                      type="monotone"
+                      dataKey="score"
+                      stroke="#3b82f6"
+                      strokeWidth={2.5}
+                      fill="url(#progGrad)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex min-h-[120px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 text-center text-xs text-slate-400">
+                  Chạy đối soát CV ít nhất 2 lần để xem tiến bộ theo thời gian.
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Profile Checklist */}
             <div>
               <h4 className="text-sm font-semibold text-slate-900 mb-1">
@@ -1072,19 +1348,10 @@ export function PersonalDashboard() {
                         rel="noopener noreferrer"
                         className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50 hover:border-blue-100 transition-colors group"
                       >
-                        {/* Thumbnail hoặc icon fallback */}
-                        {course.image ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={course.image}
-                            alt={course.title}
-                            className="w-9 h-9 rounded-lg object-cover shrink-0 bg-slate-200"
-                          />
-                        ) : (
-                          <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                            <BookOpen className="w-4 h-4 text-blue-600" />
-                          </div>
-                        )}
+                        {/* Icon khóa học (thay thumbnail hay bị vỡ) */}
+                        <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                          <BookOpen className="w-4 h-4 text-blue-600" />
+                        </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold text-slate-800 truncate">
                             {course.title}
@@ -1129,9 +1396,12 @@ export function PersonalDashboard() {
                 )}
               </div>
             </div>
+            </div>
           </div>
         )}
       </div>
+        </>
+      )}
 
       {/* ── Market Teaser ── */}
       <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">

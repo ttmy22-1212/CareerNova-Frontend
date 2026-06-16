@@ -30,6 +30,7 @@ export function RegisterContent() {
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -192,10 +193,36 @@ export function RegisterContent() {
           {err && <p className="mt-1.5 text-xs text-red-500">{err}</p>}
         </div>
 
+        <label className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span>
+            Tôi đồng ý với{" "}
+            <Link
+              href="/terms"
+              className="font-semibold text-blue-600 hover:underline"
+            >
+              Điều khoản sử dụng
+            </Link>{" "}
+            và{" "}
+            <Link
+              href="/privacy-policy"
+              className="font-semibold text-blue-600 hover:underline"
+            >
+              Chính sách bảo mật
+            </Link>
+            .
+          </span>
+        </label>
+
         <button
           type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          disabled={loading || !agreed}
+          className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">

@@ -58,7 +58,7 @@ type NavItem = {
 
 const navGroups: { title: string; items: NavItem[] }[] = [
   {
-    title: "Cá nhân",
+    title: "1 · Hồ sơ của bạn",
     items: [
       {
         href: paths.personalDashboard,
@@ -66,23 +66,40 @@ const navGroups: { title: string; items: NavItem[] }[] = [
         Icon: LayoutGrid,
         end: true,
       },
-      {
-        href: paths.cvMatching,
-        label: "So khớp CV",
-        Icon: FileText,
-        badge: "Cốt lõi",
-      },
       { href: paths.profile.detail, label: "Hồ sơ Người dùng", Icon: User },
       {
         href: "/onboarding/welcome",
         label: "Kiểm tra hướng nghiệp",
         Icon: Compass,
       },
+    ],
+  },
+  {
+    title: "2 · Phân tích & đối soát",
+    items: [
+      {
+        href: paths.cvMatching,
+        label: "So khớp CV",
+        Icon: FileText,
+        badge: "Cốt lõi",
+      },
       { href: paths.skillGap, label: "Phân tích kỹ năng", Icon: Target },
     ],
   },
   {
-    title: "Thị trường",
+    title: "3 · Hành động",
+    items: [
+      { href: paths.roadmap.index, label: "Khoá học & Lộ trình", Icon: Map },
+      {
+        href: paths.recommendations,
+        label: "Đề xuất",
+        Icon: BookmarkCheck,
+      },
+      { href: paths.jobs.index, label: "Tìm kiếm việc làm", Icon: Search },
+    ],
+  },
+  {
+    title: "Khám phá thị trường",
     items: [
       {
         href: paths.dashboard,
@@ -90,18 +107,6 @@ const navGroups: { title: string; items: NavItem[] }[] = [
         Icon: LayoutDashboard,
         end: true,
       },
-      { href: paths.jobs.index, label: "Tìm kiếm việc làm", Icon: Search },
-    ],
-  },
-  {
-    title: "Lộ trình hành động",
-    items: [
-      {
-        href: paths.recommendations,
-        label: "Đề xuất",
-        Icon: BookmarkCheck,
-      },
-      { href: paths.roadmap.index, label: "Khoá học & Lộ trình", Icon: Map },
     ],
   },
 ];
@@ -147,7 +152,6 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   },
 };
 
-
 function findActive(pathname: string) {
   let best: NavItem | null = null;
   for (const it of allItems) {
@@ -173,7 +177,9 @@ export default function UserLayout({
   const [collapsed, setCollapsed] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
-  const [serverJourney, setServerJourney] = useState<AnyJourneyStage[] | null>(null);
+  const [serverJourney, setServerJourney] = useState<AnyJourneyStage[] | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -181,7 +187,9 @@ export default function UserLayout({
       .then((res) => {
         if (res?.data?.stages) setServerJourney(res.data.stages);
       })
-      .catch(() => {/* fallback to localStorage journey */});
+      .catch(() => {
+        /* fallback to localStorage journey */
+      });
   }, [user]);
 
   // Thông tin Thị trường is publicly accessible (no login required)
@@ -342,7 +350,7 @@ export default function UserLayout({
                 Career Nova
               </p>
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                Platform
+                Nền tảng
               </p>
             </div>
           )}
@@ -660,7 +668,22 @@ function JourneyBar({ journey }: { journey: AnyJourneyStage[] }) {
   const pathname = usePathname() ?? "/";
   if (pathname.startsWith("/onboarding")) return null;
 
+  // Bạn đang ở đâu = stage có href khớp route hiện tại (khớp dài nhất)
+  let hereIdx = -1;
+  let bestLen = -1;
+  journey.forEach((s, idx) => {
+    if (s.href && pathname.startsWith(s.href) && s.href.length > bestLen) {
+      bestLen = s.href.length;
+      hereIdx = idx;
+    }
+  });
+
+  // Việc nên làm tiếp = bước chưa xong gần nhất sau vị trí hiện tại,
+  // nếu không có thì là bước chưa xong đầu tiên.
   const firstIncomplete = journey.findIndex((s) => !s.done);
+  const nextAfterHere = journey.findIndex((s, idx) => idx > hereIdx && !s.done);
+  const nextIdx = nextAfterHere !== -1 ? nextAfterHere : firstIncomplete;
+  const nextStage = nextIdx !== -1 ? journey[nextIdx] : null;
 
   return (
     <div
@@ -678,64 +701,65 @@ function JourneyBar({ journey }: { journey: AnyJourneyStage[] }) {
 
         <div className="flex flex-1 items-center gap-1 overflow-x-auto">
           {journey.map((stage, idx) => {
-            const isCurrent = !stage.done && firstIncomplete === idx;
-            const isPast = stage.done;
-            const isFuture = !stage.done && !isCurrent;
+            const isHere = idx === hereIdx;
+            const isPast = stage.done && !isHere;
+            const isFuture = !stage.done && !isHere;
 
             return (
               <div key={stage.id} className="flex items-center gap-1">
                 <Link
                   href={stage.href}
                   title={
-                    isCurrent
-                      ? `Bước tiếp theo: ${stage.desc}`
+                    isHere
+                      ? `Bạn đang ở đây — ${stage.desc}`
                       : stage.desc
                   }
-                  className={`group flex items-center gap-2 rounded-lg px-2.5 py-1.5 transition-all duration-150 ${
-                    isPast
-                      ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
-                      : isCurrent
-                        ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-800 dark:hover:bg-blue-950/60"
+                  className={`group relative flex items-center gap-2 rounded-lg px-2.5 py-1.5 transition-all duration-150 ${
+                    isHere
+                      ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-300 dark:ring-blue-700"
+                      : isPast
+                        ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
                         : "text-slate-400 hover:bg-slate-50 dark:text-slate-600 dark:hover:bg-slate-800/50"
                   }`}
                 >
                   {/* Step number / icon */}
                   <div
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold transition-all ${
-                      isPast
-                        ? "bg-emerald-500 text-white"
-                        : isCurrent
-                          ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600"
+                      isHere
+                        ? "bg-white text-blue-600"
+                        : isPast
+                          ? "bg-emerald-500 text-white"
+                          : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600"
                     }`}
                   >
-                    {isPast ? (
+                    {isHere ? (
+                      <span>{idx + 1}</span>
+                    ) : isPast ? (
                       <CheckCircle2 className="h-3 w-3" />
-                    ) : isCurrent ? (
-                      <ArrowRight className="h-3 w-3" />
                     ) : (
                       <span>{idx + 1}</span>
                     )}
                   </div>
 
                   <div className="hidden min-w-0 sm:block">
-                    <p className="text-xs font-semibold leading-tight whitespace-nowrap">
+                    <p className="text-xs font-semibold leading-tight whitespace-nowrap flex items-center gap-1">
                       {stage.label}
+                      {isHere && (
+                        <span className="inline-flex items-center rounded-full bg-white/20 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide">
+                          Đang ở đây
+                        </span>
+                      )}
                     </p>
                     <p
                       className={`mt-0.5 max-w-[150px] truncate text-[10px] leading-tight ${
                         isFuture
                           ? "text-slate-400 dark:text-slate-500"
-                          : "text-current opacity-75"
+                          : "text-current opacity-80"
                       }`}
                     >
                       {stage.desc}
                     </p>
                   </div>
-
-                  {isCurrent && (
-                    <ArrowRight className="ml-0.5 hidden h-3 w-3 shrink-0 group-hover:translate-x-0.5 transition-transform sm:block" />
-                  )}
                 </Link>
 
                 {idx < journey.length - 1 && (
@@ -745,6 +769,20 @@ function JourneyBar({ journey }: { journey: AnyJourneyStage[] }) {
             );
           })}
         </div>
+
+        {/* Việc nên làm tiếp theo */}
+        {nextStage && nextIdx !== hereIdx && (
+          <Link
+            href={nextStage.href}
+            className="hidden shrink-0 items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 transition-colors hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-800 lg:flex"
+          >
+            <span className="text-[10px] font-normal text-blue-500 dark:text-blue-400">
+              Tiếp theo
+            </span>
+            {nextStage.label}
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        )}
       </div>
     </div>
   );

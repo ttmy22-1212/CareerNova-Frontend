@@ -139,6 +139,7 @@
 /* Keep MUI scrollbar styling */
 div::-webkit-scrollbar {
   width: 16px;
+  height: 16px;
   background-color: #fff;
   scrollbar-width: thin;
 }

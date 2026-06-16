@@ -46,8 +46,8 @@ export interface StatsCardData {
   companies_hiring: {
     count: number;
   };
-  market_growth: {
-    yoy_percentage: number;
+  internship_jobs: {
+    count: number;
   };
 }
 
@@ -100,9 +100,11 @@ export interface HotJobItemDto {
   location: string | null;
   work_type: string | null;
   job_category: string;
-  save_count: number;
   job_count: number;
-  avg_salary: number;
+  company_count: number;
+  total_applies: number;
+  total_views: number;
+  remote_count: number;
 }
 
 export interface HotJobsResponseDto {

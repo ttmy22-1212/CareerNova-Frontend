@@ -1,6 +1,8 @@
 "use client";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth/auth-context";
+import MarketDashboardApi from "@/api/market-dashboard";
 import {
   ArrowRight,
   Sparkles,
@@ -18,6 +20,23 @@ import {
 
 export function LandingPage() {
   const { user } = useAuth();
+  const [stats, setStats] = useState<{
+    jobs?: number;
+    companies?: number;
+  }>({});
+
+  useEffect(() => {
+    MarketDashboardApi.getStats({ time_range: "30days" })
+      .then((res) => {
+        const d = (res?.data as any)?.data || res?.data;
+        if (d)
+          setStats({
+            jobs: d.active_jobs?.count,
+            companies: d.companies_hiring?.count,
+          });
+      })
+      .catch(() => {});
+  }, []);
 
   if (user) return null;
 
@@ -62,19 +81,20 @@ export function LandingPage() {
         <div className="max-w-5xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-full text-sm font-semibold text-blue-700 mb-6">
             <Sparkles className="w-4 h-4" />
-            Nền tảng tuyển dụng thông minh cho IT
+            Dành cho sinh viên IT sắp ra trường
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 mb-6 leading-tight">
-            Tìm công việc IT{" "}
+            Biết mình{" "}
             <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              phù hợp chính xác
-            </span>
+              còn thiếu kỹ năng gì
+            </span>{" "}
+            so với thị trường
           </h1>
 
           <p className="text-lg sm:text-xl text-slate-600 mb-8 max-w-2xl mx-auto leading-relaxed">
-            Tải CV, nhận gợi ý job cá nhân hóa, phân tích kỹ năng, và lộ trình
-            phát triển sự nghiệp dựa trên thị trường IT thực tế.
+            Tải CV lên — hệ thống đối soát với yêu cầu tuyển dụng thật, chỉ ra
+            khoảng trống kỹ năng và gợi ý lộ trình học để bạn sẵn sàng đi làm.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
@@ -120,7 +140,7 @@ export function LandingPage() {
                   {
                     icon: BarChart3,
                     title: "Market dashboard",
-                    desc: "Theo dõi lương và nhu cầu tuyển dụng",
+                    desc: "Theo dõi nhu cầu tuyển dụng & kỹ năng hot",
                   },
                 ].map((item) => (
                   <div
@@ -142,21 +162,94 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── Product Signals ── */}
+      {/* ── Cách hoạt động ── */}
+      <section className="py-16 px-4 bg-white">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-center text-2xl sm:text-3xl font-bold text-slate-900 mb-3">
+            Chỉ 3 bước để biết mình đang ở đâu
+          </h2>
+          <p className="text-center text-slate-500 mb-10 max-w-xl mx-auto">
+            Không cần chuyên môn phân tích — hệ thống làm phần khó, bạn chỉ cần
+            hành động.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {[
+              {
+                icon: FileText,
+                step: "1",
+                title: "Tải CV của bạn",
+                desc: "Hệ thống tự trích xuất kỹ năng từ CV — không cần nhập tay.",
+              },
+              {
+                icon: Target,
+                step: "2",
+                title: "Xem khoảng trống kỹ năng",
+                desc: "Đối soát ngữ nghĩa với yêu cầu tuyển dụng thật, chỉ ra điểm còn yếu.",
+              },
+              {
+                icon: BarChart3,
+                step: "3",
+                title: "Nhận lộ trình học",
+                desc: "Gợi ý kỹ năng cần bổ sung theo thứ tự ưu tiên + việc làm phù hợp.",
+              },
+            ].map((s) => (
+              <div
+                key={s.step}
+                className="relative rounded-2xl border border-slate-200 bg-slate-50 p-6"
+              >
+                <span className="absolute top-4 right-5 text-4xl font-black text-slate-200">
+                  {s.step}
+                </span>
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 shadow-sm">
+                  <s.icon className="h-5 w-5 text-white" />
+                </div>
+                <p className="text-base font-bold text-slate-900 mb-1">
+                  {s.title}
+                </p>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  {s.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-8 text-center">
+            <Link
+              href="/auth/register"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all shadow-lg hover:-translate-y-0.5"
+            >
+              Bắt đầu miễn phí — chỉ vài phút
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Social proof: số liệu thật ── */}
       <section className="py-12 px-4 border-t border-b border-slate-200 bg-slate-50">
         <div className="max-w-5xl mx-auto">
-          <p className="text-center text-sm font-semibold text-slate-500 mb-6">
-            DỮ LIỆU SỬ DỤNG TRONG SẢN PHẨM
+          <p className="text-center text-sm font-semibold text-slate-500 mb-8">
+            DỮ LIỆU THỊ TRƯỜNG THỰC TẾ
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
             {[
-              "Việc làm IT",
-              "Kỹ năng từ JD",
-              "Mức lương chuẩn hóa",
-              "CV matching",
-            ].map((signal) => (
-              <div key={signal} className="text-slate-500 font-semibold text-sm">
-                {signal}
+              {
+                value: stats.jobs ? stats.jobs.toLocaleString() : "—",
+                label: "Tin tuyển dụng IT",
+              },
+              {
+                value: stats.companies ? stats.companies.toLocaleString() : "—",
+                label: "Công ty đang tuyển",
+              },
+              { value: "Ngữ nghĩa", label: "Đối soát kỹ năng bằng AI" },
+              { value: "Realtime", label: "Cập nhật xu hướng" },
+            ].map((s) => (
+              <div key={s.label}>
+                <p className="text-2xl sm:text-3xl font-extrabold text-blue-600">
+                  {s.value}
+                </p>
+                <p className="mt-1 text-xs font-medium text-slate-500">
+                  {s.label}
+                </p>
               </div>
             ))}
           </div>
@@ -400,6 +493,48 @@ export function LandingPage() {
                 </p>
                 <p className="mt-2 text-sm text-slate-600">{item.text}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section className="py-16 px-4 bg-slate-50 border-t border-slate-200">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-center text-2xl sm:text-3xl font-bold text-slate-900 mb-8">
+            Câu hỏi thường gặp
+          </h2>
+          <div className="space-y-3">
+            {[
+              {
+                q: "Sử dụng có miễn phí không?",
+                a: "Có. Bạn có thể tạo tài khoản, tải CV, đối soát kỹ năng và xem lộ trình học hoàn toàn miễn phí.",
+              },
+              {
+                q: "Dữ liệu CV của tôi có an toàn không?",
+                a: "CV chỉ dùng để phân tích kỹ năng và đối soát với yêu cầu công việc cho riêng bạn. Bạn có thể xóa CV bất cứ lúc nào trong phần Hồ sơ.",
+              },
+              {
+                q: "Hệ thống đối soát kỹ năng như thế nào?",
+                a: "Thay vì so trùng từ khóa, hệ thống hiểu ý nghĩa từng kỹ năng (vd ReactJS liên quan tới Frontend) để đánh giá độ phù hợp chính xác hơn.",
+              },
+              {
+                q: "Tôi cần chuẩn bị gì để bắt đầu?",
+                a: "Chỉ cần một CV (PDF/DOCX). Phần còn lại hệ thống tự trích xuất và phân tích trong vài phút.",
+              },
+            ].map((item) => (
+              <details
+                key={item.q}
+                className="group rounded-xl border border-slate-200 bg-white px-5 py-4"
+              >
+                <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-slate-900 list-none">
+                  {item.q}
+                  <ChevronRight className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-90" />
+                </summary>
+                <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                  {item.a}
+                </p>
+              </details>
             ))}
           </div>
         </div>

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Clock, Users, Star, ArrowRight, BookmarkPlus } from "lucide-react";
 import LearningRoadmapApi from "@/api/learning-roadmap";
 import { CourseItemDto, LearningPathDto } from "@/types/learning-roadmap";
+import { NextStepBanner } from "./NextStepBanner";
 
 interface LearningRoadmapProps {
   selectedSkillFromDB?: string;
@@ -179,6 +180,22 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
 
   return (
     <div className="p-6 space-y-5">
+      {selectedSkillFromDB && (
+        <div className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+          <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+            <Star className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-blue-900">
+              Lộ trình cho “{selectedSkillFromDB}”
+            </p>
+            <p className="text-xs text-blue-700">
+              Gợi ý khóa học vì đây là kỹ năng bạn còn thiếu so với thị trường.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Lộ trình học */}
       <div className="space-y-6 mb-12">
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">
@@ -470,6 +487,13 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
           </div>
         )}
       </div>
+
+      <NextStepBanner
+        href="/jobs"
+        title="Sẵn sàng ứng tuyển?"
+        desc="Khám phá các việc làm phù hợp nhất với hồ sơ và kỹ năng của bạn."
+        cta="Tìm việc phù hợp"
+      />
     </div>
   );
 }

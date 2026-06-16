@@ -34,6 +34,8 @@ import MatchingApi from "@/api/matching";
 import profileApi from "@/api/profile";
 import { MatchedSkillDetail, MatchCategoryResponse } from "@/types/matching";
 import { CvItemDto } from "@/types/cv";
+import { InfoTooltip, GLOSSARY } from "./InfoTooltip";
+import { RoleComparison } from "./RoleComparison";
 
 type InputMode = "role" | "url";
 
@@ -126,12 +128,19 @@ function CategoryDropdown({
   );
 }
 
-const getSkillLevel = (proficiency: number | null): string => {
-  if (proficiency === null) return "Không có";
-  if (proficiency >= 85) return "Chuyên gia";
-  if (proficiency >= 70) return "Nâng cao";
-  if (proficiency >= 50) return "Trung bình";
-  return "Người mới";
+// Chỉ hiện badge "liên quan tới X" khi độ tương đồng ngữ nghĩa đủ cao,
+// tránh gợi ý sai ở mức yếu (vd JavaScript "liên quan" Java chỉ 39%)
+const SEMANTIC_BADGE_MIN_SIMILARITY = 60;
+
+// Diễn giải điểm phù hợp cho người mới (thay vì chỉ con số trống)
+const scoreVerdict = (score: number) => {
+  if (score >= 80)
+    return "Rất phù hợp — bạn đáp ứng hầu hết yêu cầu cốt lõi.";
+  if (score >= 60)
+    return "Khá tốt — bạn đáp ứng phần lớn yêu cầu, cần bổ sung vài kỹ năng.";
+  if (score >= 40)
+    return "Tiềm năng — còn một số khoảng trống cần lấp đầy.";
+  return "Còn khoảng cách khá lớn — hãy xem các kỹ năng cần học bên dưới.";
 };
 
 const normalizePercent = (value: number | string | null | undefined) => {
@@ -190,11 +199,14 @@ const CustomRadarTooltip = ({ active, payload }: any) => {
       <div className="bg-white p-3 border border-slate-200 shadow-xl rounded-lg text-xs font-medium">
         <p className="text-slate-900 font-semibold mb-1 flex items-center gap-1">
           <span>{data.subject}</span>
-          {data.matchedVia && (
-            <span className="text-violet-500 font-normal text-[11px] bg-violet-50 px-1.5 py-0.5 rounded">
-              (khớp qua {data.matchedVia})
-            </span>
-          )}
+          {data.matchedVia &&
+            data.matchedVia.toLowerCase() !==
+              (data.subject || "").toLowerCase() &&
+            data.you >= SEMANTIC_BADGE_MIN_SIMILARITY && (
+              <span className="text-violet-500 font-normal text-[11px] bg-violet-50 px-1.5 py-0.5 rounded">
+                (liên quan tới {data.matchedVia})
+              </span>
+            )}
         </p>
         <p className="text-blue-600">Bạn có: {data.you}%</p>
         <p className="text-emerald-600">Yêu cầu: {data.required}%</p>
@@ -266,6 +278,8 @@ export function CVMatching() {
   const [originalModalRadarData, setOriginalModalRadarData] = useState<any[]>(
     [],
   );
+  const [categoryOverviewData, setCategoryOverviewData] = useState<any[]>([]);
+  const [isOverviewLoading, setIsOverviewLoading] = useState(false);
 
   const filteredRoles = benchmarkRoles.filter((role) =>
     role.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -401,19 +415,17 @@ export function CVMatching() {
           .filter((s: MatchedSkillDetail) => normalizePercent(s.similarity) >= 70)
           .map((s: MatchedSkillDetail) => ({
             skill: s.skill_name,
-            cvLevel: getSkillLevel(normalizePercent(s.similarity)),
             required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
             match: normalizePercent(s.similarity),
-            years: 1,
           })),
         partialMatches: (
           backendData.gap_report?.partially_matched_skills || []
         ).map((s: any) => ({
           skill: s.skill_name,
-          cvLevel: getSkillLevel(normalizePercent(s.similarity)),
           required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
+          // % hiển thị = độ tương đồng ngữ nghĩa (max_sim) — dễ hiểu & không gây hiểu lầm
           match: normalizePercent(s.similarity),
-          years: 0,
+          matchedVia: s.matched_via || null,
         })),
         missingSkills: (backendData.gap_report?.missing_skills || []).map(
           (s: any) => ({
@@ -427,6 +439,7 @@ export function CVMatching() {
         subject: s.skill_name,
         you: normalizePercent(s.similarity),
         required: 100,
+        matchedVia: s.matched_via || null,
       })),
     };
     setOriginalRadarData(mappedResult.radarData);
@@ -447,6 +460,7 @@ export function CVMatching() {
           setModalCategories(categoriesArray);
         } else {
           setCategories(categoriesArray);
+          buildCategoryOverview(matchId, categoriesArray);
         }
       } else {
         console.warn(
@@ -456,6 +470,54 @@ export function CVMatching() {
       }
     } catch (err) {
       console.error("Lỗi lấy danh sách categories:", err);
+    }
+  };
+
+  const buildCategoryOverview = async (
+    matchId: string,
+    cats: MatchCategoryResponse[],
+  ) => {
+    const matched = cats.filter(
+      (c) => c.is_matched && c.category && c.category !== "All",
+    );
+    if (matched.length < 2) {
+      setCategoryOverviewData([]);
+      return;
+    }
+    try {
+      setIsOverviewLoading(true);
+      const results = await Promise.all(
+        matched.map((c) =>
+          MatchingApi.getRadarByCategory(matchId, c.category).catch(() => null),
+        ),
+      );
+      const overview = results
+        .map((res, i) => {
+          const gap = (res?.data?.gap_report as any) || {};
+          const skills = [
+            ...(res?.data?.radar_data || []),
+            ...(gap.partially_matched_skills || []),
+            ...(gap.missing_skills || []),
+          ];
+          if (!skills.length) return null;
+          const avg =
+            skills.reduce(
+              (sum: number, s: any) => sum + normalizePercent(s.similarity),
+              0,
+            ) / skills.length;
+          return {
+            subject: matched[i].category,
+            you: Math.round(avg),
+            required: 100,
+          };
+        })
+        .filter(Boolean);
+      setCategoryOverviewData(overview as any[]);
+    } catch (err) {
+      console.error("Lỗi tính overview theo category:", err);
+      setCategoryOverviewData([]);
+    } finally {
+      setIsOverviewLoading(false);
     }
   };
 
@@ -524,7 +586,10 @@ export function CVMatching() {
     }
   };
 
-  const handleAnalyzeAndMatch = async () => {
+  const handleAnalyzeAndMatch = async (roleOverride?: unknown) => {
+    // roleOverride chỉ hợp lệ khi là string (onClick truyền event → bỏ qua)
+    const overrideRole =
+      typeof roleOverride === "string" ? roleOverride : undefined;
     // Luồng kiểm soát: Ưu tiên lấy thông tin cv hoạt động
     const targetCvId = activeCv?.cv_id;
 
@@ -535,16 +600,24 @@ export function CVMatching() {
       return;
     }
 
+    // Khi đối soát theo vai trò gợi ý: ép về chế độ "role" và đồng bộ state
+    const effectiveMode = overrideRole ? "role" : mode;
+    if (overrideRole) {
+      setMode("role");
+      setSelectedRole(overrideRole);
+    }
+
     try {
       setIsLoading(true);
       setApiError(null);
 
       const payload: any = {
         cv_id: targetCvId!,
-        search_group: mode === "url" ? "" : selectedRole || "",
+        search_group:
+          effectiveMode === "url" ? "" : overrideRole || selectedRole || "",
       };
 
-      if (mode === "url") {
+      if (effectiveMode === "url") {
         payload.job_url = jdUrl.trim();
       }
 
@@ -1042,7 +1115,44 @@ export function CVMatching() {
         </div>
       </div>
 
-      {!analyzed || !matchResult ? (
+      {isLoading ? (
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-10">
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-3">
+              <Loader2 className="w-7 h-7 text-blue-500 animate-spin" />
+            </div>
+            <h3 className="font-bold text-slate-900">Đang phân tích CV của bạn…</h3>
+            <p className="text-sm text-slate-500 mt-1">
+              Quá trình này có thể mất ít giây — AI đang xử lý hồ sơ của bạn.
+            </p>
+          </div>
+          <div className="max-w-md mx-auto space-y-2.5">
+            {[
+              "Đọc & trích xuất kỹ năng từ CV",
+              "Đối soát ngữ nghĩa với yêu cầu công việc",
+              "Tính điểm phù hợp & khoảng trống kỹ năng",
+            ].map((step, i) => (
+              <div
+                key={step}
+                className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5"
+              >
+                <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-[11px] font-bold flex items-center justify-center shrink-0">
+                  {i + 1}
+                </span>
+                <span className="text-sm text-slate-600">{step}</span>
+                <span className="ml-auto flex gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-300 animate-pulse" />
+                </span>
+              </div>
+            ))}
+          </div>
+          {/* Skeleton chỗ kết quả */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 animate-pulse">
+            <div className="h-28 rounded-xl bg-slate-100" />
+            <div className="h-28 rounded-xl bg-slate-100" />
+          </div>
+        </div>
+      ) : !analyzed || !matchResult ? (
         <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-16 text-center">
           <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <BarChart3 className="w-8 h-8 text-blue-400" />
@@ -1061,10 +1171,11 @@ export function CVMatching() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
               {
-                label: "Tổng thể phù hợp",
+                label: "Điểm phù hợp",
                 value: matchResult.overallScore,
-                sub: "Ứng viên mạnh",
+                sub: "Tính theo trọng số từng kỹ năng",
                 type: "ring",
+                tip: GLOSSARY.matchScore,
               },
               {
                 label: "Kỹ năng phù hợp",
@@ -1078,13 +1189,19 @@ export function CVMatching() {
                 key={i}
                 className="bg-white rounded-xl border border-slate-100 shadow-sm p-5"
               >
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-1">
                   {card.label}
+                  {(card as any).tip && (
+                    <InfoTooltip text={(card as any).tip} />
+                  )}
                 </p>
                 {card.type === "ring" ? (
                   <div className="flex items-center gap-4">
                     <ScoreRing score={card.value as number} />
                     <div>
+                      <p className="text-sm font-medium text-slate-700">
+                        {scoreVerdict(card.value as number)}
+                      </p>
                       <p className="text-xs text-slate-500 mt-1">{card.sub}</p>
                     </div>
                   </div>
@@ -1182,9 +1299,9 @@ export function CVMatching() {
                           </div>
                           <div className="flex gap-4 mt-1.5 text-[11px] text-slate-500">
                             <span>
-                              Cấp độ của bạn:{" "}
+                              Độ tương đồng:{" "}
                               <span className="font-semibold text-slate-700">
-                                {item.cvLevel}
+                                {item.match}%
                               </span>
                             </span>
                             <span>
@@ -1193,7 +1310,6 @@ export function CVMatching() {
                                 {item.required}
                               </span>
                             </span>
-                            <span>{item.years}+ năm kinh nghiệm</span>
                           </div>
                         </div>
                       </div>
@@ -1246,12 +1362,29 @@ export function CVMatching() {
                   <div className="border-t border-slate-100 divide-y divide-slate-50">
                     {matchResult.analysis.partialMatches.map((item: any) => (
                       <div key={item.skill} className="px-5 py-3">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-sm font-semibold text-slate-900">
-                            {item.skill}
-                          </span>
-                          <span className="text-xs font-bold text-amber-600">
-                            {item.match}% Tương thích
+                        <div className="flex items-center justify-between mb-1.5 gap-2">
+                          <div className="flex items-center gap-2 flex-wrap min-w-0">
+                            <span className="text-sm font-semibold text-slate-900">
+                              {item.skill}
+                            </span>
+                            {item.matchedVia &&
+                              item.matchedVia.toLowerCase() !==
+                                item.skill.toLowerCase() &&
+                              item.match >= SEMANTIC_BADGE_MIN_SIMILARITY && (
+                                <span
+                                  className="flex items-center gap-1 px-1.5 py-0.5 bg-violet-50 text-violet-700 rounded-full text-[10px] font-semibold"
+                                  title={`Kỹ năng gần nhất trong hồ sơ của bạn theo ngữ nghĩa (tương đồng ${item.match}%)`}
+                                >
+                                  <Sparkles className="w-2.5 h-2.5" />
+                                  liên quan tới {item.matchedVia}
+                                </span>
+                              )}
+                          </div>
+                          <span
+                            className="text-xs font-bold text-amber-600 shrink-0"
+                            title="Mức độ tương đồng ngữ nghĩa giữa kỹ năng của bạn và yêu cầu"
+                          >
+                            {item.match}% tương đồng
                           </span>
                         </div>
                         <div className="relative h-1.5 bg-slate-100 rounded-full overflow-hidden mb-1.5">
@@ -1261,12 +1394,6 @@ export function CVMatching() {
                           />
                         </div>
                         <div className="flex gap-4 text-[11px] text-slate-500">
-                          <span>
-                            Cấp độ của bạn:{" "}
-                            <span className="font-semibold text-slate-700">
-                              {item.cvLevel}
-                            </span>
-                          </span>
                           <span>
                             Yêu cầu:{" "}
                             <span className="font-semibold text-slate-700">
@@ -1370,15 +1497,116 @@ export function CVMatching() {
                   </div>
                 )}
 
-                <ResponsiveContainer width="100%" height={240}>
+                {(() => {
+                  const isOverview =
+                    selectedCategory === "All" &&
+                    categoryOverviewData.length >= 2;
+                  const dataToRender = isOverview
+                    ? categoryOverviewData
+                    : matchResult.radarData;
+                  const maxLabelLen = (dataToRender || []).reduce(
+                    (m: number, d: any) =>
+                      Math.max(m, (d.subject || "").length),
+                    0,
+                  );
+                  const innerWidth = 260 + maxLabelLen * 14;
+                  // Radar cần ≥3 trục; category ít kỹ năng → dùng bar ngang cho dễ đọc
+                  const useBars =
+                    !isOverview && (dataToRender?.length || 0) < 3;
+                  return (
+                    <>
+                      {selectedCategory !== "All" && (
+                        <button
+                          onClick={() =>
+                            handleCategoryChange(selectedMatchingId, "All")
+                          }
+                          className="mb-2 text-xs text-blue-600 hover:underline"
+                        >
+                          ← Quay lại tổng quan
+                        </button>
+                      )}
+                      {isOverview && (
+                        <p className="mb-2 text-[11px] text-slate-500">
+                          Điểm trung bình theo nhóm — bấm vào tên nhóm để xem chi tiết
+                        </p>
+                      )}
+                      {isOverviewLoading ? (
+                        <div className="flex items-center justify-center h-[260px] text-xs text-slate-400">
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          Đang tính tổng quan...
+                        </div>
+                      ) : useBars ? (
+                        <div className="space-y-4 py-4">
+                          <p className="text-[11px] text-slate-500">
+                            Nhóm này có ít kỹ năng — hiển thị dạng thanh để dễ so
+                            sánh với mức yêu cầu.
+                          </p>
+                          {dataToRender.map((d: any) => (
+                            <div key={d.subject}>
+                              <div className="mb-1 flex items-center justify-between text-xs">
+                                <span className="font-semibold text-slate-800">
+                                  {d.subject}
+                                </span>
+                                <span className="font-bold text-blue-600">
+                                  {d.you}%
+                                </span>
+                              </div>
+                              <div className="relative h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                                {/* Mức yêu cầu (nền xanh lá nhạt) */}
+                                <div
+                                  className="absolute inset-y-0 left-0 bg-emerald-100"
+                                  style={{ width: `${d.required ?? 100}%` }}
+                                />
+                                {/* Mức của bạn */}
+                                <div
+                                  className="absolute inset-y-0 left-0 rounded-full bg-blue-500"
+                                  style={{ width: `${d.you}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                          <div className="flex items-center gap-4 pt-1 text-[11px] text-slate-500">
+                            <span className="flex items-center gap-1.5">
+                              <span className="inline-block h-2 w-3 rounded bg-blue-500" />
+                              Bạn
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <span className="inline-block h-2 w-3 rounded bg-emerald-100" />
+                              Yêu cầu
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                <div
+                  ref={(el) => {
+                    if (el) {
+                      el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+                    }
+                  }}
+                  style={{ overflow: "auto" }}
+                >
+                  <div style={{ width: innerWidth, height: 260 }}>
+                    <ResponsiveContainer width="100%" height="100%">
                   <RadarChart
-                    data={matchResult.radarData}
+                    data={dataToRender}
                     margin={{ top: 10, right: 20, bottom: 10, left: 20 }}
+                    onClick={(e: any) => {
+                      if (isOverview && e?.activeLabel) {
+                        handleCategoryChange(
+                          selectedMatchingId,
+                          e.activeLabel,
+                        );
+                      }
+                    }}
+                    style={{ cursor: isOverview ? "pointer" : "default" }}
                   >
                     <PolarGrid stroke="#e2e8f0" />
                     <PolarAngleAxis
                       dataKey="subject"
-                      tick={{ fontSize: 10, fill: "#64748b" }}
+                      tick={{
+                        fontSize: 10,
+                        fill: isOverview ? "#2563eb" : "#64748b",
+                      }}
                     />
                     <PolarRadiusAxis
                       tick={false}
@@ -1402,6 +1630,12 @@ export function CVMatching() {
                     <Tooltip content={<CustomRadarTooltip />} />
                   </RadarChart>
                 </ResponsiveContainer>
+                  </div>
+                </div>
+                      )}
+                    </>
+                  );
+                })()}
                 <div className="flex gap-4 justify-center mt-2">
                   <div className="flex items-center gap-1.5 text-xs text-slate-500">
                     <span className="w-4 h-0.5 bg-blue-500 rounded-full inline-block" />
@@ -1417,22 +1651,38 @@ export function CVMatching() {
               {/* CTA */}
               <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-100 rounded-xl p-5">
                 <p className="text-sm font-bold text-violet-900 mb-1">
-                  Muốn có những gợi ý chi tiết?
+                  {matchResult.analysis.missingSkills.length > 0
+                    ? `Lấp đầy ${matchResult.analysis.missingSkills.length} kỹ năng còn thiếu`
+                    : "Nâng cấp các kỹ năng còn yếu"}
                 </p>
                 <p className="text-xs text-violet-700 mb-3">
-                  Xem chính xác những gì bạn cần học để lấp đầy các khoảng trống
-                  kỹ năng.
+                  Xem lộ trình học với khóa học gợi ý cho từng kỹ năng bạn cần bổ
+                  sung.
                 </p>
-                <Link
-                  href="/skill-gap"
-                  className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white rounded-lg text-xs font-semibold hover:bg-violet-700 transition-colors justify-center"
-                >
-                  Xem Phân Tích Khoảng Trống{" "}
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+                <div className="flex flex-col gap-2">
+                  <Link
+                    href="/roadmap"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white rounded-lg text-xs font-semibold hover:bg-violet-700 transition-colors justify-center"
+                  >
+                    Tới Lộ trình học <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                  <Link
+                    href="/skill-gap"
+                    className="text-center text-xs font-semibold text-violet-700 hover:underline"
+                  >
+                    Xem phân tích khoảng trống chi tiết
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
+
+          {/* So sánh vai trò phù hợp với CV (dùng dữ liệu career-paths) */}
+          <RoleComparison
+            currentScore={matchResult.overallScore}
+            currentRole={mode === "role" ? selectedRole : undefined}
+            onAnalyzeRole={(sg) => handleAnalyzeAndMatch(sg)}
+          />
         </>
       )}
 
@@ -1450,6 +1700,7 @@ export function CVMatching() {
             subject: s.skill_name,
             you: normalizePercent(s.similarity),
             required: 100,
+            matchedVia: s.matched_via || null,
           }));
 
           const strongMatches = (analyzeResult.radar_data || []).filter(
@@ -1538,15 +1789,33 @@ export function CVMatching() {
                       </div>
                       <div className="p-4 flex flex-wrap gap-2">
                         {partialMatches.length > 0 ? (
-                          partialMatches.map((item: any) => (
-                            <span
-                              key={item.skill_id}
-                              className="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full"
-                            >
-                              {item.skill_name} (
-                              {normalizePercent(item.similarity)}%)
-                            </span>
-                          ))
+                          partialMatches.map((item: any) => {
+                            const showVia =
+                              item.matched_via &&
+                              item.matched_via.toLowerCase() !==
+                                item.skill_name.toLowerCase() &&
+                              normalizePercent(item.similarity) >=
+                                SEMANTIC_BADGE_MIN_SIMILARITY;
+                            return (
+                              <span
+                                key={item.skill_id}
+                                className="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full"
+                                title={
+                                  showVia
+                                    ? `Liên quan ngữ nghĩa tới "${item.matched_via}" (tương đồng ${normalizePercent(item.similarity)}%)`
+                                    : "Độ tương đồng ngữ nghĩa với yêu cầu"
+                                }
+                              >
+                                {item.skill_name} (
+                                {normalizePercent(item.similarity)}% tương đồng)
+                                {showVia && (
+                                  <span className="ml-1 font-normal text-violet-600">
+                                    ↔ {item.matched_via}
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          })
                         ) : (
                           <p className="text-xs text-slate-400 italic">
                             Không có kỹ năng tương thích một phần.

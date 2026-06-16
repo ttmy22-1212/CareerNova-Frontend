@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   MapPin,
@@ -68,9 +69,16 @@ const matchColor = (m: number | null) => {
 };
 
 export function JobSearch() {
+  const searchParams = useSearchParams();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("");
   const [selectedExp, setSelectedExp] = useState("");
+  const [location, setLocation] = useState("");
+  const [searchGroup, setSearchGroup] = useState("");
+  const [listedWithinDays, setListedWithinDays] = useState<number | undefined>(
+    undefined,
+  );
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<string>("match_score");
 
@@ -83,6 +91,30 @@ export function JobSearch() {
   const [loading, setLoading] = useState(true);
   const [processingJobId, setProcessingJobId] = useState<string | null>(null);
   const [isRecommendedMode, setIsRecommendedMode] = useState(sortBy === "match_score");
+
+  // Đọc bộ lọc từ URL (vd: điều hướng từ "Top vị trí tuyển nhiều" ở Thị trường)
+  useEffect(() => {
+    const q = searchParams.get("q") || "";
+    const sg = searchParams.get("search_group") || "";
+    const wt = searchParams.get("work_type") || "";
+    const loc = searchParams.get("location") || "";
+    const exp = searchParams.get("experience_level") || "";
+    const withinDays = searchParams.get("listed_within_days");
+
+    if (q) setSearchTerm(q);
+    if (sg) setSearchGroup(sg);
+    if (wt) setSelectedType(wt);
+    if (loc) setLocation(loc);
+    if (exp) setSelectedExp(exp);
+    if (withinDays) setListedWithinDays(Number(withinDays));
+
+    // Có bộ lọc cụ thể → chuyển sang chế độ tìm kiếm thường (không dùng "Phù hợp nhất")
+    if (q || sg || wt || loc || exp) {
+      setSortBy("listed_time");
+      setShowFilters(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const loadJobs = useCallback(async () => {
     setLoading(true);
@@ -168,6 +200,9 @@ export function JobSearch() {
         ...(searchTerm && { q: searchTerm }),
         ...(selectedType && { work_type: selectedType }),
         ...(selectedExp && { experience_level: selectedExp }),
+        ...(location && { location }),
+        ...(searchGroup && { search_group: searchGroup }),
+        ...(listedWithinDays && { listed_within_days: listedWithinDays }),
         ...(activeCvId && { cv_id: activeCvId }),
         ...(minMatch !== undefined && { min_match: minMatch }),
       };
@@ -185,11 +220,30 @@ export function JobSearch() {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, selectedType, selectedExp, sortBy, currentPage, minMatch]);
+  }, [
+    searchTerm,
+    selectedType,
+    selectedExp,
+    location,
+    searchGroup,
+    listedWithinDays,
+    sortBy,
+    currentPage,
+    minMatch,
+  ]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedType, selectedExp, sortBy, minMatch]);
+  }, [
+    searchTerm,
+    selectedType,
+    selectedExp,
+    location,
+    searchGroup,
+    listedWithinDays,
+    sortBy,
+    minMatch,
+  ]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -436,6 +490,70 @@ export function JobSearch() {
         </div>
       )}
 
+      {/* Chip bộ lọc đang áp dụng */}
+      {(searchGroup ||
+        searchTerm ||
+        selectedType ||
+        location ||
+        selectedExp ||
+        listedWithinDays) && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-slate-500">
+            Đang lọc:
+          </span>
+          {[
+            searchGroup && {
+              label: `Vị trí: ${searchGroup}`,
+              clear: () => setSearchGroup(""),
+            },
+            searchTerm && {
+              label: `Từ khóa: ${searchTerm}`,
+              clear: () => setSearchTerm(""),
+            },
+            selectedType && {
+              label: `Hình thức: ${selectedType}`,
+              clear: () => setSelectedType(""),
+            },
+            location && {
+              label: `Địa điểm: ${location}`,
+              clear: () => setLocation(""),
+            },
+            selectedExp && {
+              label: `Kinh nghiệm: ${selectedExp}`,
+              clear: () => setSelectedExp(""),
+            },
+            listedWithinDays && {
+              label: `${listedWithinDays} ngày qua`,
+              clear: () => setListedWithinDays(undefined),
+            },
+          ]
+            .filter(Boolean)
+            .map((chip: any, i) => (
+              <button
+                key={i}
+                onClick={chip.clear}
+                className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+              >
+                {chip.label}
+                <X className="w-3 h-3" />
+              </button>
+            ))}
+          <button
+            onClick={() => {
+              setSearchTerm("");
+              setSelectedType("");
+              setSelectedExp("");
+              setLocation("");
+              setSearchGroup("");
+              setListedWithinDays(undefined);
+            }}
+            className="text-xs font-semibold text-slate-400 hover:text-slate-600 hover:underline"
+          >
+            Xóa tất cả
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-600">
           {isRecommendedMode ? (
@@ -492,6 +610,9 @@ export function JobSearch() {
               setSearchTerm("");
               setSelectedType("");
               setSelectedExp("");
+              setLocation("");
+              setSearchGroup("");
+              setListedWithinDays(undefined);
               setMinMatch(undefined);
             }}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"

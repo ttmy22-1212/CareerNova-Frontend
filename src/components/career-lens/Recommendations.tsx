@@ -388,25 +388,30 @@ export function Recommendations() {
 
   const bannerDesc = (() => {
     if (!topJob && !topSkill && !profile.major) {
-      return "Hoàn thiện hồ sơ và upload CV để nhận phân tích cá nhân hóa từ AI.";
+      return "Hoàn thiện hồ sơ và tải CV để nhận đề xuất cá nhân hóa.";
     }
     const parts: string[] = [];
     if (topJob) {
-      const rate = topJob.match_rate ? ` (${topJob.match_rate})` : "";
-      parts.push(`Bạn phù hợp tốt với vị trí ${topJob.title}${rate}.`);
+      const rate = topJob.match_rate ? ` (khớp ${topJob.match_rate})` : "";
+      parts.push(`Vị trí phù hợp nhất với bạn: ${topJob.title}${rate}.`);
     } else if (profile.major) {
-      parts.push(`Với chuyên ngành ${profile.major}, bạn có tiềm năng tốt trong lĩnh vực công nghệ.`);
+      parts.push(`Chuyên ngành: ${profile.major}.`);
     }
     if (topSkill) {
-      parts.push(`Tập trung phát triển kỹ năng ${topSkill.skill_name} để tăng cơ hội phù hợp.`);
+      parts.push(
+        `Kỹ năng nên ưu tiên phát triển: ${topSkill.skill_name}.`,
+      );
     }
-    return parts.join(" ") || "Upload CV và hoàn thiện hồ sơ để nhận đề xuất chính xác hơn.";
+    return (
+      parts.join(" ") ||
+      "Tải CV và hoàn thiện hồ sơ để nhận đề xuất chính xác hơn."
+    );
   })();
 
   const tabs = [
-    { key: "overview" as const, label: "Tổng Quan Sự Nghiệp", icon: Sparkles },
-    { key: "saved" as const, label: "Đề Xuất", icon: BookmarkCheck },
-    { key: "resources" as const, label: "Tài Nguyên", icon: BookOpen },
+    { key: "overview" as const, label: "Đề xuất cho bạn", icon: Sparkles },
+    { key: "saved" as const, label: "Báo cáo đã lưu", icon: BookmarkCheck },
+    { key: "resources" as const, label: "Tài nguyên học", icon: BookOpen },
   ];
 
   return (
@@ -422,7 +427,7 @@ export function Recommendations() {
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-5 h-5 text-violet-300 shrink-0" />
               <p className="text-violet-200 text-sm font-semibold">
-                Tóm Tắt Sự Nghiệp — Phân Tích Dữ Liệu
+                Tóm tắt từ hồ sơ của bạn
               </p>
             </div>
             <p className="text-white font-bold text-lg mb-3 max-w-xl leading-snug">

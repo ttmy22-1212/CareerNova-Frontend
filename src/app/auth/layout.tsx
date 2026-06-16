@@ -23,7 +23,7 @@ export default function AuthLayout({
               <div>
                 <p className="text-base font-bold text-white">Career Nova</p>
                 <p className="text-xs font-medium uppercase tracking-wider text-white/70">
-                  Platform
+                  Nền tảng
                 </p>
               </div>
             </Link>
@@ -69,7 +69,9 @@ export default function AuthLayout({
             <span className="rounded-full bg-white/15 px-3 py-1 font-semibold text-white ring-1 ring-white/20">
               Career Nova
             </span>
-            <span>CV matching, skill gap và market insight trong một luồng</span>
+            <span>
+              CV matching, skill gap và market insight trong một luồng
+            </span>
           </div>
         </aside>
 

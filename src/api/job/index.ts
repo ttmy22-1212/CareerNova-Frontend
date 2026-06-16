@@ -10,6 +10,8 @@ export interface GetJobsQueryDto {
   work_type?: string;
   location?: string;
   experience_level?: string;
+  search_group?: string;
+  listed_within_days?: number;
   cv_id?: string;
   min_match?: number;
   sortBy?: string;
