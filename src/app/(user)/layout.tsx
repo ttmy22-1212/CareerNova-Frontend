@@ -89,12 +89,12 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: "3 · Hành động",
     items: [
-      { href: paths.roadmap.index, label: "Khoá học & Lộ trình", Icon: Map },
       {
         href: paths.recommendations,
-        label: "Đề xuất",
+        label: "Đề xuất (tổng hợp)",
         Icon: BookmarkCheck,
       },
+      { href: paths.roadmap.index, label: "Khoá học & Lộ trình", Icon: Map },
       { href: paths.jobs.index, label: "Tìm kiếm việc làm", Icon: Search },
     ],
   },
@@ -135,8 +135,8 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
     subtitle: "Khoảng cách kỹ năng so với thị trường",
   },
   [paths.recommendations]: {
-    title: "Đề xuất",
-    subtitle: "Lộ trình & gợi ý cho bạn",
+    title: "Đề xuất (tổng hợp)",
+    subtitle: "Tóm tắt nhanh — dẫn tới Tìm việc, Phân tích kỹ năng, Roadmap",
   },
   [paths.profile.detail]: {
     title: "Hồ sơ Người dùng",
@@ -349,8 +349,8 @@ export default function UserLayout({
               <p className="text-sm font-bold leading-tight text-slate-900 dark:text-slate-100">
                 Career Nova
               </p>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                Nền tảng
+              <p className="text-[11px] font-medium leading-tight text-slate-400">
+                Phân tích kỹ năng & việc làm IT
               </p>
             </div>
           )}
@@ -667,6 +667,8 @@ export default function UserLayout({
 function JourneyBar({ journey }: { journey: AnyJourneyStage[] }) {
   const pathname = usePathname() ?? "/";
   if (pathname.startsWith("/onboarding")) return null;
+  // Trang Tổng quan Cá nhân đã có thanh "Hành trình của bạn" chi tiết → tránh trùng
+  if (pathname.startsWith(paths.personalDashboard)) return null;
 
   // Bạn đang ở đâu = stage có href khớp route hiện tại (khớp dài nhất)
   let hereIdx = -1;

@@ -20,15 +20,8 @@ import {
   Eye,
 } from "lucide-react";
 import Link from "next/link";
-import {
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
+import { SkillRadar } from "./SkillRadar";
+import { buildCategoryOverview as buildOverviewUtil } from "@/utils/category-overview";
 import CvApi from "@/api/cv";
 import MatchingApi from "@/api/matching";
 import profileApi from "@/api/profile";
@@ -192,29 +185,6 @@ function ScoreRing({ score, size = 96 }: { score: number; size?: number }) {
   );
 }
 
-const CustomRadarTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="bg-white p-3 border border-slate-200 shadow-xl rounded-lg text-xs font-medium">
-        <p className="text-slate-900 font-semibold mb-1 flex items-center gap-1">
-          <span>{data.subject}</span>
-          {data.matchedVia &&
-            data.matchedVia.toLowerCase() !==
-              (data.subject || "").toLowerCase() &&
-            data.you >= SEMANTIC_BADGE_MIN_SIMILARITY && (
-              <span className="text-violet-500 font-normal text-[11px] bg-violet-50 px-1.5 py-0.5 rounded">
-                (liên quan tới {data.matchedVia})
-              </span>
-            )}
-        </p>
-        <p className="text-blue-600">Bạn có: {data.you}%</p>
-        <p className="text-emerald-600">Yêu cầu: {data.required}%</p>
-      </div>
-    );
-  }
-  return null;
-};
 
 export function CVMatching() {
   const [mode, setMode] = useState<InputMode>("role");
@@ -279,6 +249,7 @@ export function CVMatching() {
     [],
   );
   const [categoryOverviewData, setCategoryOverviewData] = useState<any[]>([]);
+  const [modalCategoryOverview, setModalCategoryOverview] = useState<any[]>([]);
   const [isOverviewLoading, setIsOverviewLoading] = useState(false);
 
   const filteredRoles = benchmarkRoles.filter((role) =>
@@ -458,6 +429,9 @@ export function CVMatching() {
       if (Array.isArray(categoriesArray)) {
         if (isModal) {
           setModalCategories(categoriesArray);
+          buildOverviewUtil(matchId, categoriesArray)
+            .then(setModalCategoryOverview)
+            .catch(() => {});
         } else {
           setCategories(categoriesArray);
           buildCategoryOverview(matchId, categoriesArray);
@@ -1504,15 +1478,6 @@ export function CVMatching() {
                   const dataToRender = isOverview
                     ? categoryOverviewData
                     : matchResult.radarData;
-                  const maxLabelLen = (dataToRender || []).reduce(
-                    (m: number, d: any) =>
-                      Math.max(m, (d.subject || "").length),
-                    0,
-                  );
-                  const innerWidth = 260 + maxLabelLen * 14;
-                  // Radar cần ≥3 trục; category ít kỹ năng → dùng bar ngang cho dễ đọc
-                  const useBars =
-                    !isOverview && (dataToRender?.length || 0) < 3;
                   return (
                     <>
                       {selectedCategory !== "All" && (
@@ -1535,117 +1500,23 @@ export function CVMatching() {
                           <Loader2 className="w-4 h-4 animate-spin mr-2" />
                           Đang tính tổng quan...
                         </div>
-                      ) : useBars ? (
-                        <div className="space-y-4 py-4">
-                          <p className="text-[11px] text-slate-500">
-                            Nhóm này có ít kỹ năng — hiển thị dạng thanh để dễ so
-                            sánh với mức yêu cầu.
-                          </p>
-                          {dataToRender.map((d: any) => (
-                            <div key={d.subject}>
-                              <div className="mb-1 flex items-center justify-between text-xs">
-                                <span className="font-semibold text-slate-800">
-                                  {d.subject}
-                                </span>
-                                <span className="font-bold text-blue-600">
-                                  {d.you}%
-                                </span>
-                              </div>
-                              <div className="relative h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                                {/* Mức yêu cầu (nền xanh lá nhạt) */}
-                                <div
-                                  className="absolute inset-y-0 left-0 bg-emerald-100"
-                                  style={{ width: `${d.required ?? 100}%` }}
-                                />
-                                {/* Mức của bạn */}
-                                <div
-                                  className="absolute inset-y-0 left-0 rounded-full bg-blue-500"
-                                  style={{ width: `${d.you}%` }}
-                                />
-                              </div>
-                            </div>
-                          ))}
-                          <div className="flex items-center gap-4 pt-1 text-[11px] text-slate-500">
-                            <span className="flex items-center gap-1.5">
-                              <span className="inline-block h-2 w-3 rounded bg-blue-500" />
-                              Bạn
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                              <span className="inline-block h-2 w-3 rounded bg-emerald-100" />
-                              Yêu cầu
-                            </span>
-                          </div>
-                        </div>
                       ) : (
-                <div
-                  ref={(el) => {
-                    if (el) {
-                      el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
-                    }
-                  }}
-                  style={{ overflow: "auto" }}
-                >
-                  <div style={{ width: innerWidth, height: 260 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart
-                    data={dataToRender}
-                    margin={{ top: 10, right: 20, bottom: 10, left: 20 }}
-                    onClick={(e: any) => {
-                      if (isOverview && e?.activeLabel) {
-                        handleCategoryChange(
-                          selectedMatchingId,
-                          e.activeLabel,
-                        );
-                      }
-                    }}
-                    style={{ cursor: isOverview ? "pointer" : "default" }}
-                  >
-                    <PolarGrid stroke="#e2e8f0" />
-                    <PolarAngleAxis
-                      dataKey="subject"
-                      tick={{
-                        fontSize: 10,
-                        fill: isOverview ? "#2563eb" : "#64748b",
-                      }}
-                    />
-                    <PolarRadiusAxis
-                      tick={false}
-                      axisLine={false}
-                      domain={[0, 100]}
-                    />
-                    <Radar
-                      name="You"
-                      dataKey="you"
-                      stroke="#3b82f6"
-                      fill="#3b82f6"
-                      fillOpacity={0.35}
-                    />
-                    <Radar
-                      name="Required"
-                      dataKey="required"
-                      stroke="#10b981"
-                      fill="#10b981"
-                      fillOpacity={0.15}
-                    />
-                    <Tooltip content={<CustomRadarTooltip />} />
-                  </RadarChart>
-                </ResponsiveContainer>
-                  </div>
-                </div>
+                        <SkillRadar
+                          data={dataToRender}
+                          requiredLabel="Yêu cầu"
+                          matchedViaLabel="liên quan tới"
+                          matchedViaMinSimilarity={60}
+                          clickableLabels={isOverview}
+                          onLabelClick={(cat) =>
+                            handleCategoryChange(selectedMatchingId, cat)
+                          }
+                          scrollable
+                          height={260}
+                        />
                       )}
                     </>
                   );
                 })()}
-                <div className="flex gap-4 justify-center mt-2">
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <span className="w-4 h-0.5 bg-blue-500 rounded-full inline-block" />
-                    Bạn
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <span className="w-4 h-0.5 bg-emerald-500 rounded-full inline-block" />
-                    Yêu cầu
-                  </div>
-                </div>
               </div>
 
               {/* CTA */}
@@ -1872,53 +1743,56 @@ export function CVMatching() {
                       </div>
                     )}
 
-                    <ResponsiveContainer width="100%" height={240}>
-                      <RadarChart
-                        data={
-                          modalRadarDataFiltered.length > 0 ||
-                          selectedModalCategory !== "All"
-                            ? modalRadarDataFiltered
-                            : modalRadarData
-                        }
-                        margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                      >
-                        <PolarGrid stroke="#e2e8f0" />
-                        <PolarAngleAxis
-                          dataKey="subject"
-                          tick={{ fontSize: 9, fill: "#64748b" }}
-                        />
-                        <PolarRadiusAxis
-                          tick={false}
-                          axisLine={false}
-                          domain={[0, 100]}
-                        />
-                        <Radar
-                          name="You"
-                          dataKey="you"
-                          stroke="#3b82f6"
-                          fill="#3b82f6"
-                          fillOpacity={0.35}
-                        />
-                        <Radar
-                          name="Required"
-                          dataKey="required"
-                          stroke="#10b981"
-                          fill="#10b981"
-                          fillOpacity={0.15}
-                        />
-                        <Tooltip content={<CustomRadarTooltip />} />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                    <div className="flex gap-4 justify-center mt-3 text-[11px]">
-                      <div className="flex items-center gap-1 text-slate-600">
-                        <span className="w-3 h-0.5 bg-blue-500 inline-block rounded-full" />{" "}
-                        Bạn
-                      </div>
-                      <div className="flex items-center gap-1 text-slate-600">
-                        <span className="w-3 h-0.5 bg-emerald-500 inline-block rounded-full" />{" "}
-                        Yêu cầu
-                      </div>
-                    </div>
+                    {(() => {
+                      const isModalOverview =
+                        selectedModalCategory === "All" &&
+                        modalCategoryOverview.length >= 2;
+                      return (
+                        <>
+                          {selectedModalCategory !== "All" && (
+                            <button
+                              onClick={() =>
+                                handleCategoryChange(
+                                  analyzeResult.match_id,
+                                  "All",
+                                  true,
+                                )
+                              }
+                              className="mb-2 text-xs text-blue-600 hover:underline"
+                            >
+                              ← Quay lại tổng quan
+                            </button>
+                          )}
+                          {isModalOverview && (
+                            <p className="mb-2 text-[11px] text-slate-500">
+                              Điểm trung bình theo nhóm — bấm vào tên nhóm để xem
+                              chi tiết
+                            </p>
+                          )}
+                          <SkillRadar
+                            data={
+                              isModalOverview
+                                ? modalCategoryOverview
+                                : modalRadarDataFiltered.length > 0 ||
+                                    selectedModalCategory !== "All"
+                                  ? modalRadarDataFiltered
+                                  : modalRadarData
+                            }
+                            requiredLabel="Yêu cầu"
+                            matchedViaLabel="liên quan tới"
+                            matchedViaMinSimilarity={60}
+                            clickableLabels={isModalOverview}
+                            onLabelClick={(cat) =>
+                              handleCategoryChange(
+                                analyzeResult.match_id,
+                                cat,
+                                true,
+                              )
+                            }
+                          />
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 

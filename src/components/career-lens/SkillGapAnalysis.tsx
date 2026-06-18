@@ -2,6 +2,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { NextStepBanner } from "./NextStepBanner";
+import { SkillRadar } from "./SkillRadar";
+import { InfoTooltip, GLOSSARY } from "./InfoTooltip";
+import { buildCategoryOverview } from "@/utils/category-overview";
 import {
   Target,
   BookOpen,
@@ -15,11 +18,6 @@ import {
   Circle,
 } from "lucide-react";
 import {
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
   ResponsiveContainer,
   Tooltip,
   BarChart,
@@ -199,30 +197,6 @@ function RadarCategoryDropdown({
   );
 }
 
-const CustomRadarTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="rounded-lg border border-slate-200 bg-white p-3 text-xs font-medium shadow-xl">
-        <p className="mb-1 flex items-center gap-1 font-semibold text-slate-900">
-          <span>{data.subject}</span>
-          {data.matchedVia &&
-            data.matchedVia.toLowerCase() !==
-              (data.subject || "").toLowerCase() && (
-              <span className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-normal text-violet-500">
-                (khớp qua {data.matchedVia})
-              </span>
-            )}
-        </p>
-        <p className="text-blue-600">Bạn có: {data.you}%</p>
-        <p className="text-emerald-600">
-          Yêu cầu thị trường: {data.market || data.required || 100}%
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
 
 export function SkillGapAnalysis() {
   const [expandedPath, setExpandedPath] = useState<string | null>(null);
@@ -240,6 +214,7 @@ export function SkillGapAnalysis() {
   );
   const [categoryGaps, setCategoryGaps] = useState<CategoryGapDto[]>([]);
   const [matchRadarSkills, setMatchRadarSkills] = useState<any[]>([]);
+  const [categoryOverview, setCategoryOverview] = useState<any[]>([]);
   const [learningRecommendations, setLearningRecommendations] = useState<
     SkillGapLearningRecommendationDto[]
   >([]);
@@ -266,6 +241,9 @@ export function SkillGapAnalysis() {
             if (catRes?.data) {
               setMatchCategories(catRes.data);
               setMatchSkillCategory("All");
+              buildCategoryOverview(defaultMatchId, catRes.data)
+                .then(setCategoryOverview)
+                .catch(() => {});
             }
           }
         }
@@ -459,8 +437,9 @@ export function SkillGapAnalysis() {
 
           <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
             <div className="mb-3">
-              <h4 className="text-sm font-bold text-slate-900">
+              <h4 className="flex items-center gap-1 text-sm font-bold text-slate-900">
                 Kỹ năng của bạn so với thị trường
+                <InfoTooltip text={GLOSSARY.similarity} />
               </h4>
               <p className="mt-0.5 text-[11px] text-slate-500">
                 Theo kết quả so khớp CV mặc định
@@ -476,105 +455,43 @@ export function SkillGapAnalysis() {
                   isLoading={isMatchCategoryLoading}
                 />
 
-                {matchRadarData.length === 0 ? (
-                  <div className="mt-4 flex min-h-[200px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/70 text-xs text-slate-400">
-                    Không có dữ liệu phân tích kỹ năng cho danh mục này
-                  </div>
-                ) : matchRadarData.length < 3 ? (
-                  <div className="mt-4 space-y-4">
-                    <p className="text-[11px] text-slate-500">
-                      Nhóm này có ít kỹ năng — hiển thị dạng thanh để dễ so sánh
-                      với mức yêu cầu.
-                    </p>
-                    {matchRadarData.map((d: any) => (
-                      <div key={d.subject}>
-                        <div className="mb-1 flex items-center justify-between text-xs">
-                          <span className="flex items-center gap-1.5 font-semibold text-slate-800">
-                            {d.subject}
-                            {d.matchedVia &&
-                              d.matchedVia.toLowerCase() !==
-                                d.subject.toLowerCase() && (
-                                <span className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-normal text-violet-500">
-                                  khớp qua {d.matchedVia}
-                                </span>
-                              )}
-                          </span>
-                          <span className="font-bold text-blue-600">
-                            {d.you}%
-                          </span>
-                        </div>
-                        <div className="relative h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                          <div
-                            className="absolute inset-y-0 left-0 bg-emerald-100"
-                            style={{ width: `${d.required ?? 100}%` }}
-                          />
-                          <div
-                            className="absolute inset-y-0 left-0 rounded-full bg-blue-500"
-                            style={{ width: `${d.you}%` }}
-                          />
-                        </div>
+                {(() => {
+                  const isOverview =
+                    matchSkillCategory === "All" &&
+                    categoryOverview.length >= 2;
+                  if (!isOverview && matchRadarData.length === 0) {
+                    return (
+                      <div className="mt-4 flex min-h-[200px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/70 text-xs text-slate-400">
+                        Không có dữ liệu phân tích kỹ năng cho danh mục này
                       </div>
-                    ))}
-                    <div className="flex items-center gap-4 pt-1 text-[11px] text-slate-500">
-                      <span className="flex items-center gap-1.5">
-                        <span className="inline-block h-2 w-3 rounded bg-blue-500" />
-                        Bạn
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="inline-block h-2 w-3 rounded bg-emerald-100" />
-                        Yêu cầu thị trường
-                      </span>
+                    );
+                  }
+                  return (
+                    <div className="mt-4">
+                      {isOverview ? (
+                        <p className="mb-2 text-[11px] text-slate-500">
+                          Điểm trung bình theo nhóm — bấm vào tên nhóm để xem
+                          chi tiết
+                        </p>
+                      ) : (
+                        matchSkillCategory !== "All" && (
+                          <button
+                            onClick={() => setMatchSkillCategory("All")}
+                            className="mb-2 text-xs text-blue-600 hover:underline"
+                          >
+                            ← Quay lại tổng quan
+                          </button>
+                        )
+                      )}
+                      <SkillRadar
+                        data={isOverview ? categoryOverview : matchRadarData}
+                        requiredLabel="Yêu cầu thị trường"
+                        clickableLabels={isOverview}
+                        onLabelClick={(cat) => setMatchSkillCategory(cat)}
+                      />
                     </div>
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={240}>
-                    <RadarChart
-                      data={matchRadarData}
-                      margin={{ top: 10, right: 25, bottom: 10, left: 25 }}
-                    >
-                      <PolarGrid stroke="#e2e8f0" />
-                      <PolarAngleAxis
-                        dataKey="subject"
-                        tick={{
-                          fontSize: 10,
-                          fill: "#64748b",
-                          fontWeight: 500,
-                        }}
-                      />
-                      <PolarRadiusAxis
-                        tick={false}
-                        axisLine={false}
-                        domain={[0, 100]}
-                      />
-                      <Radar
-                        name="Bạn"
-                        dataKey="you"
-                        stroke="#3b82f6"
-                        fill="#3b82f6"
-                        fillOpacity={0.35}
-                      />
-                      <Radar
-                        name="Thị trường"
-                        dataKey="required"
-                        stroke="#10b981"
-                        fill="#10b981"
-                        fillOpacity={0.15}
-                      />
-                      <Tooltip content={<CustomRadarTooltip />} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                )}
-
-                <div className="mt-1 flex justify-center gap-5">
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <span className="inline-block h-0.5 w-4 rounded-full bg-blue-500" />
-                    Bạn
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <span className="inline-block h-0.5 w-4 rounded-full bg-emerald-500" />
-                    Yêu cầu thị trường
-                  </div>
-                </div>
+                  );
+                })()}
               </>
             ) : (
               <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-200 bg-white/70 px-4 text-center">

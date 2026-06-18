@@ -703,6 +703,68 @@ export default function ProfilePage() {
               );
             })()}
 
+            {/* Hồ sơ hướng nghiệp RIASEC */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-violet-500" />
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Hồ sơ hướng nghiệp (RIASEC)
+                  </h3>
+                  {profile.riasec?.code && (
+                    <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-bold text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
+                      {profile.riasec.code}
+                    </span>
+                  )}
+                </div>
+                <Link
+                  href="/onboarding/welcome?step=2"
+                  className="text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  {profile.riasec ? "Làm lại bài test" : "Làm bài test"}
+                </Link>
+              </div>
+
+              {profile.riasec && profile.riasec.top.length > 0 ? (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {profile.riasec.top.map((d) => (
+                      <div
+                        key={d.dim}
+                        className="rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40"
+                      >
+                        <div className="mb-1 flex items-center justify-between">
+                          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                            {d.label}
+                          </span>
+                          <span className="text-xs font-bold text-violet-600 dark:text-violet-300">
+                            {d.percent}%
+                          </span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500"
+                            style={{ width: `${d.percent}%` }}
+                          />
+                        </div>
+                        <p className="mt-1 text-[10px] leading-snug text-slate-500 dark:text-slate-400">
+                          {d.desc}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-[11px] text-slate-400">
+                    Dựa trên mô hình RIASEC (Holland) & O*NET Interest Profiler.
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Bạn chưa làm bài trắc nghiệm hướng nghiệp. Hoàn thành để biết
+                  nhóm sở thích nghề nghiệp và các hướng IT phù hợp.
+                </p>
+              )}
+            </div>
+
             <div className="grid gap-5 md:grid-cols-3">
               <Card icon={Compass} title="Định hướng quan tâm" tone="blue">
                 {profile.interests.length === 0 ? (

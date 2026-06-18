@@ -296,6 +296,8 @@ export function JobDetail() {
                 <button
                   onClick={handleToggleSaveJob}
                   disabled={saving}
+                  aria-label={isSaved ? "Bỏ lưu việc làm" : "Lưu việc làm"}
+                  aria-pressed={isSaved}
                   className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-center disabled:opacity-50 ${
                     isSaved
                       ? "bg-amber-50 border-amber-200 text-amber-600 dark:bg-amber-950/30 dark:border-amber-900"
@@ -306,7 +308,10 @@ export function JobDetail() {
                     className={`w-5 h-5 ${isSaved ? "fill-amber-500 text-amber-500" : ""}`}
                   />
                 </button>
-                <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors">
+                <button
+                  aria-label="Chia sẻ việc làm"
+                  className="p-2.5 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
+                >
                   <Share2 className="w-4 h-4" />
                 </button>
               </div>

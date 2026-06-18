@@ -22,11 +22,6 @@ import {
   Flame,
 } from "lucide-react";
 import {
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
   ResponsiveContainer,
   Tooltip,
   AreaChart,
@@ -35,6 +30,9 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
+import { SkillRadar } from "./SkillRadar";
+import { InfoTooltip, GLOSSARY } from "./InfoTooltip";
+import { buildCategoryOverview } from "@/utils/category-overview";
 
 import PersonalDashboardApi from "@/api/personal-dashboard";
 import ProfileApi from "@/api/profile";
@@ -154,31 +152,6 @@ function RadarCategoryDropdown({
   );
 }
 
-const CustomRadarTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="bg-white p-3 border border-slate-200 shadow-xl rounded-lg text-xs font-medium">
-        <p className="text-slate-900 font-semibold mb-1 flex items-center gap-1">
-          <span>{data.subject}</span>
-          {data.matchedVia &&
-            data.matchedVia.toLowerCase() !==
-              (data.subject || "").toLowerCase() &&
-            data.you >= 60 && (
-              <span className="text-violet-500 font-normal text-[10px] bg-violet-50 px-1.5 py-0.5 rounded">
-                (liên quan tới {data.matchedVia})
-              </span>
-            )}
-        </p>
-        <p className="text-blue-600">Bạn có: {data.you}%</p>
-        <p className="text-emerald-600">
-          Yêu cầu thị trường: {data.market || 100}%
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
 
 // ── Component ────────────────────────────────────────────────────
 export function PersonalDashboard() {
@@ -188,6 +161,7 @@ export function PersonalDashboard() {
   const [categories, setCategories] = useState<MatchCategoryResponse[]>([]);
   const [isCategoryLoading, setIsCategoryLoading] = useState<boolean>(false);
   const [skillCategory, setSkillCategory] = useState<string>("");
+  const [categoryOverview, setCategoryOverview] = useState<any[]>([]);
 
   // States quản lý dữ liệu thực tế từ API
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
@@ -231,6 +205,9 @@ export function PersonalDashboard() {
             if (catRes.data.length > 0 && !skillCategory) {
               setSkillCategory("All"); // Đồng bộ giá trị mặc định ban đầu là "All"
             }
+            buildCategoryOverview(defaultMatchId, catRes.data)
+              .then(setCategoryOverview)
+              .catch(() => {});
           }
         }
       }
@@ -945,8 +922,9 @@ export function PersonalDashboard() {
             {/* CỘT TRÁI: Radar chart theo danh mục */}
             <div className="flex flex-col bg-slate-50/60 border border-slate-100 rounded-2xl p-5 gap-4">
               <div>
-                <h4 className="text-sm font-bold text-slate-900">
+                <h4 className="flex items-center gap-1 text-sm font-bold text-slate-900">
                   Kỹ năng của bạn so với thị trường
+                  <InfoTooltip text={GLOSSARY.similarity} />
                 </h4>
                 <p className="text-[11px] text-slate-500 mt-0.5">
                   Theo từng nhóm kỹ năng
@@ -962,70 +940,58 @@ export function PersonalDashboard() {
                 />
               </div>
 
-              {radarData.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-3 border border-dashed border-slate-200 rounded-xl bg-white/70 px-4 text-center min-h-[200px]">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
-                    <Target className="w-6 h-6 text-blue-400" />
+              {(() => {
+                const isOverview =
+                  skillCategory === "All" && categoryOverview.length >= 2;
+                if (!isOverview && radarData.length === 0) {
+                  return (
+                    <div className="flex-1 flex flex-col items-center justify-center gap-3 border border-dashed border-slate-200 rounded-xl bg-white/70 px-4 text-center min-h-[200px]">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
+                        <Target className="w-6 h-6 text-blue-400" />
+                      </div>
+                      <p className="text-sm font-semibold text-slate-700">
+                        Chưa có dữ liệu phân tích kỹ năng
+                      </p>
+                      <p className="text-xs text-slate-500 max-w-xs">
+                        Tải CV và chạy đối soát để xem radar kỹ năng cá nhân của
+                        bạn.
+                      </p>
+                      <Link
+                        href="/cv-matching"
+                        className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
+                      >
+                        Bắt đầu đối soát CV
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="flex-1">
+                    {isOverview ? (
+                      <p className="mb-2 text-[11px] text-slate-500">
+                        Điểm trung bình theo nhóm — bấm vào tên nhóm để xem chi
+                        tiết
+                      </p>
+                    ) : (
+                      skillCategory !== "All" && (
+                        <button
+                          onClick={() => setSkillCategory("All")}
+                          className="mb-2 text-xs text-blue-600 hover:underline"
+                        >
+                          ← Quay lại tổng quan
+                        </button>
+                      )
+                    )}
+                    <SkillRadar
+                      data={isOverview ? categoryOverview : radarData}
+                      requiredLabel="Yêu cầu thị trường"
+                      clickableLabels={isOverview}
+                      onLabelClick={(cat) => setSkillCategory(cat)}
+                    />
                   </div>
-                  <p className="text-sm font-semibold text-slate-700">
-                    Chưa có dữ liệu phân tích kỹ năng
-                  </p>
-                  <p className="text-xs text-slate-500 max-w-xs">
-                    Tải CV và chạy đối soát để xem radar kỹ năng cá nhân của bạn.
-                  </p>
-                  <Link
-                    href="/cv-matching"
-                    className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
-                  >
-                    Bắt đầu đối soát CV
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <RadarChart
-                    data={radarData}
-                    margin={{ top: 10, right: 25, bottom: 10, left: 25 }}
-                  >
-                    <PolarGrid stroke="#e2e8f0" />
-                    <PolarAngleAxis
-                      dataKey="subject"
-                      tick={{ fontSize: 10, fill: "#64748b", fontWeight: 500 }}
-                    />
-                    <PolarRadiusAxis
-                      tick={false}
-                      axisLine={false}
-                      domain={[0, 100]}
-                    />
-                    <Radar
-                      name="Bạn"
-                      dataKey="you"
-                      stroke="#3b82f6"
-                      fill="#3b82f6"
-                      fillOpacity={0.35}
-                    />
-                    <Radar
-                      name="Thị trường"
-                      dataKey="required"
-                      stroke="#10b981"
-                      fill="#10b981"
-                      fillOpacity={0.15}
-                    />
-                    <Tooltip content={<CustomRadarTooltip />} />
-                  </RadarChart>
-                </ResponsiveContainer>
-              )}
-
-              <div className="flex gap-4 justify-center border-t border-slate-200/60 pt-3 mt-auto">
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                  <span className="w-3.5 h-0.5 bg-blue-500 inline-block rounded-full" />
-                  Bạn
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                  <span className="w-3.5 h-0.5 bg-emerald-500 inline-block rounded-full" />
-                  Yêu cầu thị trường
-                </div>
-              </div>
+                );
+              })()}
             </div>
 
             {/* CỘT PHẢI: Top 7 kỹ năng cần cải thiện khẩn cấp nhất */}

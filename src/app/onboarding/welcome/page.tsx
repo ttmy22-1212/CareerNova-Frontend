@@ -38,7 +38,7 @@ import ProfileApi from "@/api/profile";
 import JobApi from "@/api/job";
 import CvApi from "@/api/cv";
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
 const majors: { value: StudentMajor; label: string; desc: string }[] = [
   { value: "CS", label: "Khoa học Máy tính", desc: "Computer Science" },
@@ -114,155 +114,137 @@ const goals: { value: Goal; label: string; desc: string; Icon: any }[] = [
   },
 ];
 
-const quizQuestions: {
-  q: string;
-  options: {
-    text: string;
-    weights: Partial<Record<CareerInterest, number>>;
-  }[];
-}[] = [
-  {
-    q: "Bạn thích làm việc với gì hơn?",
-    options: [
-      {
-        text: "Giao diện người dùng đẹp, tương tác mượt",
-        weights: { frontend: 2, mobile: 1 },
-      },
-      {
-        text: "Logic phức tạp, hệ thống chịu tải lớn",
-        weights: { backend: 2, devops: 1 },
-      },
-      {
-        text: "Số liệu, thuật toán, mô hình dự đoán",
-        weights: { data: 2, ai_ml: 1 },
-      },
-      {
-        text: "Bảo mật, audit, tìm lỗ hổng",
-        weights: { cybersecurity: 2, qa: 1 },
-      },
-    ],
+// ── Bài trắc nghiệm hướng nghiệp theo RIASEC (Holland Codes / O*NET Interest Profiler) ──
+// Nguồn: J. Holland — Theory of Vocational Choice; O*NET Interest Profiler (U.S. Dept of Labor).
+type Riasec = "R" | "I" | "A" | "S" | "E" | "C";
+
+const RIASEC_META: Record<
+  Riasec,
+  { label: string; short: string; desc: string }
+> = {
+  R: {
+    label: "Thực hành",
+    short: "Realistic",
+    desc: "Thích làm việc với hệ thống, máy móc, hạ tầng và tự động hóa.",
   },
-  {
-    q: "Phong cách làm việc của bạn?",
-    options: [
-      {
-        text: "Visual & sáng tạo — thích thấy kết quả ngay",
-        weights: { frontend: 2, mobile: 1 },
-      },
-      {
-        text: "Logic & cấu trúc — thích tối ưu, refactor",
-        weights: { backend: 2, fullstack: 1 },
-      },
-      {
-        text: "Tỉ mỉ & phân tích — thích đào sâu data",
-        weights: { data: 2, ai_ml: 1, qa: 1 },
-      },
-      {
-        text: "Hệ thống & tự động — thích hạ tầng",
-        weights: { devops: 2, cybersecurity: 1 },
-      },
-    ],
+  I: {
+    label: "Phân tích",
+    short: "Investigative",
+    desc: "Thích nghiên cứu, giải quyết vấn đề bằng logic và dữ liệu.",
   },
-  {
-    q: "Khi gặp lỗi, bạn thường?",
-    options: [
-      {
-        text: "Inspect element, thử nhiều UI khác nhau",
-        weights: { frontend: 2, mobile: 1 },
-      },
-      {
-        text: "Đọc log, debug step-by-step",
-        weights: { backend: 2, fullstack: 1 },
-      },
-      {
-        text: "Phân tích pattern, viết test reproduce",
-        weights: { qa: 2, backend: 1 },
-      },
-      {
-        text: "Dựng môi trường mô phỏng để cô lập",
-        weights: { devops: 2, cybersecurity: 1 },
-      },
-    ],
+  A: {
+    label: "Sáng tạo",
+    short: "Artistic",
+    desc: "Thích thiết kế, thẩm mỹ và tạo ra cái mới.",
   },
-  {
-    q: "Mục tiêu sự nghiệp 5 năm tới?",
-    options: [
-      {
-        text: "Senior Engineer, làm sản phẩm cho hàng triệu user",
-        weights: { fullstack: 2, frontend: 1, backend: 1, mobile: 1 },
-      },
-      {
-        text: "ML Engineer / Data Scientist",
-        weights: { ai_ml: 2, data: 1 },
-      },
-      {
-        text: "Cloud Architect / SRE",
-        weights: { devops: 2, backend: 1 },
-      },
-      {
-        text: "Security Researcher / Pentester",
-        weights: { cybersecurity: 2 },
-      },
-      {
-        text: "QA Lead / Automation Architect",
-        weights: { qa: 2, backend: 1 },
-      },
-    ],
+  S: {
+    label: "Xã hội",
+    short: "Social",
+    desc: "Thích giúp đỡ, hướng dẫn và làm việc cùng người khác.",
   },
-  {
-    q: "Sản phẩm nào bạn thích build nhất?",
-    options: [
-      {
-        text: "Web app SaaS, dashboard",
-        weights: { frontend: 2, fullstack: 1 },
-      },
-      {
-        text: "Mobile app trên store",
-        weights: { mobile: 2, frontend: 1 },
-      },
-      {
-        text: "Recommendation engine, chatbot AI",
-        weights: { ai_ml: 2, data: 1 },
-      },
-      {
-        text: "API service, microservices, tool nội bộ",
-        weights: { backend: 2, devops: 1 },
-      },
-      {
-        text: "Test automation, monitoring, security tooling",
-        weights: { qa: 2, cybersecurity: 1, devops: 1 },
-      },
-    ],
+  E: {
+    label: "Quản trị",
+    short: "Enterprising",
+    desc: "Thích dẫn dắt, thuyết phục và khởi xướng.",
   },
+  C: {
+    label: "Quy chuẩn",
+    short: "Conventional",
+    desc: "Thích sự tỉ mỉ, tổ chức và quy trình chính xác.",
+  },
+};
+
+// 18 hoạt động (3/nhóm), phong cách O*NET: "Bạn thích hoạt động này tới mức nào?"
+const riasecItems: { text: string; dim: Riasec }[] = [
+  { text: "Cấu hình máy chủ, mạng hoặc thiết bị phần cứng", dim: "R" },
+  { text: "Phân tích dữ liệu để tìm ra quy luật và kết luận", dim: "I" },
+  { text: "Thiết kế giao diện đẹp, trải nghiệm người dùng mượt mà", dim: "A" },
+  { text: "Hướng dẫn, hỗ trợ người khác giải quyết vấn đề kỹ thuật", dim: "S" },
+  { text: "Dẫn dắt một dự án và đưa ra các quyết định quan trọng", dim: "E" },
+  { text: "Kiểm thử kỹ lưỡng, đảm bảo chất lượng theo quy chuẩn", dim: "C" },
+  { text: "Tự động hóa triển khai (CI/CD), dựng và vận hành hạ tầng", dim: "R" },
+  { text: "Nghiên cứu thuật toán hoặc mô hình để giải bài toán khó", dim: "I" },
+  { text: "Sáng tạo ý tưởng sản phẩm, hình ảnh hoặc hiệu ứng mới", dim: "A" },
+  { text: "Làm việc nhóm, điều phối để mọi người cùng tiến độ", dim: "S" },
+  { text: "Thuyết phục người khác ủng hộ một ý tưởng hoặc sản phẩm", dim: "E" },
+  { text: "Tổ chức, quản lý dữ liệu và tài liệu một cách có hệ thống", dim: "C" },
+  { text: "Làm việc với thiết bị vật lý: IoT, robot, hệ thống nhúng", dim: "R" },
+  { text: "Tìm nguyên nhân gốc của một lỗi phức tạp", dim: "I" },
+  { text: "Xây dựng hoạt ảnh, đồ họa hoặc bố cục trực quan", dim: "A" },
+  { text: "Giải thích vấn đề kỹ thuật cho người không chuyên", dim: "S" },
+  { text: "Khởi xướng sản phẩm mới, nghĩ về thị trường và người dùng", dim: "E" },
+  { text: "Làm việc tỉ mỉ với quy trình, checklist, độ chính xác cao", dim: "C" },
 ];
 
+// Thang Likert 5 mức (1..5)
+const likertScale: { value: number; label: string }[] = [
+  { value: 1, label: "Rất không thích" },
+  { value: 2, label: "Không thích" },
+  { value: 3, label: "Trung lập" },
+  { value: 4, label: "Thích" },
+  { value: 5, label: "Rất thích" },
+];
+
+// Hồ sơ sở thích RIASEC của TỪNG nghề IT — bám mã sở thích O*NET (3=chính, 2=phụ, 1=thứ ba).
+// Đề xuất = so khớp hồ sơ RIASEC của user với từng hồ sơ nghề (giống cách O*NET match người↔nghề).
+const ROLE_RIASEC_PROFILE: Record<
+  CareerInterest,
+  Partial<Record<Riasec, number>>
+> = {
+  frontend: { A: 3, I: 1, R: 1 }, // Web & Digital Interface Designers (A,I,R)
+  mobile: { A: 2, I: 2, R: 1 }, // App dev (Software Dev + thiết kế)
+  backend: { I: 3, C: 2, R: 1 }, // Software Developers (I,C,R)
+  fullstack: { I: 2, A: 1, E: 1, C: 1 }, // rộng + thiên sản phẩm
+  data: { I: 3, C: 2, R: 1 }, // Data Scientists (I,C,R)
+  ai_ml: { I: 3, C: 1, R: 1 }, // nghiên cứu — nặng Investigative
+  devops: { R: 3, C: 2, I: 1 }, // Network/Sys Admin (R,I,C)
+  cybersecurity: { I: 3, C: 2, R: 1 }, // Information Security Analysts (I,C,R)
+  qa: { C: 3, I: 1 }, // QA Analysts & Testers (C,I)
+};
+
+const ITEMS_PER_DIM = 3;
+const MAX_DIM_SCORE = ITEMS_PER_DIM * 5; // 15
+
 const isQuizComplete = (answers: number[]) =>
-  quizQuestions.every((question, qIdx) => {
-    const answer = answers[qIdx];
-    return Number.isInteger(answer) && answer >= 0 && answer < question.options.length;
+  riasecItems.every((_, i) => {
+    const a = answers[i];
+    return Number.isInteger(a) && a >= 1 && a <= 5;
   });
+
+// Tính điểm 6 nhóm RIASEC (mỗi nhóm 0..15) + phần trăm chuẩn hóa
+const computeRiasecScores = (answers: number[]) => {
+  const raw: Record<Riasec, number> = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
+  riasecItems.forEach((item, i) => {
+    const a = answers[i];
+    if (Number.isInteger(a)) raw[item.dim] += a;
+  });
+  return (Object.keys(raw) as Riasec[])
+    .map((dim) => ({
+      dim,
+      score: raw[dim],
+      percent: Math.round((raw[dim] / MAX_DIM_SCORE) * 100),
+    }))
+    .sort((a, b) => b.score - a.score);
+};
 
 const getCareerQuizSuggestions = (answers: number[]): CareerInterest[] => {
-  const scores = new Map<CareerInterest, number>(
-    careerResultOrder.map((career) => [career, 0]),
-  );
-
-  answers.forEach((optIdx, qIdx) => {
-    const option = quizQuestions[qIdx]?.options[optIdx];
-    if (!option) return;
-
-    Object.entries(option.weights).forEach(([career, weight]) => {
-      const key = career as CareerInterest;
-      scores.set(key, (scores.get(key) ?? 0) + Number(weight || 0));
-    });
+  // Vector sở thích của user theo 6 nhóm RIASEC, chuẩn hóa 0..1
+  const dims = computeRiasecScores(answers);
+  const userVec: Record<Riasec, number> = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
+  dims.forEach((d) => {
+    userVec[d.dim] = d.score / MAX_DIM_SCORE;
   });
 
+  // Điểm khớp mỗi nghề = tổng (sở thích user × trọng số nhóm trong hồ sơ nghề)
   return careerResultOrder
-    .map((career) => ({
-      career,
-      score: scores.get(career) ?? 0,
-      order: careerResultOrder.indexOf(career),
-    }))
+    .map((career) => {
+      const profile = ROLE_RIASEC_PROFILE[career] || {};
+      const score = (Object.entries(profile) as [Riasec, number][]).reduce(
+        (sum, [dim, w]) => sum + userVec[dim] * w,
+        0,
+      );
+      return { career, score, order: careerResultOrder.indexOf(career) };
+    })
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score || a.order - b.order)
     .slice(0, 3)
@@ -280,6 +262,10 @@ export default function OnboardingWizard() {
   const [step, setStep] = useState(initialStep);
   const [skillInput, setSkillInput] = useState("");
   const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
+  // Nhánh ở bước Định hướng: "known" = đã rõ (chọn tay) · "explore" = chưa rõ (làm quiz RIASEC)
+  const [directionMode, setDirectionMode] = useState<"known" | "explore" | null>(
+    null,
+  );
 
   const [dbSkills, setDbSkills] = useState<string[]>([]);
   const [isSearchingSkills, setIsSearchingSkills] = useState(false);
@@ -343,6 +329,14 @@ export default function OnboardingWizard() {
     setStep(initialStep);
   }, [initialStep]);
 
+  // Khôi phục nhánh Định hướng cho user quay lại (đã làm quiz → explore; đã chọn tay → known)
+  useEffect(() => {
+    if (directionMode) return;
+    if (profile.quizDone) setDirectionMode("explore");
+    else if (profile.interests.length > 0) setDirectionMode("known");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile.quizDone, profile.interests.length]);
+
   const progress = (step / TOTAL_STEPS) * 100;
 
   const next = async () => {
@@ -354,38 +348,36 @@ export default function OnboardingWizard() {
             current_step: 2,
             major: profile.major || undefined,
             school: profile.university,
+            current_year: Number(profile.year),
           });
           setStep((s) => Math.min(s + 1, TOTAL_STEPS));
           break;
 
-        case 2:
+        case 2: {
+          // Nhánh "khám phá" → suy ra định hướng từ kết quả quiz; nhánh "đã rõ" → dùng lựa chọn tay
+          let orientationRoles = profile.interests;
+          if (directionMode === "explore" && isQuizComplete(quizAnswers)) {
+            orientationRoles = getCareerQuizSuggestions(quizAnswers);
+            setProfile({ interests: orientationRoles });
+          }
           await ProfileApi.updateOnboardingProgress({
             current_step: 3,
-            current_year: Number(profile.year),
-            orientation: profile.interests.join(","),
+            orientation: orientationRoles.join(","),
           });
           setStep((s) => Math.min(s + 1, TOTAL_STEPS));
           break;
+        }
 
         case 3:
-          await CvApi.syncProfileSkills({
-            cv_id: uploadedCvId,
-            skills: profile.topSkills.map((s) => s.name),
-          });
+          // Bước Kỹ năng & CV cho phép bỏ qua → chỉ đồng bộ khi có dữ liệu
+          if (uploadedCvId || profile.topSkills.length > 0) {
+            await CvApi.syncProfileSkills({
+              cv_id: uploadedCvId,
+              skills: profile.topSkills.map((s) => s.name),
+            });
+          }
           await ProfileApi.updateOnboardingProgress({
             current_step: 4,
-          });
-          setStep((s) => Math.min(s + 1, TOTAL_STEPS));
-          break;
-
-        case 4:
-          await ProfileApi.updateOnboardingProgress({
-            current_step: 5,
-            objective: profile.goal || undefined,
-            target_salary: profile.targetSalaryUSD
-              ? Number(profile.targetSalaryUSD)
-              : undefined,
-            prefer_remote: profile.preferRemote,
           });
           setStep((s) => Math.min(s + 1, TOTAL_STEPS));
           break;
@@ -407,23 +399,43 @@ export default function OnboardingWizard() {
   const finish = async () => {
     try {
       setIsLoading(true);
-      const suggested = getCareerQuizSuggestions(quizAnswers);
-      const selectedOrientation = profile.interests.join(",");
-      const quizOrientation = suggested.join(",");
-      const orientation =
-        selectedOrientation || quizOrientation
-          ? `${selectedOrientation}${quizOrientation ? `|${quizOrientation}` : ""}`
-          : undefined;
+      const quizTaken = isQuizComplete(quizAnswers);
+      // Định hướng: ưu tiên kết quả quiz nếu có, ngược lại dùng lựa chọn tay
+      const suggested = quizTaken
+        ? getCareerQuizSuggestions(quizAnswers)
+        : profile.interests.slice(0, 3);
+
+      // Hồ sơ RIASEC chỉ tính khi user đã làm quiz
+      let riasec: { code: string; top: any[] } | null = null;
+      if (quizTaken) {
+        const top = computeRiasecScores(quizAnswers)
+          .slice(0, 3)
+          .map((d) => ({
+            dim: d.dim,
+            label: RIASEC_META[d.dim].label,
+            short: RIASEC_META[d.dim].short,
+            percent: d.percent,
+            desc: RIASEC_META[d.dim].desc,
+          }));
+        riasec = { code: top.map((t) => t.dim).join(""), top };
+      }
 
       setProfile({
-        quizDone: true,
+        quizDone: quizTaken,
         suggestedPaths: suggested,
+        riasec,
+        goal: profile.goal,
         completedAt: new Date().toISOString(),
       });
 
       await ProfileApi.updateOnboardingProgress({
-        current_step: 5,
-        orientation,
+        current_step: TOTAL_STEPS,
+        orientation: suggested.join(","),
+        objective: profile.goal || undefined,
+        target_salary: profile.targetSalaryUSD
+          ? Number(profile.targetSalaryUSD)
+          : undefined,
+        prefer_remote: profile.preferRemote,
       });
       await ProfileApi.completeOnboarding();
 
@@ -438,13 +450,23 @@ export default function OnboardingWizard() {
 
   const canNext = useMemo(() => {
     if (isLoading || isUploadingCv || isSearchingSkills) return false;
-    if (step === 1) return !!profile.major;
-    if (step === 2) return !!profile.year && profile.interests.length > 0;
-    if (step === 3) return profile.topSkills.length >= 3;
-    if (step === 4) return !!profile.goal;
-    if (step === 5) return isQuizComplete(quizAnswers);
+    if (step === 1) return !!profile.major && !!profile.year;
+    if (step === 2)
+      return directionMode === "explore"
+        ? isQuizComplete(quizAnswers)
+        : directionMode === "known" && profile.interests.length > 0;
+    if (step === 3) return true; // Kỹ năng & CV — cho phép bỏ qua
+    if (step === 4) return true; // Mục tiêu — cho phép bỏ qua
     return false;
-  }, [step, profile, quizAnswers, isLoading, isUploadingCv, isSearchingSkills]);
+  }, [
+    step,
+    profile,
+    quizAnswers,
+    directionMode,
+    isLoading,
+    isUploadingCv,
+    isSearchingSkills,
+  ]);
 
   const handleSkillInputChange = async (value: string) => {
     setSkillInput(value);
@@ -555,28 +577,87 @@ export default function OnboardingWizard() {
   };
 
   if (showResult) {
+    const quizTaken = isQuizComplete(quizAnswers);
+    const topDims = quizTaken ? computeRiasecScores(quizAnswers).slice(0, 3) : [];
+    const riasecCode = topDims.map((d) => d.dim).join("");
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 px-4 py-10 flex items-center justify-center">
-        <div className="mx-auto max-w-md w-full text-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-200 animate-bounce">
+        <div className="mx-auto max-w-lg w-full text-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-200">
             <Check className="h-7 w-7 text-white" />
           </div>
 
-          <h1 className="text-2xl font-bold text-slate-900">Chúc mừng bạn!</h1>
-          <p className="mt-1 text-sm text-slate-500 mb-6">
-            Dựa trên Kiểm tra hướng nghiệp, đây là các định hướng phù hợp nhất
-            với bạn:
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {quizTaken ? "Hồ sơ hướng nghiệp của bạn" : "Hoàn tất hồ sơ!"}
+          </h1>
+          {quizTaken ? (
+            <p className="mt-1 text-sm text-slate-500 mb-5">
+              Mã sở thích nghề nghiệp (RIASEC):{" "}
+              <span className="font-bold text-blue-600">{riasecCode}</span>
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-slate-500 mb-5">
+              Dưới đây là các hướng nghề phù hợp với định hướng bạn đã chọn.
+            </p>
+          )}
 
+          {/* Hồ sơ RIASEC — chỉ hiện khi đã làm quiz */}
+          {quizTaken && (
+            <div className="mb-6 space-y-3 text-left">
+              {topDims.map((d) => (
+                <div key={d.dim}>
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-slate-800">
+                      {RIASEC_META[d.dim].label}{" "}
+                      <span className="text-xs font-normal text-slate-400">
+                        ({RIASEC_META[d.dim].short})
+                      </span>
+                    </span>
+                    <span className="text-xs font-bold text-slate-600">
+                      {d.percent}%
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
+                      style={{ width: `${d.percent}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    {RIASEC_META[d.dim].desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="mb-2 text-left text-sm font-semibold text-slate-800">
+            Hướng nghề IT phù hợp nhất với bạn:
+          </p>
           <div className="space-y-2.5 mb-8">
-            {calculatedPaths.map((path) => (
-              <div
-                key={path}
-                className="py-3 px-4 rounded-xl border border-blue-100 bg-blue-50/50 font-semibold text-blue-700 text-sm tracking-wide shadow-sm"
-              >
-                🚀 {interestLabelMap[path] ?? path}
-              </div>
-            ))}
+            {calculatedPaths.map((path) => {
+              // Nhóm RIASEC trội của nghề này (để giải thích "vì sao hợp")
+              const profile = ROLE_RIASEC_PROFILE[path] || {};
+              const domDim = (Object.entries(profile) as [Riasec, number][]).sort(
+                (a, b) => b[1] - a[1],
+              )[0]?.[0];
+              return (
+                <div
+                  key={path}
+                  className="rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3 text-left shadow-sm"
+                >
+                  <p className="text-sm font-semibold text-blue-700">
+                    🚀 {interestLabelMap[path] ?? path}
+                  </p>
+                  {quizTaken && domDim && (
+                    <p className="mt-0.5 text-[11px] text-blue-600/80">
+                      Hợp với thiên hướng{" "}
+                      <b>{RIASEC_META[domDim].label}</b> của bạn
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Bắc cầu sang lộ trình nghề nghiệp dựa trên CV (data-driven) */}
@@ -630,7 +711,7 @@ export default function OnboardingWizard() {
             Chào mừng đến Career Nova
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            5 bước (~5 phút) để nhận gợi ý cá nhân hóa cho riêng bạn
+            4 bước ngắn để nhận gợi ý nghề nghiệp cá nhân hóa
           </p>
         </div>
 
@@ -649,7 +730,7 @@ export default function OnboardingWizard() {
             />
           </div>
           <div className="mt-3 flex justify-between text-[10px] font-medium text-slate-500">
-            {["Ngành học", "Định hướng", "Skill & CV", "Mục tiêu", "Quiz"].map(
+            {["Về bạn", "Định hướng", "Kỹ năng & CV", "Mục tiêu"].map(
               (label, i) => (
                 <span
                   key={label}
@@ -672,15 +753,19 @@ export default function OnboardingWizard() {
             <Step1
               major={profile.major}
               university={profile.university}
+              year={profile.year}
               onMajor={(m) => setProfile({ major: m })}
               onUni={(u) => setProfile({ university: u })}
+              onYear={(y) => setProfile({ year: y })}
             />
           )}
           {step === 2 && (
             <Step2
-              year={profile.year}
+              mode={directionMode}
+              setMode={setDirectionMode}
               interests={profile.interests}
-              onYear={(y) => setProfile({ year: y })}
+              quizAnswers={quizAnswers}
+              setQuizAnswers={setQuizAnswers}
               onToggle={(v) => {
                 const has = profile.interests.includes(v);
                 setProfile({
@@ -716,9 +801,6 @@ export default function OnboardingWizard() {
               onSalary={(v) => setProfile({ targetSalaryUSD: v })}
               onRemote={(v) => setProfile({ preferRemote: v })}
             />
-          )}
-          {step === 5 && (
-            <Step5 answers={quizAnswers} setAnswers={setQuizAnswers} />
           )}
         </div>
 
@@ -770,22 +852,27 @@ export default function OnboardingWizard() {
 function Step1({
   major,
   university,
+  year,
   onMajor,
   onUni,
+  onYear,
 }: {
   major: StudentMajor | null;
   university: string;
+  year: StudentYear | null;
   onMajor: (m: StudentMajor) => void;
   onUni: (u: string) => void;
+  onYear: (y: StudentYear) => void;
 }) {
   return (
     <div>
-      <h2 className="mb-1 text-xl font-bold text-slate-900">
-        Bạn học ngành gì?
-      </h2>
+      <h2 className="mb-1 text-xl font-bold text-slate-900">Về bạn</h2>
       <p className="mb-5 text-sm text-slate-500">
-        Chọn ngành gần nhất với chuyên môn của bạn để chúng tôi gợi ý career
-        path phù hợp.
+        Vài thông tin cơ bản để chúng tôi cá nhân hóa gợi ý cho bạn.
+      </p>
+
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+        Ngành học
       </p>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {majors.map((m) => (
@@ -803,45 +890,11 @@ function Step1({
           </button>
         ))}
       </div>
-      <div className="mt-5">
-        <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-          Trường đại học (tùy chọn)
-        </label>
-        <input
-          value={university}
-          onChange={(e) => onUni(e.target.value)}
-          placeholder="VD: Đại học Bách Khoa, FPT University..."
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-        />
-      </div>
-    </div>
-  );
-}
 
-function Step2({
-  year,
-  interests: chosen,
-  onYear,
-  onToggle,
-}: {
-  year: StudentYear | null;
-  interests: CareerInterest[];
-  onYear: (y: StudentYear) => void;
-  onToggle: (v: CareerInterest) => void;
-}) {
-  return (
-    <div>
-      <h2 className="mb-1 text-xl font-bold text-slate-900">
-        Năm học & định hướng
-      </h2>
-      <p className="mb-5 text-sm text-slate-500">
-        Chọn 1-3 mảng bạn quan tâm nhất. Có thể đổi sau.
-      </p>
-
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+      <p className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">
         Bạn đang học năm
       </p>
-      <div className="mb-6 flex gap-2">
+      <div className="flex gap-2">
         {([1, 2, 3, 4, 5] as StudentYear[]).map((y) => (
           <button
             key={y}
@@ -857,39 +910,118 @@ function Step2({
         ))}
       </div>
 
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-        Định hướng quan tâm{" "}
-        <span className="ml-1 font-normal normal-case text-slate-400">
-          ({chosen.length}/3)
-        </span>
-      </p>
-      <div className="grid grid-cols-3 gap-2.5 md:grid-cols-4">
-        {interests.map((it) => {
-          const active = chosen.includes(it.value);
-          const disabled = !active && chosen.length >= 3;
-          return (
-            <button
-              key={it.value}
-              disabled={disabled}
-              onClick={() => onToggle(it.value)}
-              className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all ${
-                active
-                  ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
-                  : disabled
-                    ? "border-slate-100 bg-slate-50 opacity-50"
-                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-              }`}
-            >
-              <it.Icon
-                className={`h-5 w-5 ${active ? "text-blue-600" : "text-slate-500"}`}
-              />
-              <span className="text-xs font-semibold text-slate-700">
-                {it.label}
-              </span>
-            </button>
-          );
-        })}
+      <div className="mt-6">
+        <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+          Trường đại học (tùy chọn)
+        </label>
+        <input
+          value={university}
+          onChange={(e) => onUni(e.target.value)}
+          placeholder="VD: Đại học Bách Khoa, FPT University..."
+          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        />
       </div>
+    </div>
+  );
+}
+
+function Step2({
+  mode,
+  setMode,
+  interests: chosen,
+  onToggle,
+  quizAnswers,
+  setQuizAnswers,
+}: {
+  mode: "known" | "explore" | null;
+  setMode: (m: "known" | "explore") => void;
+  interests: CareerInterest[];
+  onToggle: (v: CareerInterest) => void;
+  quizAnswers: number[];
+  setQuizAnswers: (a: number[]) => void;
+}) {
+  return (
+    <div>
+      <h2 className="mb-1 text-xl font-bold text-slate-900">
+        Định hướng nghề nghiệp
+      </h2>
+      <p className="mb-5 text-sm text-slate-500">
+        Bạn đã có hướng đi cụ thể trong ngành IT chưa?
+      </p>
+
+      {/* Nhánh lựa chọn */}
+      <div className="mb-6 grid gap-3 sm:grid-cols-2">
+        <button
+          onClick={() => setMode("known")}
+          className={`rounded-xl border p-4 text-left transition-all ${
+            mode === "known"
+              ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+              : "border-slate-200 bg-white hover:border-slate-300"
+          }`}
+        >
+          <p className="text-sm font-bold text-slate-900">Tôi đã rõ hướng</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Chọn nhanh 1-3 mảng bạn quan tâm.
+          </p>
+        </button>
+        <button
+          onClick={() => setMode("explore")}
+          className={`rounded-xl border p-4 text-left transition-all ${
+            mode === "explore"
+              ? "border-violet-500 bg-violet-50 ring-2 ring-violet-100"
+              : "border-slate-200 bg-white hover:border-slate-300"
+          }`}
+        >
+          <p className="text-sm font-bold text-slate-900">
+            Chưa rõ — giúp tôi khám phá
+          </p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Làm bài trắc nghiệm hướng nghiệp RIASEC.
+          </p>
+        </button>
+      </div>
+
+      {mode === "known" && (
+        <>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Định hướng quan tâm{" "}
+            <span className="ml-1 font-normal normal-case text-slate-400">
+              ({chosen.length}/3)
+            </span>
+          </p>
+          <div className="grid grid-cols-3 gap-2.5 md:grid-cols-4">
+            {interests.map((it) => {
+              const active = chosen.includes(it.value);
+              const disabled = !active && chosen.length >= 3;
+              return (
+                <button
+                  key={it.value}
+                  disabled={disabled}
+                  onClick={() => onToggle(it.value)}
+                  className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all ${
+                    active
+                      ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+                      : disabled
+                        ? "border-slate-100 bg-slate-50 opacity-50"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  <it.Icon
+                    className={`h-5 w-5 ${active ? "text-blue-600" : "text-slate-500"}`}
+                  />
+                  <span className="text-xs font-semibold text-slate-700">
+                    {it.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {mode === "explore" && (
+        <Step5 answers={quizAnswers} setAnswers={setQuizAnswers} />
+      )}
     </div>
   );
 }
@@ -933,11 +1065,12 @@ function Step3({
   return (
     <div>
       <h2 className="mb-1 text-xl font-bold text-slate-900">
-        Skill & CV của bạn
+        Kỹ năng & CV{" "}
+        <span className="text-sm font-normal text-slate-400">(tùy chọn)</span>
       </h2>
       <p className="mb-5 text-sm text-slate-500">
-        Khai báo 3-8 skill mạnh nhất + level. Tải CV để chúng tôi phân tích
-        chính xác hơn (tùy chọn).
+        Tải CV để hệ thống tự nhận diện kỹ năng — hoặc tự khai báo. Có thể bỏ
+        qua và bổ sung sau.
       </p>
 
       {/* CV Upload */}
@@ -1002,7 +1135,7 @@ function Step3({
       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
         Top skills{" "}
         <span className="ml-1 font-normal normal-case text-slate-400">
-          ({skills.length}/8 — tối thiểu 3)
+          ({skills.length}/8)
         </span>
       </p>
 
@@ -1096,10 +1229,12 @@ function Step4({
   return (
     <div>
       <h2 className="mb-1 text-xl font-bold text-slate-900">
-        Mục tiêu nghề nghiệp
+        Mục tiêu nghề nghiệp{" "}
+        <span className="text-sm font-normal text-slate-400">(tùy chọn)</span>
       </h2>
       <p className="mb-5 text-sm text-slate-500">
-        Bạn đang ở giai đoạn nào? Chúng tôi sẽ ưu tiên gợi ý phù hợp.
+        Bạn đang ở giai đoạn nào? Chúng tôi sẽ ưu tiên gợi ý phù hợp. Có thể bỏ
+        qua.
       </p>
 
       <div className="mb-6 grid grid-cols-1 gap-2.5 md:grid-cols-2">
@@ -1177,56 +1312,65 @@ function Step5({
   answers: number[];
   setAnswers: (a: number[]) => void;
 }) {
-  const select = (qIdx: number, optIdx: number) => {
+  const select = (qIdx: number, value: number) => {
     const next = [...answers];
-    next[qIdx] = optIdx;
+    next[qIdx] = value;
     setAnswers(next);
   };
 
-  const completed = answers.filter((a) => a !== undefined).length;
+  const completed = riasecItems.filter(
+    (_, i) => Number.isInteger(answers[i]) && answers[i] >= 1,
+  ).length;
 
   return (
     <div>
       <h2 className="mb-1 text-xl font-bold text-slate-900">
-        Kiểm tra hướng nghiệp
+        Khám phá hướng nghề phù hợp
       </h2>
-      <p className="mb-5 text-sm text-slate-500">
-        5 câu hỏi nhanh để tìm 2-3 hướng phù hợp nhất. ({completed}/
-        {quizQuestions.length})
+      <p className="mb-1 text-sm text-slate-500">
+        Cho biết mức độ bạn <b>thích làm</b> mỗi hoạt động dưới đây. Không có
+        đúng/sai — hãy trả lời theo cảm nhận thật.
+      </p>
+      <p className="mb-4 text-[11px] text-slate-400">
+        Dựa trên mô hình RIASEC (Holland Codes) & O*NET Interest Profiler — U.S.
+        Department of Labor.
       </p>
 
-      <div className="space-y-5">
-        {quizQuestions.map((q, qIdx) => (
+      <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all"
+          style={{ width: `${(completed / riasecItems.length) * 100}%` }}
+        />
+      </div>
+      <p className="mb-4 text-xs font-medium text-slate-500">
+        {completed}/{riasecItems.length} câu
+      </p>
+
+      <div className="space-y-4">
+        {riasecItems.map((item, qIdx) => (
           <div
             key={qIdx}
             className="rounded-xl border border-slate-200 bg-slate-50/50 p-4"
           >
             <p className="mb-3 text-sm font-semibold text-slate-800">
-              {qIdx + 1}. {q.q}
+              {qIdx + 1}. {item.text}
             </p>
-            <div className="space-y-2">
-              {q.options.map((opt, optIdx) => {
-                const active = answers[qIdx] === optIdx;
+            <div className="flex flex-wrap gap-2">
+              {likertScale.map((opt) => {
+                const active = answers[qIdx] === opt.value;
                 return (
                   <button
-                    key={optIdx}
-                    onClick={() => select(qIdx, optIdx)}
-                    className={`flex w-full items-start gap-2.5 rounded-lg border px-3 py-2 text-left text-sm transition-all ${
+                    key={opt.value}
+                    type="button"
+                    onClick={() => select(qIdx, opt.value)}
+                    aria-pressed={active}
+                    className={`flex-1 min-w-[88px] rounded-lg border px-2 py-2 text-center text-xs font-medium transition-all ${
                       active
-                        ? "border-blue-500 bg-blue-50 text-blue-900"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                        ? "border-blue-500 bg-blue-600 text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50"
                     }`}
                   >
-                    <div
-                      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
-                        active
-                          ? "border-blue-600 bg-blue-600"
-                          : "border-slate-300"
-                      }`}
-                    >
-                      {active && <Check className="h-2.5 w-2.5 text-white" />}
-                    </div>
-                    <span>{opt.text}</span>
+                    {opt.label}
                   </button>
                 );
               })}

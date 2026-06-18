@@ -467,10 +467,12 @@ export function MarketDashboard({
                 Xu hướng tin tuyển dụng
               </h3>
             </div>
-            <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full uppercase">
-              Quy mô:{" "}
-              {{ day: "Ngày", week: "Tuần", month: "Tháng" }[trends.scale] ??
-                trends.scale}
+            <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full">
+              {{
+                "7days": "7 ngày qua",
+                "14days": "14 ngày qua",
+                "30days": "30 ngày qua",
+              }[timePeriod] ?? "Theo bộ lọc"}
             </span>
           </div>
           <ResponsiveContainer width="100%" height={220}>

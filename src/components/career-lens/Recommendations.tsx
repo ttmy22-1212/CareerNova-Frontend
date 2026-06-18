@@ -24,6 +24,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useOnboarding } from "@/contexts/onboarding/onboarding-context";
+import { EmptyState } from "./EmptyState";
 import RecommendationApi from "@/api/recommendation";
 import ProfileApi from "@/api/profile";
 import JobApi from "@/api/job";
@@ -590,6 +591,12 @@ export function Recommendations() {
       {/* ── Thẻ Tổng Quan ── */}
       {activeTab === "overview" && (
         <div className="space-y-5">
+          <p className="rounded-lg bg-slate-50 px-4 py-2.5 text-xs text-slate-500">
+            Đây là trang tổng hợp nhanh. Bấm{" "}
+            <span className="font-semibold text-slate-700">“chi tiết”</span> ở
+            mỗi mục để tới trang chuyên sâu (Tìm việc, Phân tích kỹ năng,
+            Roadmap).
+          </p>
           {/* Những công việc phù hợp với bạn */}
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -608,15 +615,14 @@ export function Recommendations() {
             </div>
             <div className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
               {apiJobs.length === 0 ? (
-                <div className="px-5 py-10 text-center">
-                  <p className="text-sm font-semibold text-slate-700">
-                    Chưa có công việc phù hợp
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Hãy bật matching mặc định hoặc chạy phân tích CV để nhận đề
-                    xuất phù hợp hơn.
-                  </p>
-                </div>
+                <EmptyState
+                  icon={Briefcase}
+                  title="Chưa có công việc phù hợp"
+                  description="Chạy đối soát CV để hệ thống gợi ý việc làm khớp với hồ sơ của bạn."
+                  ctaLabel="Đối soát CV"
+                  ctaHref="/cv-matching"
+                  compact
+                />
               ) : (
                 <div className="divide-y divide-slate-50">
                   {apiJobs.map((job) => (
@@ -669,23 +675,30 @@ export function Recommendations() {
 
           {/* Priority Skills */}
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="w-5 h-5 text-orange-500" />
-              <h2 className="font-bold text-slate-900">
-                Kỹ Năng Ưu Tiên Cần Phát Triển
-              </h2>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-orange-500" />
+                <h2 className="font-bold text-slate-900">
+                  Kỹ Năng Ưu Tiên Cần Phát Triển
+                </h2>
+              </div>
+              <Link
+                href="/skill-gap"
+                className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                Phân tích chi tiết <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm divide-y divide-slate-50">
               {prioritySkills.length === 0 ? (
-                <div className="px-5 py-8 text-center">
-                  <p className="text-sm font-semibold text-slate-700">
-                    Chưa có kỹ năng ưu tiên
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Chạy matching mặc định để hệ thống xác định kỹ năng còn
-                    thiếu hoặc mới khớp một phần.
-                  </p>
-                </div>
+                <EmptyState
+                  icon={TrendingUp}
+                  title="Chưa có kỹ năng ưu tiên"
+                  description="Chạy đối soát CV để hệ thống xác định kỹ năng còn thiếu hoặc mới khớp một phần."
+                  ctaLabel="Đối soát CV"
+                  ctaHref="/cv-matching"
+                  compact
+                />
               ) : (
                 prioritySkills.map((skill) => {
                   const uc = urgencyConfig[skill.priority];
@@ -1026,17 +1039,29 @@ export function Recommendations() {
       {/* ── Resources Tab ── */}
       {activeTab === "resources" && (
         <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-500">
+              Gợi ý nhanh dựa trên kỹ năng còn thiếu — xem đầy đủ khóa học & lộ
+              trình ở trang Roadmap.
+            </p>
+            <Link
+              href="/roadmap"
+              className="flex shrink-0 items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+            >
+              Tới Roadmap <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {learningRecommendations.length === 0 ? (
-              <div className="col-span-full rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center">
-                <BookOpen className="mx-auto mb-3 h-9 w-9 text-slate-300" />
-                <p className="text-sm font-bold text-slate-900">
-                  Chưa có tài nguyên học tập đề xuất
-                </p>
-                <p className="mx-auto mt-1 max-w-lg text-xs text-slate-500">
-                  Chạy phân tích khoảng cách kỹ năng để hệ thống đề xuất khóa
-                  học và lộ trình phù hợp với CV mặc định.
-                </p>
+              <div className="col-span-full">
+                <EmptyState
+                  icon={BookOpen}
+                  title="Chưa có tài nguyên học tập đề xuất"
+                  description="Chạy phân tích khoảng cách kỹ năng để hệ thống đề xuất khóa học phù hợp."
+                  ctaLabel="Phân tích kỹ năng"
+                  ctaHref="/skill-gap"
+                  compact
+                />
               </div>
             ) : (
               learningRecommendations.map((recommendation) => {

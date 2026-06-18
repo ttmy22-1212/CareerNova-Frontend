@@ -22,6 +22,18 @@ export type CareerInterest =
   | "qa";
 export type Goal = "internship" | "fulltime" | "switch" | "explore";
 
+export interface RiasecResult {
+  /** Mã 3 nhóm trội, vd "IAC". */
+  code: string;
+  top: {
+    dim: string;
+    label: string;
+    short: string;
+    percent: number;
+    desc: string;
+  }[];
+}
+
 export interface OnboardingProfile {
   completedAt: string | null;
   // Step 1
@@ -41,6 +53,8 @@ export interface OnboardingProfile {
   // Step 5
   quizDone: boolean;
   suggestedPaths: CareerInterest[];
+  /** Kết quả trắc nghiệm hướng nghiệp RIASEC (Holland/O*NET). */
+  riasec: RiasecResult | null;
   // Activity tracking
   bookmarkedJobIds: string[];
   appliedJobIds: string[];
@@ -62,6 +76,7 @@ const DEFAULT_PROFILE: OnboardingProfile = {
   preferRemote: false,
   quizDone: false,
   suggestedPaths: [],
+  riasec: null,
   bookmarkedJobIds: [],
   appliedJobIds: [],
   lastAnalysisAt: null,
@@ -173,10 +188,13 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     },
     {
       id: "quiz",
-      label: "Hoàn thành Kiểm tra hướng nghiệp",
-      done: profile.quizDone || !!profile.completedAt,
+      label: "Hoàn thành định hướng nghề nghiệp",
+      done:
+        profile.quizDone ||
+        profile.interests.length > 0 ||
+        !!profile.completedAt,
       weight: 20,
-      href: "/onboarding/welcome?step=5",
+      href: "/onboarding/welcome?step=2",
     },
   ];
 

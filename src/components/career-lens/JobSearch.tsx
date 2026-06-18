@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { EmptyState } from "./EmptyState";
 import {
   Search,
   MapPin,
@@ -590,36 +591,42 @@ export function JobSearch() {
       </div>
 
       {loading ? (
-        <div className="py-20 flex flex-col items-center justify-center text-slate-400">
-          <Loader2 className="w-8 h-8 animate-spin mb-2" />
-          <p className="text-sm">Đang tìm các cơ hội tốt nhất...</p>
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="animate-pulse rounded-xl border border-slate-100 bg-white p-4"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-2/3 rounded bg-slate-200" />
+                  <div className="h-3 w-1/3 rounded bg-slate-100" />
+                  <div className="flex gap-2 pt-1">
+                    <div className="h-5 w-16 rounded-full bg-slate-100" />
+                    <div className="h-5 w-20 rounded-full bg-slate-100" />
+                  </div>
+                </div>
+                <div className="h-8 w-12 rounded bg-slate-100" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : jobs.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-100 p-12 text-center">
-          <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Search className="w-6 h-6 text-slate-400" />
-          </div>
-          <h3 className="font-semibold text-slate-900 mb-1">
-            Không tìm thấy công việc
-          </h3>
-          <p className="text-sm text-slate-500">
-            Hãy thử điều chỉnh tìm kiếm hoặc bộ lọc của bạn
-          </p>
-          <button
-            onClick={() => {
-              setSearchTerm("");
-              setSelectedType("");
-              setSelectedExp("");
-              setLocation("");
-              setSearchGroup("");
-              setListedWithinDays(undefined);
-              setMinMatch(undefined);
-            }}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-          >
-            Xóa bộ lọc
-          </button>
-        </div>
+        <EmptyState
+          icon={Search}
+          title="Không tìm thấy công việc"
+          description="Hãy thử điều chỉnh từ khóa hoặc xóa bớt bộ lọc đang áp dụng."
+          ctaLabel="Xóa bộ lọc"
+          onCta={() => {
+            setSearchTerm("");
+            setSelectedType("");
+            setSelectedExp("");
+            setLocation("");
+            setSearchGroup("");
+            setListedWithinDays(undefined);
+            setMinMatch(undefined);
+          }}
+        />
       ) : (
         <div className="space-y-3">
           {jobs.map((job) => (
@@ -688,6 +695,12 @@ export function JobSearch() {
                           handleToggleSaveJobInList(job.job_id, isJobSaved);
                         }}
                         disabled={processingJobId === job.job_id}
+                        aria-label={
+                          (job as any).is_saved
+                            ? "Bỏ lưu việc làm"
+                            : "Lưu việc làm"
+                        }
+                        aria-pressed={!!(job as any).is_saved}
                         className={`p-2 border rounded-lg transition-colors cursor-pointer disabled:opacity-50 ${
                           (job as any).is_saved
                             ? "bg-amber-50 border-amber-200 text-amber-600 dark:bg-amber-950/20 dark:border-amber-900"

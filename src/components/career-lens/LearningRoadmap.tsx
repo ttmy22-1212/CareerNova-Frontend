@@ -197,12 +197,17 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
       )}
 
       {/* Lộ trình học */}
-      <div className="space-y-6 mb-12">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-          {debouncedSearchQuery
-            ? `Kết quả tìm kiếm "${debouncedSearchQuery}" (${displayLearningPaths.length})`
-            : "Lộ trình học"}
-        </h2>
+      <div className="space-y-5 mb-12">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+            {debouncedSearchQuery
+              ? `Kết quả tìm kiếm "${debouncedSearchQuery}" (${displayLearningPaths.length})`
+              : "Lộ trình học theo chủ đề"}
+          </h2>
+          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+            Chuỗi khóa học được sắp theo thứ tự để học từ gốc đến nâng cao.
+          </p>
+        </div>
         <div className="w-full">
           <input
             type="text"
@@ -271,16 +276,6 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
                   </div>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="px-6 py-4">
-                  <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-violet-500 to-purple-600"
-                      style={{ width: `${path.progress}%` }}
-                    />
-                  </div>
-                </div>
-
                 {/* Courses List */}
                 <div
                   className="border-t border-slate-200 dark:border-slate-800"
@@ -320,17 +315,6 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
                                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                                 {course.rating}
                               </div>
-                            </div>
-                            <div className="mt-3 flex items-center justify-between">
-                              <div className="h-1.5 flex-1 bg-slate-200 rounded-full dark:bg-slate-700 overflow-hidden mr-3 min-w-0">
-                                <div
-                                  className="h-full bg-green-500"
-                                  style={{ width: `${course.progress}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
-                                {course.progress}%
-                              </span>
                             </div>
                             <div className="mt-3 flex items-center gap-4">
                               {course.source_url && (
@@ -381,10 +365,15 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
 
       {/* Khóa học gợi ý */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            Gợi ý dành cho bạn
-          </h2>
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              Khóa học lẻ gợi ý
+            </h2>
+            <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+              Khóa học riêng cho từng kỹ năng bạn còn thiếu.
+            </p>
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
               Lọc theo cấp độ:
