@@ -1,20 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  AlertCircle,
   ArrowLeft,
   ArrowRight,
   Check,
-  CheckCircle2,
   GraduationCap,
   Compass,
   FileText,
-  Loader2,
   Target as TargetIcon,
   Sparkles,
-  Upload,
   Briefcase,
   Code2,
   Smartphone,
@@ -25,6 +21,11 @@ import {
   Shield,
   Bug,
   Layers,
+  Lightbulb,
+  Users,
+  Headphones,
+  Megaphone,
+  LineChart,
 } from "lucide-react";
 import {
   CareerInterest,
@@ -65,6 +66,21 @@ const interests: {
   { value: "devops", label: "DevOps", Icon: Wrench, tone: "amber" },
   { value: "cybersecurity", label: "Security", Icon: Shield, tone: "red" },
   { value: "qa", label: "QA / Test", Icon: Bug, tone: "lime" },
+  { value: "product", label: "Product / PM", Icon: Lightbulb, tone: "orange" },
+  {
+    value: "engineering_manager",
+    label: "Quản lý Kỹ thuật",
+    Icon: Users,
+    tone: "teal",
+  },
+  { value: "it_support", label: "IT Support", Icon: Headphones, tone: "sky" },
+  { value: "devrel", label: "DevRel / Đào tạo", Icon: Megaphone, tone: "rose" },
+  {
+    value: "business_analyst",
+    label: "Business Analyst",
+    Icon: LineChart,
+    tone: "pink",
+  },
 ];
 
 const interestLabelMap = interests.reduce(
@@ -85,6 +101,11 @@ const careerResultOrder: CareerInterest[] = [
   "devops",
   "cybersecurity",
   "qa",
+  "product",
+  "engineering_manager",
+  "it_support",
+  "devrel",
+  "business_analyst",
 ];
 
 const goals: { value: Goal; label: string; desc: string; Icon: any }[] = [
@@ -200,6 +221,11 @@ const ROLE_RIASEC_PROFILE: Record<
   devops: { R: 3, C: 2, I: 1 }, // Network/Sys Admin (R,I,C)
   cybersecurity: { I: 3, C: 2, R: 1 }, // Information Security Analysts (I,C,R)
   qa: { C: 3, I: 1 }, // QA Analysts & Testers (C,I)
+  product: { E: 3, I: 1, S: 1 }, // Product Manager — dẫn dắt, định hướng sản phẩm (E)
+  engineering_manager: { E: 3, S: 2, I: 1 }, // Tech Lead / EM — lãnh đạo + con người (E,S)
+  it_support: { S: 3, C: 2, R: 1 }, // IT Support — hỗ trợ người dùng, quy trình (S,C,R)
+  devrel: { S: 3, E: 1, A: 1 }, // DevRel / Trainer — truyền đạt, cộng đồng (S)
+  business_analyst: { C: 2, E: 2, I: 1, S: 1 }, // BA — cầu nối nghiệp vụ↔kỹ thuật (C,E)
 };
 
 const ITEMS_PER_DIM = 3;
@@ -235,20 +261,47 @@ const getCareerQuizSuggestions = (answers: number[]): CareerInterest[] => {
     userVec[d.dim] = d.score / MAX_DIM_SCORE;
   });
 
-  // Điểm khớp mỗi nghề = tổng (sở thích user × trọng số nhóm trong hồ sơ nghề)
+  // Điểm khớp mỗi nghề = cosine giữa vector sở thích user và vector nghề.
+  // Chuẩn hoá theo độ lớn vector nghề để KHÔNG thiên vị nghề có tổng trọng số
+  // lớn hoặc nhóm I (trọng số 3) — đây là nguyên nhân khiến user mạnh E/A vẫn
+  // bị đẩy sang nghề thiên phân tích. (Norm của user là hằng số giữa các nghề
+  // nên có thể bỏ qua mà không đổi thứ hạng.)
   return careerResultOrder
     .map((career) => {
-      const profile = ROLE_RIASEC_PROFILE[career] || {};
-      const score = (Object.entries(profile) as [Riasec, number][]).reduce(
-        (sum, [dim, w]) => sum + userVec[dim] * w,
-        0,
-      );
-      return { career, score, order: careerResultOrder.indexOf(career) };
+      const entries = Object.entries(ROLE_RIASEC_PROFILE[career] || {}) as [
+        Riasec,
+        number,
+      ][];
+      const dot = entries.reduce((sum, [dim, w]) => sum + userVec[dim] * w, 0);
+      const roleNorm =
+        Math.sqrt(entries.reduce((s, [, w]) => s + w * w, 0)) || 1;
+      return {
+        career,
+        score: dot / roleNorm,
+        order: careerResultOrder.indexOf(career),
+      };
     })
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score || a.order - b.order)
     .slice(0, 3)
     .map((item) => item.career);
+};
+
+// Nhóm RIASEC khớp NHẤT giữa user và nghề (đóng góp lớn nhất vào điểm match) —
+// dùng để giải thích "vì sao hợp" theo đúng thế mạnh của user, thay vì nhóm
+// trội cố định của nghề (vốn khiến mọi nghề I-trội đều ghi "Phân tích").
+const getAlignedDim = (
+  career: CareerInterest,
+  userVec: Record<Riasec, number>,
+): Riasec | undefined => {
+  const entries = Object.entries(ROLE_RIASEC_PROFILE[career] || {}) as [
+    Riasec,
+    number,
+  ][];
+  if (!entries.length) return undefined;
+  return entries.sort(
+    (a, b) => userVec[b[0]] * b[1] - userVec[a[0]] * a[1],
+  )[0][0];
 };
 
 export default function OnboardingWizard() {
@@ -269,9 +322,8 @@ export default function OnboardingWizard() {
 
   const [dbSkills, setDbSkills] = useState<string[]>([]);
   const [isSearchingSkills, setIsSearchingSkills] = useState(false);
-  const [uploadedCvId, setUploadedCvId] = useState<string | null>(null);
-  const [isUploadingCv, setIsUploadingCv] = useState(false);
-  const [cvUploadError, setCvUploadError] = useState<string | null>(null);
+  // CV không tải ở onboarding nữa (chỉ khai báo kỹ năng) — uploadedCvId giữ null
+  const [uploadedCvId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [calculatedPaths, setCalculatedPaths] = useState<CareerInterest[]>([]);
@@ -369,7 +421,7 @@ export default function OnboardingWizard() {
         }
 
         case 3:
-          // Bước Kỹ năng & CV cho phép bỏ qua → chỉ đồng bộ khi có dữ liệu
+          // Bước Kỹ năng cho phép bỏ qua → chỉ đồng bộ khi có dữ liệu
           if (uploadedCvId || profile.topSkills.length > 0) {
             await CvApi.syncProfileSkills({
               cv_id: uploadedCvId,
@@ -449,13 +501,13 @@ export default function OnboardingWizard() {
   };
 
   const canNext = useMemo(() => {
-    if (isLoading || isUploadingCv || isSearchingSkills) return false;
+    if (isLoading || isSearchingSkills) return false;
     if (step === 1) return !!profile.major && !!profile.year;
     if (step === 2)
       return directionMode === "explore"
         ? isQuizComplete(quizAnswers)
         : directionMode === "known" && profile.interests.length > 0;
-    if (step === 3) return true; // Kỹ năng & CV — cho phép bỏ qua
+    if (step === 3) return true; // Kỹ năng — cho phép bỏ qua
     if (step === 4) return true; // Mục tiêu — cho phép bỏ qua
     return false;
   }, [
@@ -464,7 +516,6 @@ export default function OnboardingWizard() {
     quizAnswers,
     directionMode,
     isLoading,
-    isUploadingCv,
     isSearchingSkills,
   ]);
 
@@ -490,7 +541,6 @@ export default function OnboardingWizard() {
       profile.topSkills.find((s) => s.name.toLowerCase() === name.toLowerCase())
     )
       return;
-    if (profile.topSkills.length >= 8) return;
     setProfile({
       topSkills: [...profile.topSkills, { name: name.trim(), level: 3 }],
     });
@@ -523,63 +573,23 @@ export default function OnboardingWizard() {
     });
   };
 
-  const handleCvUpload = async (file: File | null) => {
-    if (!file) {
-      setProfile({ hasUploadedCV: false, cvFileName: null });
-      setUploadedCvId(null);
-      return;
-    }
-
-    const validTypes = ["application/pdf", "image/jpeg", "image/png"];
-    if (!validTypes.includes(file.type)) {
-      setCvUploadError("Vui lòng tải lên tài liệu định dạng PDF hoặc Ảnh (.pdf, .jpg, .jpeg, .png)");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setCvUploadError("File phải nhỏ hơn 5MB");
-      return;
-    }
-
-    try {
-      setIsUploadingCv(true);
-      setCvUploadError(null);
-      const res = await CvApi.uploadCv(file);
-      if (res.data) {
-        const { cv_id, file_name } = res.data;
-        setUploadedCvId(cv_id);
-
-        setProfile({ hasUploadedCV: true, cvFileName: file_name });
-        const parsed_skills = (res.data as any).parsed_skills;
-        if (parsed_skills && Array.isArray(parsed_skills)) {
-          const formattedParsed = parsed_skills.map((skillName: string) => ({
-            name: skillName,
-            level: 3,
-          }));
-          const mergedSkills = [...profile.topSkills];
-          formattedParsed.forEach((newSkill: any) => {
-            if (
-              !mergedSkills.find(
-                (s) => s.name.toLowerCase() === newSkill.name.toLowerCase(),
-              )
-            ) {
-              if (mergedSkills.length < 8) mergedSkills.push(newSkill);
-            }
-          });
-          setProfile({ topSkills: mergedSkills });
-        }
-      }
-    } catch (err) {
-      console.error("Lỗi tải CV lên hệ thống:", err);
-      setCvUploadError("Tải file CV thất bại, vui lòng thử lại!");
-    } finally {
-      setIsUploadingCv(false);
-    }
-  };
-
   if (showResult) {
     const quizTaken = isQuizComplete(quizAnswers);
     const topDims = quizTaken ? computeRiasecScores(quizAnswers).slice(0, 3) : [];
     const riasecCode = topDims.map((d) => d.dim).join("");
+    // Vector sở thích user (0..1) để giải thích "vì sao hợp" theo đúng thế mạnh
+    const userVec: Record<Riasec, number> = {
+      R: 0,
+      I: 0,
+      A: 0,
+      S: 0,
+      E: 0,
+      C: 0,
+    };
+    if (quizTaken)
+      computeRiasecScores(quizAnswers).forEach((d) => {
+        userVec[d.dim] = d.score / MAX_DIM_SCORE;
+      });
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 px-4 py-10 flex items-center justify-center">
         <div className="mx-auto max-w-lg w-full text-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
@@ -636,11 +646,8 @@ export default function OnboardingWizard() {
           </p>
           <div className="space-y-2.5 mb-8">
             {calculatedPaths.map((path) => {
-              // Nhóm RIASEC trội của nghề này (để giải thích "vì sao hợp")
-              const profile = ROLE_RIASEC_PROFILE[path] || {};
-              const domDim = (Object.entries(profile) as [Riasec, number][]).sort(
-                (a, b) => b[1] - a[1],
-              )[0]?.[0];
+              // Nhóm RIASEC mà user & nghề khớp nhất (giải thích "vì sao hợp")
+              const domDim = getAlignedDim(path, userVec);
               return (
                 <div
                   key={path}
@@ -730,7 +737,7 @@ export default function OnboardingWizard() {
             />
           </div>
           <div className="mt-3 flex justify-between text-[10px] font-medium text-slate-500">
-            {["Về bạn", "Định hướng", "Kỹ năng & CV", "Mục tiêu"].map(
+            {["Về bạn", "Định hướng", "Kỹ năng", "Mục tiêu"].map(
               (label, i) => (
                 <span
                   key={label}
@@ -762,7 +769,14 @@ export default function OnboardingWizard() {
           {step === 2 && (
             <Step2
               mode={directionMode}
-              setMode={setDirectionMode}
+              setMode={(m) => {
+                if (m === directionMode) return;
+                setDirectionMode(m);
+                // Đổi nhánh → bỏ dữ liệu nhánh đối lập để không lưu nhầm lựa
+                // chọn cũ (vd: lỡ chọn "đã rõ" rồi đổi sang "khám phá").
+                if (m === "known") setQuizAnswers([]);
+                else setProfile({ interests: [] });
+              }}
               interests={profile.interests}
               quizAnswers={quizAnswers}
               setQuizAnswers={setQuizAnswers}
@@ -779,17 +793,12 @@ export default function OnboardingWizard() {
           {step === 3 && (
             <Step3
               skills={profile.topSkills}
-              hasCV={profile.hasUploadedCV}
-              cvName={profile.cvFileName}
               skillInput={skillInput}
               setSkillInput={handleSkillInputChange}
               addSkill={addSkill}
               removeSkill={removeSkill}
               updateLevel={updateLevel}
-              onCV={handleCvUpload}
               dbSkills={dbSkills}
-              isUploadingCv={isUploadingCv}
-              cvUploadError={cvUploadError}
             />
           )}
           {step === 4 && (
@@ -1028,32 +1037,21 @@ function Step2({
 
 function Step3({
   skills,
-  hasCV,
-  cvName,
   skillInput,
   setSkillInput,
   addSkill,
   removeSkill,
   updateLevel,
-  onCV,
   dbSkills = [],
-  isUploadingCv = false,
-  cvUploadError = null,
 }: {
   skills: { name: string; level: number }[];
-  hasCV: boolean;
-  cvName: string | null;
   skillInput: string;
   setSkillInput: (s: string) => void;
   addSkill: (s: string) => void;
   removeSkill: (s: string) => void;
   updateLevel: (s: string, lvl: number) => void;
-  onCV: (file: File | null) => void;
   dbSkills?: string[];
-  isUploadingCv?: boolean;
-  cvUploadError?: string | null;
 }) {
-  const cvFileInputRef = useRef<HTMLInputElement>(null);
   // Lọc suggestions dựa trực tiếp vào mảng dbSkills nhận từ API, loại bỏ những kĩ năng đã chọn
   const suggestions = useMemo(() => {
     const selectedNames = skills.map((s) => s.name.toLowerCase());
@@ -1065,77 +1063,18 @@ function Step3({
   return (
     <div>
       <h2 className="mb-1 text-xl font-bold text-slate-900">
-        Kỹ năng & CV{" "}
+        Kỹ năng{" "}
         <span className="text-sm font-normal text-slate-400">(tùy chọn)</span>
       </h2>
       <p className="mb-5 text-sm text-slate-500">
-        Tải CV để hệ thống tự nhận diện kỹ năng — hoặc tự khai báo. Có thể bỏ
-        qua và bổ sung sau.
+        Chọn các kỹ năng bạn đã có. Có thể bỏ qua và bổ sung sau.
       </p>
-
-      {/* CV Upload */}
-      <div className="mb-5">
-        <input
-          type="file"
-          ref={cvFileInputRef}
-          accept=".pdf,.jpg,.jpeg,.png"
-          className="hidden"
-          onChange={(e) => onCV(e.target.files?.[0] ?? null)}
-        />
-        <div
-          onClick={() => !isUploadingCv && cvFileInputRef.current?.click()}
-          className="border-2 border-dashed border-slate-200 rounded-xl px-4 py-3 text-center hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer flex items-center justify-center min-h-[64px]"
-        >
-          {isUploadingCv ? (
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
-              <span className="text-xs font-medium text-slate-600">Đang tải lên...</span>
-            </div>
-          ) : hasCV ? (
-            <div className="flex items-center gap-2 w-full justify-center">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-              <span className="text-xs font-semibold text-slate-800 truncate max-w-[200px]">
-                {cvName}
-              </span>
-              <span className="text-[10px] text-emerald-600 font-medium shrink-0">(Hoàn tất)</span>
-              <button
-                onClick={(e) => { e.stopPropagation(); onCV(null); }}
-                className="text-xs text-red-500 hover:underline shrink-0"
-              >
-                Xoá
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-1">
-              <div className="flex items-center gap-2 text-slate-500">
-                <Upload className="h-4 w-4 text-slate-400" />
-                <span className="text-sm font-semibold text-slate-700">
-                  Bấm để Tải CV (PDF/DOCX)
-                </span>
-              </div>
-              <span className="text-[11px] text-slate-500">Tối đa 5MB. Tùy chọn.</span>
-            </div>
-          )}
-        </div>
-        {cvUploadError && (
-          <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-            <AlertCircle className="h-3.5 w-3.5" /> {cvUploadError}
-          </p>
-        )}
-        {hasCV && skills.length > 0 && (
-          <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
-            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-            Đã nhận diện {skills.length} kỹ năng từ CV của bạn — kiểm tra & bổ
-            sung bên dưới.
-          </p>
-        )}
-      </div>
 
       {/* Skill input */}
       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
         Top skills{" "}
         <span className="ml-1 font-normal normal-case text-slate-400">
-          ({skills.length}/8)
+          ({skills.length})
         </span>
       </p>
 

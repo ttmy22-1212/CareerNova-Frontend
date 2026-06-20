@@ -31,9 +31,11 @@ import {
   CartesianGrid,
 } from "recharts";
 import { SkillRadar } from "./SkillRadar";
+import { SEMANTIC } from "./chart-palette";
 import { InfoTooltip, GLOSSARY } from "./InfoTooltip";
 import { buildCategoryOverview } from "@/utils/category-overview";
 
+import CookieHelper from "@/utils/cookie-helper";
 import PersonalDashboardApi from "@/api/personal-dashboard";
 import ProfileApi from "@/api/profile";
 import {
@@ -225,12 +227,16 @@ export function PersonalDashboard() {
       if (chartRes.data) setSkillsChart(chartRes.data);
       if (progressRes.data) setProgress(progressRes.data);
     } catch (err) {
+      // Khi đăng xuất, token bị xoá giữa lúc các request đang bay → 401 →
+      // không còn refresh token. Đây là lỗi DỰ KIẾN, không log để khỏi gây nhiễu.
+      if (!CookieHelper.getItem("token")) return;
       console.error("Lỗi khi tải dữ liệu Dashboard từ hệ thống:", err);
     }
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    // Chỉ tải dữ liệu khi còn phiên đăng nhập (tránh gọi API sau khi đăng xuất)
+    if (CookieHelper.getItem("token")) fetchDashboardData();
   }, []);
 
   // Đồng bộ 100% luồng bốc data theo cơ chế của CVMatching
@@ -451,7 +457,6 @@ export function PersonalDashboard() {
       icon: Target,
       title: "Xem Phân tích kỹ năng",
       desc: `${statistics?.missing_skills_count ?? 0} kỹ năng cần cải thiện khẩn`,
-      color: "from-violet-500 to-violet-600",
       badge: "Khẩn",
     },
     {
@@ -462,7 +467,6 @@ export function PersonalDashboard() {
         urgentGapSkills.length > 0
           ? `${urgentGapSkills.length} kỹ năng cần bổ sung — Xem lộ trình`
           : "Khám phá lộ trình kỹ năng cá nhân hóa",
-      color: "from-blue-500 to-blue-600",
       badge: "Lộ trình",
     },
     {
@@ -473,7 +477,6 @@ export function PersonalDashboard() {
         avgMatchScore > 0
           ? `${avgMatchScore}% match với CV mặc định`
           : "Dựa trên CV mặc định",
-      color: "from-emerald-500 to-emerald-600",
       badge: "Mới",
     },
   ];
@@ -482,7 +485,7 @@ export function PersonalDashboard() {
     <div className="p-6 space-y-6">
       {/* ── Profile Completion Prompt (shown when strength < 50%) ── */}
       {strength < 50 && (
-        <div className="flex items-start gap-4 p-4 bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200 rounded-2xl dark:from-violet-950/30 dark:to-indigo-950/30 dark:border-violet-800">
+        <div className="flex items-start gap-4 p-4 bg-violet-50 border border-violet-200 rounded-2xl dark:bg-violet-950/30 dark:border-violet-800">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 shadow-sm shadow-violet-300">
             <Sparkles className="h-5 w-5 text-white" />
           </div>
@@ -731,20 +734,14 @@ export function PersonalDashboard() {
             label: "Jobs Phù Hợp",
             value: totalSuitableCount.toString(),
             sub: "Match ≥ 70%",
-            color: "from-emerald-500 to-emerald-600",
-            text: "text-white",
-            subText: "text-emerald-100",
-            iconBg: "bg-white/20",
+            tone: "success", // tốt
           },
           {
             icon: AlertCircle,
             label: "Thiếu hụt kỹ năng",
             value: (statistics?.missing_skills_count ?? 0).toString(),
             sub: "Kỹ năng cần cải thiện",
-            color: "from-orange-500 to-orange-600",
-            text: "text-white",
-            subText: "text-orange-100",
-            iconBg: "bg-white/20",
+            tone: "warning", // cần chú ý
           },
           {
             icon: Award,
@@ -754,30 +751,37 @@ export function PersonalDashboard() {
               incompleteTasks.length > 0
                 ? `${incompleteTasks.length} bước còn thiếu`
                 : "Hồ sơ hoàn chỉnh!",
-            color: "from-violet-500 to-violet-600",
-            text: "text-white",
-            subText: "text-violet-100",
-            iconBg: "bg-white/20",
+            tone: "primary", // trung tính / tiến độ
           },
-        ].map((card) => (
-          <div
-            key={card.label}
-            className={`rounded-xl p-5 bg-gradient-to-br ${card.color} shadow-sm`}
-          >
+        ].map((card) => {
+          // Thẻ trắng + accent ngữ nghĩa nhẹ thay cho nền gradient bão hoà:
+          // dễ đọc hơn (chữ tối / nền sáng) và màu mang đúng ý nghĩa.
+          const accent =
+            card.tone === "success"
+              ? "bg-emerald-50 text-emerald-600"
+              : card.tone === "warning"
+                ? "bg-amber-50 text-amber-600"
+                : "bg-blue-50 text-blue-600";
+          return (
             <div
-              className={`w-9 h-9 ${card.iconBg} rounded-lg flex items-center justify-center mb-3`}
+              key={card.label}
+              className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm"
             >
-              <card.icon className={`w-4.5 h-4.5 ${card.text}`} />
+              <div
+                className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${accent}`}
+              >
+                <card.icon className="h-5 w-5" />
+              </div>
+              <p className="mb-0.5 text-2xl font-bold text-slate-900">
+                {card.value}
+              </p>
+              <p className="text-xs font-semibold text-slate-600">
+                {card.label}
+              </p>
+              <p className="mt-0.5 text-xs text-slate-400">{card.sub}</p>
             </div>
-            <p className={`text-2xl font-bold ${card.text} mb-0.5`}>
-              {card.value}
-            </p>
-            <p className={`text-xs font-semibold ${card.text} opacity-90`}>
-              {card.label}
-            </p>
-            <p className={`text-xs ${card.subText} mt-0.5`}>{card.sub}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── Next Actions ── */}
@@ -791,10 +795,8 @@ export function PersonalDashboard() {
             href={action.href}
             className="group flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
           >
-            <div
-              className={`w-10 h-10 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center shadow-sm shrink-0`}
-            >
-              <action.icon className="w-5 h-5 text-white" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+              <action.icon className="h-5 w-5 text-blue-600" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
@@ -1115,11 +1117,11 @@ export function PersonalDashboard() {
                   </span>
                 )}
               </div>
-              {progressChart.length >= 2 ? (
+              {progressChart.length >= 1 ? (
                 <ResponsiveContainer width="100%" height={180}>
                   <AreaChart
                     data={progressChart}
-                    margin={{ top: 5, right: 10, bottom: 0, left: -20 }}
+                    margin={{ top: 8, right: 12, bottom: 0, left: -20 }}
                   >
                     <defs>
                       <linearGradient
@@ -1131,12 +1133,12 @@ export function PersonalDashboard() {
                       >
                         <stop
                           offset="5%"
-                          stopColor="#3b82f6"
+                          stopColor={SEMANTIC.primary}
                           stopOpacity={0.25}
                         />
                         <stop
                           offset="95%"
-                          stopColor="#3b82f6"
+                          stopColor={SEMANTIC.primary}
                           stopOpacity={0}
                         />
                       </linearGradient>
@@ -1156,17 +1158,27 @@ export function PersonalDashboard() {
                     />
                     <Tooltip formatter={(v: any) => [`${v}%`, "Điểm phù hợp"]} />
                     <Area
-                      type="monotone"
+                      // Đoạn thẳng nối từng lần match thật (không nội suy cong) +
+                      // chấm tròn mỗi mốc → thấy rõ từng "bước". Một lần match sẽ
+                      // hiển thị thành một chấm duy nhất.
+                      type="linear"
                       dataKey="score"
-                      stroke="#3b82f6"
+                      stroke={SEMANTIC.primary}
                       strokeWidth={2.5}
                       fill="url(#progGrad)"
+                      dot={{
+                        r: 4,
+                        fill: SEMANTIC.primary,
+                        stroke: "#fff",
+                        strokeWidth: 2,
+                      }}
+                      activeDot={{ r: 5 }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="flex min-h-[120px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 text-center text-xs text-slate-400">
-                  Chạy đối soát CV ít nhất 2 lần để xem tiến bộ theo thời gian.
+                  Chạy đối soát CV để bắt đầu theo dõi tiến bộ điểm phù hợp.
                 </div>
               )}
             </div>
@@ -1184,7 +1196,7 @@ export function PersonalDashboard() {
               <div className="flex items-center gap-3 mb-4 p-3 bg-blue-50 rounded-xl">
                 <div className="flex-1 h-2.5 bg-blue-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all"
+                    className="h-full bg-blue-600 rounded-full transition-all"
                     style={{ width: `${strength}%` }}
                   />
                 </div>

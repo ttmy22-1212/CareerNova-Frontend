@@ -197,7 +197,6 @@ function RadarCategoryDropdown({
   );
 }
 
-
 export function SkillGapAnalysis() {
   const [expandedPath, setExpandedPath] = useState<string | null>(null);
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
@@ -370,11 +369,7 @@ export function SkillGapAnalysis() {
       name: c.category.replace(" Development", "").replace(" & Data", ""),
       gap: roundedScore,
       color:
-        roundedScore < 0
-          ? "#ef4444"
-          : roundedScore > 0
-            ? "#10b981"
-            : "#94a3b8",
+        roundedScore < 0 ? "#ef4444" : roundedScore > 0 ? "#10b981" : "#94a3b8",
     };
   });
 
@@ -388,7 +383,7 @@ export function SkillGapAnalysis() {
             label: "Mức độ phù hợp với thị trường",
             value: `${statistics?.match_score ?? 0}%`,
             sub: "Trên tất cả danh mục",
-            iconBg: "from-blue-500 to-blue-600",
+            iconBg: "bg-blue-50 text-blue-600",
             change: "Phù hợp",
             changeColor: "text-blue-500",
           },
@@ -397,7 +392,7 @@ export function SkillGapAnalysis() {
             label: "Khoảng trống nghiêm trọng",
             value: `${statistics?.core_gaps_count ?? 0}`,
             sub: "Kỹ năng cần ưu tiên",
-            iconBg: "from-red-500 to-orange-500",
+            iconBg: "bg-red-50 text-red-600",
             change: "Cốt lõi",
             changeColor: "text-red-500",
           },
@@ -408,9 +403,9 @@ export function SkillGapAnalysis() {
           >
             <div className="flex items-start justify-between mb-3">
               <div
-                className={`w-10 h-10 bg-gradient-to-br ${stat.iconBg} rounded-xl flex items-center justify-center shadow-sm`}
+                className={`w-10 h-10 ${stat.iconBg} rounded-xl flex items-center justify-center`}
               >
-                <stat.icon className="w-5 h-5 text-white" />
+                <stat.icon className="w-5 h-5" />
               </div>
               <span className={`text-xs font-semibold ${stat.changeColor}`}>
                 {stat.change}
@@ -502,8 +497,8 @@ export function SkillGapAnalysis() {
                   Chưa có dữ liệu khoảng trống kỹ năng
                 </p>
                 <p className="text-xs text-slate-500 max-w-xs">
-                  Tải CV và chạy đối soát để xem bạn còn thiếu kỹ năng nào so với
-                  thị trường.
+                  Tải CV và chạy đối soát để xem bạn còn thiếu kỹ năng nào so
+                  với thị trường.
                 </p>
                 <Link
                   href="/cv-matching"
@@ -523,7 +518,7 @@ export function SkillGapAnalysis() {
             Độ khớp theo danh mục
           </h3>
           <p className="text-xs text-slate-500 mb-4">
-            Điểm khớp theo trọng số skill trong default matching
+            Điểm khớp theo trọng số kỹ năng từ so khớp mặc định
           </p>
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
@@ -666,8 +661,7 @@ export function SkillGapAnalysis() {
                     <div className="px-5 pb-4 space-y-3">
                       {cat.skills.map((skill) => {
                         const sc =
-                          statusConfig[skill.status] ||
-                          statusConfig["Missing"];
+                          statusConfig[skill.status] || statusConfig["Missing"];
                         const skillUserRate = clampPercent(skill.user_rate);
                         const skillMarketRate = clampPercent(skill.market_rate);
 
@@ -785,7 +779,9 @@ export function SkillGapAnalysis() {
                               : "bg-amber-50 text-amber-600"
                           }`}
                         >
-                          {path.status === "Missing" ? "Thiếu" : "Khớp một phần"}
+                          {path.status === "Missing"
+                            ? "Thiếu"
+                            : "Khớp một phần"}
                         </span>
                         {path.started && (
                           <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
@@ -882,7 +878,9 @@ export function SkillGapAnalysis() {
                                   </p>
                                 )}
                                 <p className="text-[10px] text-slate-400">
-                                  {course.price > 0 ? `$${course.price}` : "Free"}
+                                  {course.price > 0
+                                    ? `$${course.price}`
+                                    : "Free"}
                                 </p>
                               </div>
                             </Link>

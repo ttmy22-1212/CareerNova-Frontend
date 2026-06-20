@@ -58,15 +58,25 @@ type NavItem = {
 
 const navGroups: { title: string; items: NavItem[] }[] = [
   {
-    title: "1 · Hồ sơ của bạn",
+    title: "Khám phá thị trường",
+    items: [
+      {
+        href: paths.dashboard,
+        label: "Thông tin Thị trường",
+        Icon: LayoutDashboard,
+        end: true,
+      },
+    ],
+  },
+  {
+    title: "Dành cho bạn",
     items: [
       {
         href: paths.personalDashboard,
-        label: "Tổng quan Cá nhân",
+        label: "Tổng quan",
         Icon: LayoutGrid,
         end: true,
       },
-      { href: paths.profile.detail, label: "Hồ sơ Người dùng", Icon: User },
       {
         href: "/onboarding/welcome",
         label: "Kiểm tra hướng nghiệp",
@@ -75,7 +85,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
-    title: "2 · Phân tích & đối soát",
+    title: "Phân tích & đối soát",
     items: [
       {
         href: paths.cvMatching,
@@ -87,26 +97,15 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
-    title: "3 · Hành động",
+    title: "Hành động",
     items: [
       {
         href: paths.recommendations,
-        label: "Đề xuất (tổng hợp)",
+        label: "Đề xuất",
         Icon: BookmarkCheck,
       },
       { href: paths.roadmap.index, label: "Khoá học & Lộ trình", Icon: Map },
       { href: paths.jobs.index, label: "Tìm kiếm việc làm", Icon: Search },
-    ],
-  },
-  {
-    title: "Khám phá thị trường",
-    items: [
-      {
-        href: paths.dashboard,
-        label: "Thông tin Thị trường",
-        Icon: LayoutDashboard,
-        end: true,
-      },
     ],
   },
 ];
@@ -119,8 +118,8 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
     subtitle: "Tổng quan thị trường IT — không cần đăng nhập",
   },
   [paths.personalDashboard]: {
-    title: "Tổng quan Cá nhân",
-    subtitle: "Insight cá nhân hóa dựa trên Hồ sơ Người dùng của bạn",
+    title: "Tổng quan",
+    subtitle: "Insight cá nhân hóa dựa trên hồ sơ và CV của bạn",
   },
   [paths.jobs.index]: {
     title: "Tìm kiếm việc làm",
@@ -135,7 +134,7 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
     subtitle: "Khoảng cách kỹ năng so với thị trường",
   },
   [paths.recommendations]: {
-    title: "Đề xuất (tổng hợp)",
+    title: "Đề xuất",
     subtitle: "Tóm tắt nhanh — dẫn tới Tìm việc, Phân tích kỹ năng, Roadmap",
   },
   [paths.profile.detail]: {
@@ -215,10 +214,13 @@ export default function UserLayout({
   }
 
   const active = findActive(pathname);
-  const meta = (active && pageMeta[active.href]) ?? {
-    title: "Career Nova",
-    subtitle: "",
-  };
+  // /profile không còn trong sidebar (vào từ avatar header) nên findActive
+  // không khớp — fallback theo pathname để tiêu đề trang vẫn đúng.
+  const meta = (active && pageMeta[active.href]) ??
+    pageMeta[pathname] ?? {
+      title: "Career Nova",
+      subtitle: "",
+    };
 
   const nextAction = checklist.find((c) => !c.done);
   const groupTitle =
@@ -711,11 +713,7 @@ function JourneyBar({ journey }: { journey: AnyJourneyStage[] }) {
               <div key={stage.id} className="flex items-center gap-1">
                 <Link
                   href={stage.href}
-                  title={
-                    isHere
-                      ? `Bạn đang ở đây — ${stage.desc}`
-                      : stage.desc
-                  }
+                  title={isHere ? `Bạn đang ở đây — ${stage.desc}` : stage.desc}
                   className={`group relative flex items-center gap-2 rounded-lg px-2.5 py-1.5 transition-all duration-150 ${
                     isHere
                       ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-300 dark:ring-blue-700"

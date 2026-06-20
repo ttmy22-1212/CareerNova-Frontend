@@ -8,6 +8,7 @@ import {
   Flame,
   ArrowRight,
   ArrowUpRight,
+  ArrowDownRight,
   Filter,
   Sparkles,
   Globe,
@@ -17,13 +18,6 @@ import {
   Users,
 } from "lucide-react";
 
-// Viết hoa chữ cái đầu mỗi từ cho nhãn nhóm ngành (vd: "software engineer" → "Software Engineer")
-const toTitleCase = (value: string) =>
-  (value || "")
-    .toLowerCase()
-    .split(/\s+/)
-    .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : word))
-    .join(" ");
 
 const formatCompact = (value: number) =>
   value >= 1000 ? `${(value / 1000).toFixed(1).replace(/\.0$/, "")}k` : `${value}`;
@@ -35,9 +29,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
+  Treemap,
 } from "recharts";
 
 import MarketDashboardApi from "@/api/market-dashboard";
@@ -55,18 +47,8 @@ import {
 
 import { useOnboarding } from "@/contexts/onboarding/onboarding-context";
 
-const SKILL_COLORS = [
-  "#3b82f6",
-  "#8b5cf6",
-  "#06b6d4",
-  "#10b981",
-  "#f59e0b",
-  "#6366f1",
-  "#ec4899",
-  "#14b8a6",
-  "#f97316",
-  "#84cc16",
-];
+import { CATEGORY_COLORS, categoryColor, BRAND_BAR } from "./chart-palette";
+import { toTitleCase } from "@/utils/text";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload?.length) {
@@ -79,6 +61,71 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <span className="font-medium">{p.value.toLocaleString()}</span>
           </p>
         ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+// ── Treemap "Phân bổ thị trường" ──────────────────────────────────
+// Diện tích mỗi ô tỉ lệ thuận với số tin tuyển dụng của nhóm kỹ năng,
+// giúp người dùng quét nhanh nhóm nào đang lớn (cảm hứng: karpathy.ai/jobs).
+const IndustryTreemapCell = (props: any) => {
+  const { x, y, width, height, name, percentage, fill, index } = props;
+  if (!(width > 0) || !(height > 0)) return null;
+  const color = fill || categoryColor(index);
+  const showLabel = width > 56 && height > 30;
+  return (
+    <g>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        rx={6}
+        ry={6}
+        style={{ fill: color, stroke: "#fff", strokeWidth: 2 }}
+      />
+      {showLabel && (
+        <>
+          <text
+            x={x + 8}
+            y={y + 18}
+            fill="#fff"
+            fontSize={11}
+            fontWeight={600}
+            style={{ pointerEvents: "none" }}
+          >
+            {String(name).length > 16
+              ? `${String(name).slice(0, 15)}…`
+              : name}
+          </text>
+          <text
+            x={x + 8}
+            y={y + 33}
+            fill="rgba(255,255,255,0.85)"
+            fontSize={11}
+            style={{ pointerEvents: "none" }}
+          >
+            {percentage}%
+          </text>
+        </>
+      )}
+    </g>
+  );
+};
+
+const TreemapTooltip = ({ active, payload }: any) => {
+  if (active && payload?.length) {
+    const d = payload[0]?.payload;
+    if (!d) return null;
+    return (
+      <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-lg text-sm">
+        <p className="font-semibold text-slate-900 mb-0.5">{d.name}</p>
+        <p className="text-slate-600">
+          <span className="font-medium">{d.count?.toLocaleString()}</span> công
+          việc · {d.percentage}%
+        </p>
       </div>
     );
   }
@@ -255,6 +302,14 @@ export function MarketDashboard({
   const missingSkills = personalInsight?.missingSkills ?? 0;
   const profileCompletion = personalInsight?.profileCompletion ?? strength;
 
+  // Chuẩn hoá dữ liệu cho Treemap "Phân bổ thị trường" (gắn sẵn màu theo nghĩa)
+  const industryTreemapData = industriesData.map((item, i) => ({
+    name: toTitleCase(item.category_name || item.industry_name || "Khác"),
+    count: item.count,
+    percentage: item.percentage,
+    fill: categoryColor(i),
+  }));
+
   return (
     <div className="p-6 space-y-6">
       {/* ── Hero ── */}
@@ -407,56 +462,83 @@ export function MarketDashboard({
             label: "Tin tuyển dụng đang mở",
             sub: "Vị trí IT đang mở tuyển",
             value: stats?.active_jobs?.count?.toLocaleString() ?? "0",
-            change:
+            badge:
               stats?.active_jobs?.growth_percentage !== undefined
-                ? `${stats.active_jobs.growth_percentage >= 0 ? "+" : ""}${stats.active_jobs.growth_percentage}%`
-                : "--",
-            color: "from-blue-500 to-blue-600",
-            light: "bg-blue-50 text-blue-700",
+                ? {
+                    text: `${stats.active_jobs.growth_percentage >= 0 ? "+" : ""}${stats.active_jobs.growth_percentage}%`,
+                    tone:
+                      stats.active_jobs.growth_percentage >= 0
+                        ? "positive"
+                        : "negative",
+                  }
+                : { text: "--", tone: "neutral" },
           },
           {
             icon: Building2,
             label: "Công ty đang tuyển",
             sub: "Nhà tuyển dụng đang hoạt động",
             value: stats?.companies_hiring?.count?.toString() ?? "0",
-            change: "Đang tuyển",
-            color: "from-violet-500 to-violet-600",
-            light: "bg-violet-50 text-violet-700",
+            badge: { text: "Đang tuyển", tone: "neutral" },
           },
           {
             icon: Sparkles,
             label: "Vị trí thực tập",
             sub: "Cơ hội thực tập đang mở",
             value: stats?.internship_jobs?.count?.toLocaleString() ?? "0",
-            change: "Phù hợp SV",
-            color: "from-orange-500 to-orange-600",
-            light: "bg-orange-50 text-orange-700",
+            badge: { text: "Phù hợp SV", tone: "neutral" },
           },
-        ].map((card) => (
-          <div
-            key={card.label}
-            className="bg-white rounded-xl border border-slate-100 shadow-sm p-5"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div
-                className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.color} flex items-center justify-center shadow-sm`}
-              >
-                <card.icon className="w-5 h-5 text-white" />
+        ].map((card) => {
+          // Màu badge bám ngữ nghĩa: tăng=đạt, giảm=cảnh báo, nhãn=trung tính.
+          const badgeClass =
+            card.badge.tone === "positive"
+              ? "bg-emerald-50 text-emerald-700"
+              : card.badge.tone === "negative"
+                ? "bg-red-50 text-red-700"
+                : "bg-slate-100 text-slate-500";
+          return (
+            <div
+              key={card.label}
+              className="bg-white rounded-xl border border-slate-100 shadow-sm p-5"
+            >
+              <div className="flex items-start justify-between mb-4">
+                {/* Icon-chip thống nhất 1 tông thương hiệu — màu không mã hoá
+                    trạng thái nên không tô khác nhau giữa các thẻ cùng vai trò */}
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <card.icon className="w-5 h-5 text-blue-600" />
+                </div>
+                <span
+                  className={`flex items-center gap-0.5 text-xs font-bold px-2 py-0.5 rounded-full ${badgeClass}`}
+                >
+                  {card.badge.tone === "positive" && (
+                    <ArrowUpRight className="w-3 h-3" />
+                  )}
+                  {card.badge.tone === "negative" && (
+                    <ArrowDownRight className="w-3 h-3" />
+                  )}
+                  {card.badge.text}
+                </span>
               </div>
-              <span
-                className={`text-xs font-bold px-2 py-0.5 rounded-full ${card.light}`}
-              >
-                {card.change}
-              </span>
+              <p className="text-2xl font-bold text-slate-900 mb-0.5">
+                {card.value}
+              </p>
+              <p className="text-xs font-medium text-slate-500">{card.label}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">{card.sub}</p>
             </div>
-            <p className="text-2xl font-bold text-slate-900 mb-0.5">
-              {card.value}
-            </p>
-            <p className="text-xs font-medium text-slate-500">{card.label}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">{card.sub}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
+      {/* ── Dòng tin cậy: minh bạch quy mô dữ liệu ── */}
+      {stats?.active_jobs?.count ? (
+        <p className="-mt-2 flex items-center gap-1.5 text-xs text-slate-400">
+          <BarChart3 className="h-3.5 w-3.5" />
+          Đang phân tích{" "}
+          <span className="font-semibold text-slate-500">
+            {stats.active_jobs.count.toLocaleString()}
+          </span>{" "}
+          tin tuyển dụng IT đang mở · dữ liệu thu thập tự động, cập nhật định kỳ
+        </p>
+      ) : null}
 
       {/* ── Trend Chart + Industry ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -543,24 +625,24 @@ export function MarketDashboard({
           <p className="text-xs text-slate-500 mb-3">
             Phân bổ công việc theo nhóm kỹ năng
           </p>
-          <ResponsiveContainer width="100%" height={160}>
-            <PieChart>
-              <Pie
-                data={industriesData}
-                cx="50%"
-                cy="50%"
-                innerRadius={45}
-                outerRadius={70}
-                paddingAngle={3}
+          {industryTreemapData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <Treemap
+                data={industryTreemapData}
                 dataKey="count"
+                nameKey="name"
+                stroke="#fff"
+                isAnimationActive={false}
+                content={<IndustryTreemapCell />}
               >
-                {industriesData?.map((entry, i) => (
-                  <Cell key={i} fill={SKILL_COLORS[i % SKILL_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v: any) => [`${v} công việc`, ""]} />
-            </PieChart>
-          </ResponsiveContainer>
+                <Tooltip content={<TreemapTooltip />} />
+              </Treemap>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-[200px] items-center justify-center text-sm text-slate-400">
+              Chưa có dữ liệu phân bổ cho bộ lọc này
+            </div>
+          )}
           <div
             className="mt-2 space-y-1.5 max-h-[100px]"
             style={{ overflow: "scroll" }}
@@ -574,11 +656,11 @@ export function MarketDashboard({
                   <span
                     className="w-2 h-2 rounded-full shrink-0"
                     style={{
-                      backgroundColor: SKILL_COLORS[i % SKILL_COLORS.length],
+                      backgroundColor: categoryColor(i),
                     }}
                   />
                   <span className="text-slate-600">
-                    {item.category_name || item.industry_name}
+                    {toTitleCase(item.category_name || item.industry_name)}
                   </span>
                 </div>
                 <span className="font-semibold text-slate-900 shrink-0">
@@ -722,7 +804,7 @@ export function MarketDashboard({
                       className="h-full rounded-full transition-all"
                       style={{
                         width: `${inDemandSkillsData[0] ? (item.job_count / inDemandSkillsData[0].job_count) * 100 : 0}%`,
-                        backgroundColor: SKILL_COLORS[i % SKILL_COLORS.length],
+                        backgroundColor: BRAND_BAR,
                       }}
                     />
                   </div>

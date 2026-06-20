@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, Loader2, Mail, Lock, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/auth/auth-context";
+import { mapAuthError } from "@/utils/auth-errors";
 import {
   SocialAuthButtons,
   AuthDivider,
@@ -30,7 +31,7 @@ export function LoginContent() {
       await login(email, password);
       router.replace(next);
     } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : "Đăng nhập thất bại");
+      setErr(mapAuthError(e2, "Đăng nhập thất bại"));
     } finally {
       setLoading(false);
     }
@@ -111,9 +112,13 @@ export function LoginContent() {
         </div>
 
         {err && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
-            {err}
-          </div>
+          <p
+            role="alert"
+            className="flex items-start gap-1.5 text-sm text-red-600 dark:text-red-400"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{err}</span>
+          </p>
         )}
 
         <button

@@ -12,6 +12,7 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth/auth-context";
+import { mapAuthError } from "@/utils/auth-errors";
 import {
   SocialAuthButtons,
   AuthDivider,
@@ -44,7 +45,7 @@ export function RegisterContent() {
       await register(name, email, password);
       router.push(`/auth/verify-request?email=${encodeURIComponent(email)}`);
     } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : "Đăng ký thất bại");
+      setErr(mapAuthError(e2, "Đăng ký thất bại"));
     } finally {
       setLoading(false);
     }

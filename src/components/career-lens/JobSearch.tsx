@@ -22,6 +22,7 @@ import { JobListItem } from "@/types/job-insight";
 import ProfileApi from "@/api/profile";
 import PersonalDashboardApi from "@/api/personal-dashboard";
 import { formatSalaryRange } from "@/utils/salary";
+import { toTitleCase } from "@/utils/text";
 
 type DisplayJobItem = JobListItem & { salary_text?: string };
 
@@ -504,7 +505,7 @@ export function JobSearch() {
           </span>
           {[
             searchGroup && {
-              label: `Vị trí: ${searchGroup}`,
+              label: `Vị trí: ${toTitleCase(searchGroup)}`,
               clear: () => setSearchGroup(""),
             },
             searchTerm && {

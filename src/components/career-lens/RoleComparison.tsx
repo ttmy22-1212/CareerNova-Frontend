@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, ArrowRight, TrendingUp, Sparkles, Clock } from "lucide-react";
 import RecommendationApi from "@/api/recommendation";
+import { toTitleCase } from "@/utils/text";
 import { CareerPathRecommendation } from "@/types/recommendation";
 
 const priorityColor: Record<string, string> = {
@@ -83,7 +84,7 @@ export function RoleComparison({
             >
               <div className="flex items-start justify-between gap-2 mb-2">
                 <p className="text-sm font-bold text-slate-900 leading-tight">
-                  {p.title}
+                  {toTitleCase(p.title)}
                 </p>
                 {isBest && (
                   <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[9px] font-bold text-white">
@@ -102,7 +103,7 @@ export function RoleComparison({
               </div>
               <div className="h-2 rounded-full bg-slate-200 overflow-hidden mb-1.5">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
+                  className="h-full rounded-full bg-blue-600"
                   style={{ width: `${p.current_match}%` }}
                 />
               </div>

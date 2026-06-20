@@ -22,8 +22,8 @@ export default function AuthLayout({
               </div>
               <div>
                 <p className="text-base font-bold text-white">Career Nova</p>
-                <p className="text-xs font-medium uppercase tracking-wider text-white/70">
-                  Nền tảng
+                <p className="text-xs font-medium text-white/70">
+                  Phân tích kỹ năng & việc làm IT
                 </p>
               </div>
             </Link>
@@ -38,18 +38,19 @@ export default function AuthLayout({
               <h2 className="mt-4 text-3xl font-bold leading-tight text-white xl:text-4xl">
                 Định hướng nghề nghiệp
                 <br />
-                bằng dữ liệu, không phải linh cảm.
+                dựa trên dữ liệu thật.
               </h2>
               <p className="mt-3 max-w-md text-sm text-white/80 xl:text-base">
-                Phân tích kỹ năng, so khớp CV với JD, đề xuất lộ trình học theo
-                career path bạn chọn — tất cả trong một nền tảng.
+                Đối soát CV với yêu cầu tuyển dụng thật, chỉ ra khoảng trống kỹ
+                năng và gợi ý lộ trình học theo hướng nghề bạn chọn — tất cả
+                trong một nơi.
               </p>
             </div>
 
             <ul className="space-y-3">
               {[
-                { Icon: Target, text: "Phân tích kỹ năng theo career path" },
-                { Icon: BarChart3, text: "Thông tin Thị trường" },
+                { Icon: Target, text: "Phân tích kỹ năng theo hướng nghề" },
+                { Icon: BarChart3, text: "Thông tin thị trường tuyển dụng" },
                 { Icon: Shield, text: "Bảo mật — dữ liệu thuộc về bạn" },
               ].map(({ Icon, text }) => (
                 <li
@@ -70,7 +71,8 @@ export default function AuthLayout({
               Career Nova
             </span>
             <span>
-              CV matching, skill gap và market insight trong một luồng
+              Đối soát CV · khoảng trống kỹ năng · thông tin thị trường — trong
+              một luồng
             </span>
           </div>
         </aside>

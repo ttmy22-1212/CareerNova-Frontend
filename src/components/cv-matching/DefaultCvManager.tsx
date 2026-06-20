@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import ProfileApi from "@/api/profile";
+import { toTitleCase } from "@/utils/text";
 import { UserProfileResponse } from "@/types/profile";
 import {
   Dialog,
@@ -230,7 +231,7 @@ export function DefaultCvManager() {
                       ) : (
                         <p className="flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-100">
                           <Sparkles className="h-3.5 w-3.5 text-blue-500" />
-                          {defaultMatch.search_group || "N/A"}
+                          {toTitleCase(defaultMatch.search_group) || "N/A"}
                         </p>
                       )}
                     </div>

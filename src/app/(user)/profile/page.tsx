@@ -70,6 +70,11 @@ const interestLabels: Record<string, string> = {
   devops: "DevOps",
   cybersecurity: "Security",
   qa: "QA / Test",
+  product: "Product / PM",
+  engineering_manager: "Quản lý Kỹ thuật",
+  it_support: "IT Support",
+  devrel: "DevRel / Đào tạo",
+  business_analyst: "Business Analyst",
 };
 
 const goalLabels: Record<string, string> = {

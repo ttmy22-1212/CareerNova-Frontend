@@ -22,6 +22,7 @@ import {
 import Link from "next/link";
 import { SkillRadar } from "./SkillRadar";
 import { buildCategoryOverview as buildOverviewUtil } from "@/utils/category-overview";
+import { toTitleCase } from "@/utils/text";
 import CvApi from "@/api/cv";
 import MatchingApi from "@/api/matching";
 import profileApi from "@/api/profile";
@@ -1076,7 +1077,7 @@ export function CVMatching() {
                   <option value="">-- Chọn lần phân tích phù hợp --</option>
                 {allMatchings.map((match) => (
                   <option key={match.match_id} value={match.match_id}>
-                    {match.search_group || "Nhóm nghề"} (
+                    {toTitleCase(match.search_group) || "Nhóm nghề"} (
                     {normalizePercent(match.match_score)}%) -{" "}
                     {new Date(
                       match.created_at || match.uploaded_at,
@@ -1358,7 +1359,7 @@ export function CVMatching() {
                             className="text-xs font-bold text-amber-600 shrink-0"
                             title="Mức độ tương đồng ngữ nghĩa giữa kỹ năng của bạn và yêu cầu"
                           >
-                            {item.match}% tương đồng
+                            {item.match}%
                           </span>
                         </div>
                         <div className="relative h-1.5 bg-slate-100 rounded-full overflow-hidden mb-1.5">
@@ -1505,7 +1506,6 @@ export function CVMatching() {
                           data={dataToRender}
                           requiredLabel="Yêu cầu"
                           matchedViaLabel="liên quan tới"
-                          matchedViaMinSimilarity={60}
                           clickableLabels={isOverview}
                           onLabelClick={(cat) =>
                             handleCategoryChange(selectedMatchingId, cat)
@@ -1594,7 +1594,7 @@ export function CVMatching() {
                     <p className="text-xs text-slate-500 mt-0.5">
                       Dưới đây là đánh giá mức độ tương thích đối với vị trí{" "}
                       <span className="font-semibold text-slate-700">
-                        {analyzeResult.search_group || selectedRole}
+                        {toTitleCase(analyzeResult.search_group || selectedRole)}
                       </span>
                       .
                     </p>
@@ -1678,7 +1678,7 @@ export function CVMatching() {
                                 }
                               >
                                 {item.skill_name} (
-                                {normalizePercent(item.similarity)}% tương đồng)
+                                {normalizePercent(item.similarity)}%)
                                 {showVia && (
                                   <span className="ml-1 font-normal text-violet-600">
                                     ↔ {item.matched_via}
@@ -1780,7 +1780,6 @@ export function CVMatching() {
                             }
                             requiredLabel="Yêu cầu"
                             matchedViaLabel="liên quan tới"
-                            matchedViaMinSimilarity={60}
                             clickableLabels={isModalOverview}
                             onLabelClick={(cat) =>
                               handleCategoryChange(

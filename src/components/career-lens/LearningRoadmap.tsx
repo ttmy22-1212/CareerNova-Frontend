@@ -5,6 +5,7 @@ import { Clock, Users, Star, ArrowRight, BookmarkPlus } from "lucide-react";
 import LearningRoadmapApi from "@/api/learning-roadmap";
 import { CourseItemDto, LearningPathDto } from "@/types/learning-roadmap";
 import { NextStepBanner } from "./NextStepBanner";
+import { categoryColor } from "./chart-palette";
 
 interface LearningRoadmapProps {
   selectedSkillFromDB?: string;
@@ -211,7 +212,7 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
         <div className="w-full">
           <input
             type="text"
-            placeholder="Tìm kỹ năng hoặc khóa học cụ thể, ví dụ: Python, Docker, React..."
+            placeholder="Tìm kỹ năng hoặc khóa học cụ thể (Python, Docker, React...)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-violet-400"
@@ -227,7 +228,7 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
           </p>
         ) : (
           <div className="grid gap-4 grid-cols-1 xl:grid-cols-2 w-full">
-            {displayLearningPaths.map((path) => (
+            {displayLearningPaths.map((path, idx) => (
               <div
                 key={path.id}
                 className="cursor-pointer overflow-hidden rounded-lg border border-slate-200 bg-white transition-all hover:border-slate-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 w-full min-w-0"
@@ -235,9 +236,11 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
                   setExpandedPath(expandedPath === path.id ? null : path.id)
                 }
               >
-                {/* Header */}
+                {/* Header — màu nền lấy từ palette phân loại (lạnh, hài hoà)
+                    thay cho gradient `path.color` tuỳ hứng từ API */}
                 <div
-                  className={`bg-gradient-to-r ${path.color} p-6 text-white`}
+                  className="p-6 text-white"
+                  style={{ backgroundColor: categoryColor(idx) }}
                 >
                   <div className="flex items-start justify-between gap-4 min-w-0">
                     <div className="min-w-0 flex-1">
@@ -331,9 +334,7 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
                                 onClick={() => handleToggleSave(course.id)} // Giữ nguyên hàm cũ của bạn
                                 className={`px-3 py-2 border rounded-lg transition-all ${course.is_saved ? "border-amber-500 text-amber-500 bg-amber-50" : "border-slate-300 text-slate-600"}`} // Sửa class màu trái tim (đỏ) thành màu của Job (hổ phách)
                                 title={
-                                  course.is_saved
-                                    ? "Bỏ lưu"
-                                    : "Lưu khóa học"
+                                  course.is_saved ? "Bỏ lưu" : "Lưu khóa học"
                                 }
                               >
                                 <BookmarkPlus

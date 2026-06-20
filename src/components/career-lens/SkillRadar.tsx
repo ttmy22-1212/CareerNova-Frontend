@@ -23,8 +23,6 @@ interface SkillRadarProps {
   youLabel?: string;
   /** Cách diễn đạt matched_via: "liên quan tới" (mặc định) hoặc "khớp qua" */
   matchedViaLabel?: string;
-  /** Chỉ hiện matched_via khi độ tương đồng ≥ ngưỡng (0 = luôn hiện) */
-  matchedViaMinSimilarity?: number;
   /** Dùng bar ngang khi số kỹ năng < ngưỡng (radar cần ≥3 trục) */
   barFallbackThreshold?: number;
   /** Nhãn trục bấm được (chế độ tổng quan) */
@@ -40,17 +38,27 @@ export function SkillRadar({
   requiredLabel = "Yêu cầu",
   youLabel = "Bạn",
   matchedViaLabel = "liên quan tới",
-  matchedViaMinSimilarity = 60,
   barFallbackThreshold = 3,
   clickableLabels = false,
   onLabelClick,
   scrollable = false,
   height = 240,
 }: SkillRadarProps) {
+  // Hiện matched_via bất cứ khi nào có và khác tên kỹ năng — với kỹ năng
+  // "tương thích một phần", biết nó khớp QUA kỹ năng nào (vd JavaScript ↔ Java)
+  // chính là thông tin hữu ích, không phụ thuộc ngưỡng tương đồng.
   const showVia = (d: SkillRadarPoint) =>
     !!d.matchedVia &&
-    d.matchedVia.toLowerCase() !== (d.subject || "").toLowerCase() &&
-    d.you >= matchedViaMinSimilarity;
+    d.matchedVia.toLowerCase() !== (d.subject || "").toLowerCase();
+
+  // Gợi ý tương tác (chỉ ở chế độ tổng quan): nhiều người không nhận ra
+  // có thể bấm vào tên nhóm trên radar để xem chi tiết kỹ năng.
+  const DrillHint = () =>
+    clickableLabels ? (
+      <p className="mb-1.5 text-center text-[11px] font-medium text-blue-600">
+        Bấm vào tên nhóm (gạch chân) để xem chi tiết kỹ năng →
+      </p>
+    ) : null;
 
   const Legend = () => (
     <div className="mt-2 flex items-center justify-center gap-5">
@@ -69,7 +77,7 @@ export function SkillRadar({
   const useBars = !clickableLabels && data.length < barFallbackThreshold;
   if (useBars) {
     return (
-      <div className="space-y-4 py-2">
+      <div className="w-full space-y-4 py-2">
         <p className="text-[11px] text-slate-500">
           Nhóm này có ít kỹ năng — hiển thị dạng thanh để dễ so sánh với mức yêu
           cầu.
@@ -164,7 +172,7 @@ export function SkillRadar({
                       fontSize={10}
                       fontWeight={600}
                       fill="#2563eb"
-                      style={{ cursor: "pointer" }}
+                      style={{ cursor: "pointer", textDecoration: "underline" }}
                       onClick={(ev) => {
                         ev.stopPropagation();
                         onLabelClick?.(payload.value);
@@ -205,6 +213,7 @@ export function SkillRadar({
     const innerWidth = 260 + maxLabelLen * 14;
     return (
       <>
+        {/* <DrillHint /> */}
         <div
           ref={(el) => {
             if (el) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
@@ -220,7 +229,12 @@ export function SkillRadar({
 
   return (
     <>
-      <div style={{ height }}>{chart}</div>
+      {/* <DrillHint /> */}
+      {/* w-full: tránh co chiều ngang về 0 khi đặt trong flex căn giữa
+          (items-center) — nguyên nhân radar không hiện trong modal kết quả */}
+      <div className="w-full" style={{ height }}>
+        {chart}
+      </div>
       <Legend />
     </>
   );

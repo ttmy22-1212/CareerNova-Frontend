@@ -19,7 +19,6 @@ import {
   Calendar,
   BarChart3,
   FileText,
-  Eye,
   Heart,
   Plus,
 } from "lucide-react";
@@ -338,13 +337,6 @@ export function Recommendations() {
 
   const kanbanStages = [
     {
-      key: "viewing" as const,
-      label: "Đang xem",
-      Icon: Eye,
-      color: "slate",
-      desc: "Job bạn mới xem gần đây",
-    },
-    {
       key: "bookmarked" as const,
       label: "Quan tâm",
       Icon: Heart,
@@ -484,7 +476,7 @@ export function Recommendations() {
               Luồng công việc của bạn
             </h3>
             <p className="mt-0.5 text-xs text-slate-500">
-              Theo dõi các công việc bạn đã xem gần đây và các công việc đã lưu.
+              Các công việc bạn đã lưu để xem lại.
             </p>
           </div>
           <Link
@@ -494,7 +486,7 @@ export function Recommendations() {
             Thêm job <Plus className="h-3.5 w-3.5" />
           </Link>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3">
           {kanbanStages.map((stage) => {
             const items = kanbanColumns[stage.key];
             const c = colorMap[stage.color];

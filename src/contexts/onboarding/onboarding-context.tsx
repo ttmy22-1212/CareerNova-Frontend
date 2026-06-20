@@ -19,7 +19,12 @@ export type CareerInterest =
   | "ai_ml"
   | "devops"
   | "cybersecurity"
-  | "qa";
+  | "qa"
+  | "product"
+  | "engineering_manager"
+  | "it_support"
+  | "devrel"
+  | "business_analyst";
 export type Goal = "internship" | "fulltime" | "switch" | "explore";
 
 export interface RiasecResult {
