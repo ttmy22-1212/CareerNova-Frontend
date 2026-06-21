@@ -3,19 +3,10 @@ import { IBaseResponse } from "@/types/apis";
 import {
   CareerPathRecommendation,
   PrioritySkill,
-  RecommendedJob,
   SavedReportItem,
 } from "@/types/recommendation";
 
 export default class RecommendationApi {
-  /**
-   * Lấy danh sách 5 việc làm gợi ý hàng đầu trong vòng 1 tháng trở lại đây
-   * GET /recommendation/top-jobs
-   */
-  static async getTopJobs(): Promise<IBaseResponse<RecommendedJob[]>> {
-    return await apiGet("/recommendation/top-jobs");
-  }
-
   /**
    * Lấy kỹ năng thiếu/khớp một phần cần ưu tiên phát triển
    * GET /recommendation/priority-skills
