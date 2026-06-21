@@ -59,6 +59,7 @@ import ProfileApi from "@/api/profile";
 import LearningRoadmapApi from "@/api/learning-roadmap";
 import CvApi from "@/api/cv";
 import { CvItemDto } from "@/types/cv";
+import { toTitleCase } from "@/utils/text";
 
 const interestLabels: Record<string, string> = {
   frontend: "Frontend",
@@ -97,7 +98,7 @@ const majorLabels: Record<string, string> = {
 const providerMeta: Record<AuthProvider, { label: string; tone: string }> = {
   password: {
     label: "Email & mật khẩu",
-    tone: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+    tone: "bg-slate-100 text-slate-700 dark:text-slate-200 dark:bg-slate-800 dark:text-slate-300",
   },
   google: {
     label: "Google",
@@ -526,7 +527,7 @@ export default function ProfilePage() {
 
               <div className="min-w-0 sm:pb-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 md:text-3xl">
+                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white dark:text-slate-100 md:text-3xl">
                     {user?.full_name ?? "Sinh viên IT"}
                   </h1>
                   {user?.provider && providerMeta[user.provider] && (
@@ -538,7 +539,7 @@ export default function ProfilePage() {
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
+                <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-300 dark:text-slate-400">
                   {headline || "Chưa cập nhật ngành"}
                 </p>
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
@@ -575,7 +576,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-4 sm:gap-0 dark:border-slate-800 dark:bg-slate-900">
+          <div className="mt-5 grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white p-3 shadow-sm sm:grid-cols-4 sm:gap-0 dark:border-slate-800 dark:bg-slate-900">
             <Stat
               icon={TrendingUp}
               label="Hoàn thiện"
@@ -673,13 +674,13 @@ export default function ProfilePage() {
                   <div className="min-w-0 flex-1">
                     {defaultCv ? (
                       <>
-                        <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                        <p className="text-sm font-bold text-slate-900 dark:text-white dark:text-slate-100">
                           CV đang dùng để so khớp:{" "}
                           <span className="text-emerald-700 dark:text-emerald-400">
                             {defaultCv.file_name}
                           </span>
                         </p>
-                        <p className="text-xs text-slate-500 mt-0.5">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                           Mọi gợi ý việc làm & độ phù hợp đều dựa trên CV này.
                           {allowMatching
                             ? " Đang bật so khớp tự động."
@@ -700,7 +701,7 @@ export default function ProfilePage() {
                   </div>
                   <button
                     onClick={() => setProfileTab("skills")}
-                    className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 transition-colors dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
+                    className="shrink-0 rounded-lg bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
                   >
                     {defaultCv ? "Đổi CV" : "Quản lý CV"}
                   </button>
@@ -709,11 +710,11 @@ export default function ProfilePage() {
             })()}
 
             {/* Hồ sơ hướng nghiệp RIASEC */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-violet-500" />
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white dark:text-slate-100">
                     Hồ sơ hướng nghiệp (RIASEC)
                   </h3>
                   {profile.riasec?.code && (
@@ -736,10 +737,10 @@ export default function ProfilePage() {
                     {profile.riasec.top.map((d) => (
                       <div
                         key={d.dim}
-                        className="rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40"
+                        className="rounded-xl border border-slate-100 bg-slate-50 dark:bg-slate-800/50 p-3 dark:border-slate-800 dark:bg-slate-800/40"
                       >
                         <div className="mb-1 flex items-center justify-between">
-                          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                          <span className="text-xs font-semibold text-slate-800 dark:text-slate-100 dark:text-slate-200">
                             {d.label}
                           </span>
                           <span className="text-xs font-bold text-violet-600 dark:text-violet-300">
@@ -791,7 +792,7 @@ export default function ProfilePage() {
                 )}
                 {profile.suggestedPaths.length > 0 && (
                   <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">
-                    <p className="text-xs font-medium text-slate-500">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                       Đề xuất từ Quiz:
                     </p>
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -815,18 +816,18 @@ export default function ProfilePage() {
               >
                 {profile.goal ? (
                   <div className="space-y-2.5">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 dark:text-slate-200">
                       {goalLabels[profile.goal]}
                     </p>
                     {profile.targetSalaryUSD && (
                       <div className="rounded-lg bg-slate-50 p-2.5 dark:bg-slate-800/50">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                           Lương kỳ vọng
                         </p>
-                        <p className="mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100">
+                        <p className="mt-0.5 text-sm font-bold text-slate-900 dark:text-white dark:text-slate-100">
                           ${profile.targetSalaryUSD.toLocaleString()}/năm
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           ~
                           {Math.round(
                             (profile.targetSalaryUSD * 25000) / 12 / 1_000_000,
@@ -888,11 +889,11 @@ export default function ProfilePage() {
           {/* SKILLS & CV - Đã loại bỏ hoàn toàn Level & Progress bar rườm rà */}
           <TabsContent value="skills" className="mt-5 space-y-5">
             <div className="grid gap-5 md:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-emerald-600" />
-                    <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-white dark:text-slate-100">
                       Kỹ năng chủ lực ({profile.topSkills.length})
                     </h2>
                   </div>
@@ -913,7 +914,7 @@ export default function ProfilePage() {
                     {profile.topSkills.map((s) => (
                       <span
                         key={s.name}
-                        className="px-3 py-1.5 text-sm font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm"
+                        className="px-3 py-1.5 text-sm font-medium bg-slate-100 text-slate-800 dark:text-slate-100 dark:bg-slate-800 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm"
                       >
                         {s.name}
                       </span>
@@ -922,12 +923,12 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 {/* Header */}
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-amber-600" />
-                    <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-white dark:text-slate-100">
                       Hồ sơ CV của bạn ({sortedCvs.length})
                     </h2>
                   </div>
@@ -974,7 +975,7 @@ export default function ProfilePage() {
                               </div>
                               <div className="min-w-0">
                                 <p
-                                  className="truncate text-xs font-bold text-slate-900 dark:text-slate-100"
+                                  className="truncate text-xs font-bold text-slate-900 dark:text-white dark:text-slate-100"
                                   title={cv.file_name}
                                 >
                                   {cv.file_name}
@@ -1021,7 +1022,7 @@ export default function ProfilePage() {
                                     setViewingCvUrl(cv.file_url);
                                     setViewingCvName(cv.file_name);
                                   }}
-                                  className="p-1.5 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-slate-50 rounded-lg shadow-sm transition-colors dark:bg-slate-800 dark:border-slate-600 dark:text-slate-400"
+                                  className="p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-blue-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg shadow-sm transition-colors dark:bg-slate-800 dark:border-slate-600 dark:text-slate-400"
                                   title="Xem nội dung CV"
                                 >
                                   <Eye className="h-3 w-3" />
@@ -1045,7 +1046,7 @@ export default function ProfilePage() {
                 )}
 
                 {profile?.lastAnalysisAt && (
-                  <p className="mt-3 text-xs text-slate-500">
+                  <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
                     Phân tích gần nhất: {formatDate(profile.lastAnalysisAt)}
                   </p>
                 )}
@@ -1056,7 +1057,7 @@ export default function ProfilePage() {
           <TabsContent value="activity" className="mt-5">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* CỘT 1: CÔNG VIỆC ĐÃ LƯU */}
-              <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                 <div className="mb-2">
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                     Công việc đã lưu ({savedJobs.length})
@@ -1069,13 +1070,13 @@ export default function ProfilePage() {
                 <div className="mt-4 space-y-4">
                   {loadingSavedJobs ? (
                     <div className="flex items-center justify-center py-8">
-                      <RefreshCw className="h-5 w-5 animate-spin text-slate-500" />
-                      <span className="ml-2 text-xs text-slate-500">
+                      <RefreshCw className="h-5 w-5 animate-spin text-slate-500 dark:text-slate-400" />
+                      <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
                         Đang tải danh sách...
                       </span>
                     </div>
                   ) : savedJobs.length === 0 ? (
-                    <div className="text-center py-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                    <div className="text-center py-10 border-2 border-dashed border-slate-200 dark:border-slate-700 dark:border-slate-800 rounded-xl">
                       <Bookmark className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-700 mb-2" />
                       <p className="text-xs text-slate-500 dark:text-slate-400">
                         Bạn chưa lưu công việc nào.
@@ -1102,13 +1103,13 @@ export default function ProfilePage() {
                                       className="h-10 w-10 rounded-lg object-cover border border-slate-100 dark:border-slate-800"
                                     />
                                   ) : (
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
                                       <Building2 className="h-5 w-5" />
                                     </div>
                                   )}
                                   <div className="min-w-0">
                                     <h4 className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1">
-                                      {job.title}
+                                      {toTitleCase(job.title)}
                                     </h4>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                                       {job.company?.name}
@@ -1163,7 +1164,7 @@ export default function ProfilePage() {
               </div>
 
               {/* CỘT 2: KHÓA HỌC ĐÃ LƯU */}
-              <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                 <div className="mb-2">
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                     Khóa học đã lưu ({savedCourses.length})
@@ -1176,13 +1177,13 @@ export default function ProfilePage() {
                 <div className="mt-4 space-y-4">
                   {loadingSavedCourses ? (
                     <div className="flex items-center justify-center py-8">
-                      <RefreshCw className="h-5 w-5 animate-spin text-slate-500" />
-                      <span className="ml-2 text-xs text-slate-500">
+                      <RefreshCw className="h-5 w-5 animate-spin text-slate-500 dark:text-slate-400" />
+                      <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
                         Đang tải danh sách...
                       </span>
                     </div>
                   ) : savedCourses.length === 0 ? (
-                    <div className="text-center py-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                    <div className="text-center py-10 border-2 border-dashed border-slate-200 dark:border-slate-700 dark:border-slate-800 rounded-xl">
                       <GraduationCap className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-700 mb-2" />
                       <p className="text-xs text-slate-500 dark:text-slate-400">
                         Bạn chưa lưu khóa học nào.
@@ -1209,7 +1210,7 @@ export default function ProfilePage() {
                                       className="h-10 w-10 rounded-lg object-cover border border-slate-100 dark:border-slate-800"
                                     />
                                   ) : (
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
                                       <GraduationCap className="h-5 w-5" />
                                     </div>
                                   )}
@@ -1265,7 +1266,7 @@ export default function ProfilePage() {
                                       .map((tag, idx) => (
                                         <span
                                           key={idx}
-                                          className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded"
+                                          className="bg-slate-50 dark:bg-slate-800/50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded"
                                         >
                                           {tag}
                                         </span>
@@ -1306,10 +1307,10 @@ export default function ProfilePage() {
       {/* DIALOG CHỈNH SỬA HỒ SƠ TỔNG HỢP - CHUYỂN TỪ TAB CÀI ĐẶT CŨ SANG */}
       <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
         {/* Thay thế class của DialogContent để ép chiều rộng lớn hơn */}
-        <DialogContent className="p-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900 w-full max-w-2xl h-[85vh] flex flex-col">
+        <DialogContent className="p-0 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900 w-full max-w-2xl h-[85vh] flex flex-col">
           {/* HEADER: Giữ cố định trên cùng, không bị cuộn */}
           <DialogHeader className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
-            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">
+            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white dark:text-slate-100">
               Cấu hình thông tin tài khoản
             </DialogTitle>
             <DialogDescription className="text-sm text-slate-500 dark:text-slate-400">
@@ -1331,7 +1332,7 @@ export default function ProfilePage() {
               </h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                     Họ và tên
                   </label>
                   <input
@@ -1344,11 +1345,11 @@ export default function ProfilePage() {
                       }))
                     }
                     placeholder="Nhập họ tên..."
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white dark:text-slate-100"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                     Trường Đại học
                   </label>
                   <input
@@ -1361,7 +1362,7 @@ export default function ProfilePage() {
                       }))
                     }
                     placeholder="Nhập tên trường học..."
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white dark:text-slate-100"
                   />
                 </div>
               </div>
@@ -1378,7 +1379,7 @@ export default function ProfilePage() {
               </h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                     Ngành học
                   </label>
                   <select
@@ -1389,7 +1390,7 @@ export default function ProfilePage() {
                         major: event.target.value as StudentMajor | "",
                       }))
                     }
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white dark:text-slate-100"
                   >
                     <option value="">Chưa chọn</option>
                     {majorOptions.map(([value, label]) => (
@@ -1400,7 +1401,7 @@ export default function ProfilePage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                     Năm học
                   </label>
                   <select
@@ -1413,7 +1414,7 @@ export default function ProfilePage() {
                           : "",
                       }))
                     }
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white dark:text-slate-100"
                   >
                     <option value="">Chưa chọn</option>
                     {studentYears.map((year) => (
@@ -1427,7 +1428,7 @@ export default function ProfilePage() {
 
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                     Định hướng quan tâm
                   </label>
                   <span className="text-[11px] text-slate-400">
@@ -1457,7 +1458,7 @@ export default function ProfilePage() {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                     Mục tiêu nghề nghiệp
                   </label>
                   <select
@@ -1468,7 +1469,7 @@ export default function ProfilePage() {
                         goal: event.target.value as Goal | "",
                       }))
                     }
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white dark:text-slate-100"
                   >
                     <option value="">Chưa chọn</option>
                     {goalOptions.map(([value, label]) => (
@@ -1479,7 +1480,7 @@ export default function ProfilePage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                     Lương mục tiêu / năm
                   </label>
                   <input
@@ -1493,17 +1494,17 @@ export default function ProfilePage() {
                       }))
                     }
                     placeholder="Ví dụ: 12000"
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white dark:text-slate-100"
                   />
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-2">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white dark:text-slate-100">
                     Ưu tiên làm việc Từ xa
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Bộ lọc mặc định khi tìm kiếm việc làm
                   </p>
                 </div>
@@ -1539,10 +1540,10 @@ export default function ProfilePage() {
               </h3>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white dark:text-slate-100">
                     Mật khẩu đăng nhập
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     {user?.provider === "password"
                       ? "Thay đổi mật khẩu tài khoản định kỳ"
                       : `Đăng nhập qua liên kết ${providerMeta[user?.provider ?? "password"]?.label} — Không có mật khẩu`}
@@ -1558,7 +1559,7 @@ export default function ProfilePage() {
               </div>
               <div className="flex items-center justify-between pt-2">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white dark:text-slate-100">
                     Phương thức:{" "}
                     <span className="font-bold text-blue-600">
                       {user?.provider
@@ -1566,7 +1567,7 @@ export default function ProfilePage() {
                         : "—"}
                     </span>
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Tham gia hệ thống vào ngày:{" "}
                     {user ? formatDate(user.createdAt) : "—"}
                   </p>
@@ -1576,7 +1577,7 @@ export default function ProfilePage() {
                     logout();
                     router.replace("/auth/login");
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   <LogOut className="h-3.5 w-3.5" /> Đăng xuất
                 </button>
@@ -1586,7 +1587,7 @@ export default function ProfilePage() {
             {/* 3b. Cấu hình tự động đối sánh CV */}
             <div className="flex items-center justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
               <div className="flex-1 pr-4">
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white dark:text-slate-100">
                   Tự động đối sánh CV mặc định
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -1632,7 +1633,7 @@ export default function ProfilePage() {
               <button
                 onClick={handleResetOnboarding}
                 disabled={resettingOnboarding}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
               >
                 {resettingOnboarding ? (
                   <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -1653,7 +1654,7 @@ export default function ProfilePage() {
               <button
                 onClick={handleExportProfilePdf}
                 disabled={exportingProfilePdf}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
               >
                 {exportingProfilePdf ? (
                   <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -1666,11 +1667,11 @@ export default function ProfilePage() {
           </div>
 
           {/* FOOTER: Cố định dưới chân Dialog, không bị cuộn lấp mất nút */}
-          <DialogFooter className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-end gap-2">
+          <DialogFooter className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-800/50 dark:bg-slate-900/50 flex items-center justify-end gap-2">
             <button
               onClick={() => setOpenEditDialog(false)}
               disabled={savingProfile}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              className="rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
             >
               Hủy bỏ
             </button>
@@ -1690,10 +1691,10 @@ export default function ProfilePage() {
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden scale-in duration-200">
             {/* Header Popup */}
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-900/80 shrink-0">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-800/50 dark:bg-slate-900/80 shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
                 <FileText className="w-5 h-5 text-blue-600" />
-                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">
+                <h3 className="font-bold text-slate-900 dark:text-white dark:text-slate-100 text-sm truncate">
                   {viewingCvName}
                 </h3>
               </div>
@@ -1702,18 +1703,18 @@ export default function ProfilePage() {
                   setViewingCvUrl(null);
                   setViewingCvName("");
                 }}
-                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:hover:text-slate-200 transition-colors"
               >
                 <XCircle className="w-5 h-5" />
               </button>
             </div>
 
             {/* Nội dung file hiển thị */}
-            <div className="flex-1 bg-slate-100/50 dark:bg-slate-950 p-4 flex justify-center items-center overflow-auto">
+            <div className="flex-1 bg-slate-100/50 dark:bg-slate-800/50 dark:bg-slate-950 p-4 flex justify-center items-center overflow-auto">
               {viewingCvUrl.toLowerCase().includes(".pdf") ? (
                 <iframe
                   src={`${viewingCvUrl}#toolbar=0&navpanes=0`}
-                  className="w-full h-full rounded-lg bg-white border border-slate-200 dark:border-slate-800"
+                  className="w-full h-full rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 dark:border-slate-800"
                   title="CV Preview"
                 />
               ) : (
@@ -1721,7 +1722,7 @@ export default function ProfilePage() {
                   <img
                     src={viewingCvUrl}
                     alt="CV Preview"
-                    className="max-w-full h-auto object-contain rounded-lg shadow-md bg-white dark:bg-slate-800"
+                    className="max-w-full h-auto object-contain rounded-lg shadow-md bg-white dark:bg-slate-900 dark:bg-slate-800"
                   />
                 </div>
               )}
@@ -1752,10 +1753,10 @@ function Stat({
         <Icon className={`h-4 w-4 ${tone}`} />
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           {label}
         </p>
-        <p className="text-base font-bold text-slate-900 dark:text-slate-100">
+        <p className="text-base font-bold text-slate-900 dark:text-white dark:text-slate-100">
           {value}
         </p>
       </div>
@@ -1786,14 +1787,14 @@ function Card({
     slate: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
   };
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-3 flex items-center gap-2">
         <div
           className={`flex h-7 w-7 items-center justify-center rounded-lg ${toneMap[tone]}`}
         >
           <Icon className="h-3.5 w-3.5" />
         </div>
-        <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+        <p className="text-sm font-bold text-slate-900 dark:text-white dark:text-slate-100">
           {title}
         </p>
       </div>
@@ -1806,7 +1807,7 @@ function Empty({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-slate-50/50 px-3 py-3 text-xs font-medium text-slate-500 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800/30 dark:hover:border-blue-700 dark:hover:bg-blue-950/30 dark:hover:text-blue-300"
+      className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800/30 dark:hover:border-blue-700 dark:hover:bg-blue-950/30 dark:hover:text-blue-300"
     >
       + {label}
     </Link>
@@ -1815,7 +1816,7 @@ function Empty({ href, label }: { href: string; label: string }) {
 
 function Row({ label, done }: { label: string; done: boolean }) {
   return (
-    <li className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/30">
+    <li className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/30">
       {done ? (
         <CheckCircle2 className="h-4 w-4 text-emerald-500" />
       ) : (
@@ -1942,14 +1943,14 @@ function EditAvatarDialog({
 
         {/* Khu vực Tải file trực tiếp & Hiển thị PREVIEW to rõ ràng */}
         <div className="space-y-3 border-b border-slate-100 pb-4 dark:border-slate-800">
-          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
             Tải ảnh lên từ thiết bị
           </label>
           <div className="flex items-center gap-4">
             <label
               className={`flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700/50 ${uploading ? "opacity-60 cursor-not-allowed" : ""}`}
             >
-              <Camera className="h-4 w-4 text-slate-500" />
+              <Camera className="h-4 w-4 text-slate-500 dark:text-slate-400" />
               {uploading ? "Đang xử lý ảnh..." : "Chọn tệp ảnh"}
               <input
                 type="file"
@@ -1962,7 +1963,7 @@ function EditAvatarDialog({
 
             {/* Vùng hiển thị ảnh Preview hoành tráng */}
             {(previewUrl || url) && (
-              <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-1.5 pr-4 dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1.5 pr-4 dark:border-slate-800 dark:bg-slate-900">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={previewUrl || url}
@@ -1970,7 +1971,7 @@ function EditAvatarDialog({
                   className={`h-12 w-12 rounded-lg object-cover ring-2 ring-blue-500/20 ${uploading ? "animate-pulse opacity-50" : ""}`}
                 />
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                     {previewUrl ? "Ảnh xem trước" : "Ảnh hiện tại"}
                   </span>
                   <span className="text-[10px] text-slate-400 max-w-[120px] truncate">
@@ -1986,7 +1987,7 @@ function EditAvatarDialog({
 
         {/* Khu vực Chọn từ danh sách ảnh mẫu (Presets) */}
         <div className="space-y-2">
-          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
             Hoặc chọn nhanh avatar mẫu
           </label>
           <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto p-1 border border-slate-100 rounded-lg dark:border-slate-800">
@@ -2013,7 +2014,7 @@ function EditAvatarDialog({
 
         {/* Khu vực Dán link ảnh thủ công */}
         <div className="space-y-1">
-          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
             Hoặc dán trực tiếp URL ảnh bất kỳ
           </label>
           <input
@@ -2023,7 +2024,7 @@ function EditAvatarDialog({
               setUrl(e.target.value);
             }}
             disabled={uploading}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 disabled:opacity-60"
+            className="w-full rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 disabled:opacity-60"
             placeholder="https://..."
           />
         </div>
@@ -2036,7 +2037,7 @@ function EditAvatarDialog({
               setOpen(false);
             }}
             disabled={uploading}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 disabled:opacity-50"
+            className="rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 disabled:opacity-50"
           >
             Bỏ avatar
           </button>
@@ -2123,7 +2124,7 @@ function ChangePasswordDialog({
       }}
     >
       <DialogTrigger asChild>
-        <button className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+        <button className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
           <KeyRound className="h-3.5 w-3.5" />
           Đổi mật khẩu
         </button>
@@ -2144,7 +2145,7 @@ function ChangePasswordDialog({
         ) : (
           <div className="space-y-3">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                 Mật khẩu hiện tại
               </label>
               <div className="relative">
@@ -2153,13 +2154,13 @@ function ChangePasswordDialog({
                   type={showCurrent ? "text" : "password"}
                   value={current}
                   onChange={(e) => setCurrent(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 pr-10 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  className="w-full rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-3 py-2 pr-10 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurrent((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:hover:text-slate-200"
                 >
                   {showCurrent ? (
                     <EyeOff className="h-3.5 w-3.5" />
@@ -2171,7 +2172,7 @@ function ChangePasswordDialog({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                 Mật khẩu mới
               </label>
               <div className="relative">
@@ -2179,13 +2180,13 @@ function ChangePasswordDialog({
                   type={showNext ? "text" : "password"}
                   value={next}
                   onChange={(e) => setNext(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 pr-10 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  className="w-full rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-3 py-2 pr-10 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   placeholder="Tối thiểu 6 ký tự"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNext((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:hover:text-slate-200"
                 >
                   {showNext ? (
                     <EyeOff className="h-3.5 w-3.5" />
@@ -2228,14 +2229,14 @@ function ChangePasswordDialog({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                 Xác nhận mật khẩu mới
               </label>
               <input
                 type={showNext ? "text" : "password"}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                 placeholder="Nhập lại mật khẩu mới"
               />
             </div>
@@ -2257,7 +2258,7 @@ function ChangePasswordDialog({
                 resetDialog();
               }}
               disabled={loading}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              className="rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
             >
               Huỷ
             </button>
@@ -2321,7 +2322,7 @@ function DeleteAccountDialog({
       }}
     >
       <DialogTrigger asChild>
-        <button className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50">
+        <button className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50">
           <Trash2 className="h-3.5 w-3.5" />
           Xoá tài khoản
         </button>
@@ -2341,21 +2342,21 @@ function DeleteAccountDialog({
         <div className="space-y-3">
           {requirePassword && (
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                 Mật khẩu hiện tại
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                 placeholder="••••••••"
               />
             </div>
           )}
 
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
               Gõ{" "}
               <code className="rounded bg-red-100 px-1.5 py-0.5 font-mono text-[11px] text-red-700 dark:bg-red-950/40 dark:text-red-300">
                 XOA
@@ -2365,7 +2366,7 @@ function DeleteAccountDialog({
             <input
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-mono focus:border-transparent focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-mono focus:border-transparent focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               placeholder="XOA"
             />
           </div>
@@ -2385,7 +2386,7 @@ function DeleteAccountDialog({
               resetDelDialog();
             }}
             disabled={loading}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            className="rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
           >
             Huỷ
           </button>

@@ -34,6 +34,7 @@ import { SkillRadar } from "./SkillRadar";
 import { SEMANTIC } from "./chart-palette";
 import { InfoTooltip, GLOSSARY } from "./InfoTooltip";
 import { buildCategoryOverview } from "@/utils/category-overview";
+import { toTitleCase } from "@/utils/text";
 
 import CookieHelper from "@/utils/cookie-helper";
 import PersonalDashboardApi from "@/api/personal-dashboard";
@@ -86,13 +87,13 @@ function RadarCategoryDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-all shadow-2xs"
+        className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all shadow-2xs"
       >
         <span className="truncate">
           {selected === "All" ? "Tất cả nhóm kỹ năng" : selected}
         </span>
         {isLoading ? (
-          <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+          <div className="w-3.5 h-3.5 border-2 border-slate-400 dark:border-slate-600 border-t-transparent rounded-full animate-spin" />
         ) : (
           <svg
             className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isOpen ? "transform rotate-180" : ""}`}
@@ -111,15 +112,15 @@ function RadarCategoryDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-hidden flex flex-col z-20 animate-in fade-in slide-in-from-top-1 duration-150">
-          <div className="p-2 border-b border-slate-100 bg-slate-50/50">
+        <div className="absolute left-0 mt-1 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg max-h-48 overflow-hidden flex flex-col z-20 animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="p-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
             <input
               type="text"
               placeholder="Tìm kiếm nhóm kỹ năng..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoFocus
-              className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400 text-slate-700"
+              className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400 text-slate-700 dark:text-slate-200"
             />
           </div>
 
@@ -511,7 +512,7 @@ export function PersonalDashboard() {
               {incompleteTasks.length > 3 && (
                 <Link
                   href="/onboarding/welcome"
-                  className="flex items-center gap-1 rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-50 transition-colors dark:bg-violet-950/40 dark:text-violet-300"
+                  className="flex items-center gap-1 rounded-lg border border-violet-300 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-50 transition-colors dark:bg-violet-950/40 dark:text-violet-300"
                 >
                   +{incompleteTasks.length - 3} bước nữa{" "}
                   <ArrowRight className="h-3 w-3" />
@@ -555,8 +556,8 @@ export function PersonalDashboard() {
         className="relative bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl p-6 overflow-hidden"
       >
         <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <div className="absolute -top-8 -right-8 w-64 h-64 bg-white rounded-full" />
-          <div className="absolute -bottom-12 right-32 w-40 h-40 bg-white rounded-full" />
+          <div className="absolute -top-8 -right-8 w-64 h-64 bg-white dark:bg-slate-900 rounded-full" />
+          <div className="absolute -bottom-12 right-32 w-40 h-40 bg-white dark:bg-slate-900 rounded-full" />
         </div>
         <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
@@ -592,7 +593,7 @@ export function PersonalDashboard() {
             {!hasCV ? (
               <Link
                 href="/cv-matching"
-                className="flex items-center gap-2 px-5 py-2.5 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-colors shadow-lg"
+                className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-900 text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-colors shadow-lg"
               >
                 <Upload className="w-4 h-4" />
                 Tải CV ngay
@@ -600,7 +601,7 @@ export function PersonalDashboard() {
             ) : (
               <Link
                 href="/cv-matching"
-                className="flex items-center gap-2 px-5 py-2.5 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-colors shadow-lg"
+                className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-900 text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-colors shadow-lg"
               >
                 <FileText className="w-4 h-4" />
                 Phân tích lại CV
@@ -619,9 +620,9 @@ export function PersonalDashboard() {
 
 
       {/* ── Hành trình của bạn ── */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+          <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
             <Zap className="w-4 h-4 text-blue-600" />
             Hành trình của bạn
           </h3>
@@ -634,7 +635,7 @@ export function PersonalDashboard() {
             <div key={s.label} className="flex items-center shrink-0">
               <Link
                 href={s.href}
-                className="group flex flex-col gap-2 w-[150px] p-3 rounded-xl border border-slate-100 bg-slate-50/60 hover:border-blue-300 hover:bg-blue-50/50 transition-all"
+                className="group flex flex-col gap-2 w-[150px] p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/50 hover:border-blue-300 hover:bg-blue-50/50 transition-all"
               >
                 <div className="flex items-center justify-between">
                   <div
@@ -655,10 +656,10 @@ export function PersonalDashboard() {
                   )}
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-slate-800 leading-tight group-hover:text-blue-700">
+                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 leading-tight group-hover:text-blue-700">
                     {s.label}
                   </p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">{s.meta}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{s.meta}</p>
                 </div>
               </Link>
               {i < journeySteps.length - 1 && (
@@ -671,11 +672,11 @@ export function PersonalDashboard() {
 
       {/* ── Thẻ Bắt đầu cho user chưa có CV (tránh loạn thông tin) ── */}
       {!hasCV && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-900">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
             Bắt đầu trong 3 bước
           </h3>
-          <p className="text-sm text-slate-500 mt-0.5 mb-5">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 mb-5">
             Tải CV để mở khóa toàn bộ insight cá nhân — chỉ mất vài phút.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
@@ -701,15 +702,15 @@ export function PersonalDashboard() {
             ].map((s) => (
               <div
                 key={s.n}
-                className="rounded-xl border border-slate-100 bg-slate-50 p-4"
+                className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-4"
               >
                 <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600">
                   <s.icon className="h-4 w-4 text-white" />
                 </div>
-                <p className="text-sm font-semibold text-slate-900">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">
                   {s.n}. {s.title}
                 </p>
-                <p className="text-xs text-slate-500 mt-0.5">{s.desc}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{s.desc}</p>
               </div>
             ))}
           </div>
@@ -765,17 +766,17 @@ export function PersonalDashboard() {
           return (
             <div
               key={card.label}
-              className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm"
+              className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm"
             >
               <div
                 className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${accent}`}
               >
                 <card.icon className="h-5 w-5" />
               </div>
-              <p className="mb-0.5 text-2xl font-bold text-slate-900">
+              <p className="mb-0.5 text-2xl font-bold text-slate-900 dark:text-white">
                 {card.value}
               </p>
-              <p className="text-xs font-semibold text-slate-600">
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                 {card.label}
               </p>
               <p className="mt-0.5 text-xs text-slate-400">{card.sub}</p>
@@ -793,18 +794,18 @@ export function PersonalDashboard() {
           <Link
             key={`${action.href}-${index}`}
             href={action.href}
-            className="group flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+            className="group flex items-center gap-3 p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50">
               <action.icon className="h-5 w-5 text-blue-600" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <p className="text-sm font-semibold text-slate-900 truncate">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                   {action.title}
                 </p>
               </div>
-              <p className="text-xs text-slate-500 truncate">{action.desc}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{action.desc}</p>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors shrink-0" />
           </Link>
@@ -812,9 +813,9 @@ export function PersonalDashboard() {
       </div>
 
       {/* ── Main Content: Tabs ── */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
         {/* Tab headers */}
-        <div className="flex border-b border-slate-100">
+        <div className="flex border-b border-slate-100 dark:border-slate-800">
           {(["jobs", "skills", "progress"] as const).map((tab) => {
             const labels = {
               jobs: "Jobs Gợi Ý",
@@ -854,10 +855,10 @@ export function PersonalDashboard() {
           <div className="divide-y divide-slate-50">
             {recommendedJobs.length === 0 ? (
               <div className="px-5 py-10 text-center">
-                <p className="text-sm font-semibold text-slate-700">
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                   Chưa có jobs gợi ý
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   Tải CV hoặc chạy matching mặc định để hệ thống tính job phù
                   hợp với hồ sơ của bạn.
                 </p>
@@ -873,15 +874,15 @@ export function PersonalDashboard() {
                 <Link
                   key={job.job_id}
                   href={`/jobs/${job.job_id}`}
-                  className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors group"
+                  className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-700 transition-colors">
-                        {job.title}
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-blue-700 transition-colors">
+                        {toTitleCase(job.title)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-slate-500 mb-1.5">
+                    <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-1.5">
                       <span className="flex items-center gap-1">
                         <Building2 className="w-3 h-3" />
                         {job.company_name}
@@ -896,7 +897,7 @@ export function PersonalDashboard() {
                     <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
                       {job.match_rate}
                     </span>
-                    <p className="text-xs font-semibold text-slate-900">
+                    <p className="text-xs font-semibold text-slate-900 dark:text-white">
                       {job.salary_text}
                     </p>
                     <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
@@ -922,13 +923,13 @@ export function PersonalDashboard() {
         {activeTab === "skills" && (
           <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             {/* CỘT TRÁI: Radar chart theo danh mục */}
-            <div className="flex flex-col bg-slate-50/60 border border-slate-100 rounded-2xl p-5 gap-4">
+            <div className="flex flex-col bg-slate-50/60 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 gap-4">
               <div>
-                <h4 className="flex items-center gap-1 text-sm font-bold text-slate-900">
+                <h4 className="flex items-center gap-1 text-sm font-bold text-slate-900 dark:text-white">
                   Kỹ năng của bạn so với thị trường
                   <InfoTooltip text={GLOSSARY.similarity} />
                 </h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                   Theo từng nhóm kỹ năng
                 </p>
               </div>
@@ -947,14 +948,14 @@ export function PersonalDashboard() {
                   skillCategory === "All" && categoryOverview.length >= 2;
                 if (!isOverview && radarData.length === 0) {
                   return (
-                    <div className="flex-1 flex flex-col items-center justify-center gap-3 border border-dashed border-slate-200 rounded-xl bg-white/70 px-4 text-center min-h-[200px]">
+                    <div className="flex-1 flex flex-col items-center justify-center gap-3 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl bg-white/70 dark:bg-slate-900/70 px-4 text-center min-h-[200px]">
                       <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
                         <Target className="w-6 h-6 text-blue-400" />
                       </div>
-                      <p className="text-sm font-semibold text-slate-700">
+                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                         Chưa có dữ liệu phân tích kỹ năng
                       </p>
-                      <p className="text-xs text-slate-500 max-w-xs">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">
                         Tải CV và chạy đối soát để xem radar kỹ năng cá nhân của
                         bạn.
                       </p>
@@ -971,7 +972,7 @@ export function PersonalDashboard() {
                 return (
                   <div className="flex-1">
                     {isOverview ? (
-                      <p className="mb-2 text-[11px] text-slate-500">
+                      <p className="mb-2 text-[11px] text-slate-500 dark:text-slate-400">
                         Điểm trung bình theo nhóm — bấm vào tên nhóm để xem chi
                         tiết
                       </p>
@@ -997,13 +998,13 @@ export function PersonalDashboard() {
             </div>
 
             {/* CỘT PHẢI: Top 7 kỹ năng cần cải thiện khẩn cấp nhất */}
-            <div className="flex flex-col bg-slate-50/60 border border-slate-100 rounded-2xl p-5">
+            <div className="flex flex-col bg-slate-50/60 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
                     7 Kỹ năng cần cải thiện khẩn cấp
                   </h4>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     Sắp xếp theo mức độ ảnh hưởng đến match score
                   </p>
                 </div>
@@ -1016,7 +1017,7 @@ export function PersonalDashboard() {
 
               <div className="flex-1 space-y-2.5 overflow-y-auto">
                 {urgentGapSkills.length === 0 ? (
-                  <div className="flex items-center justify-center border border-dashed border-slate-200 rounded-xl bg-white/70 text-xs text-slate-400 min-h-[160px]">
+                  <div className="flex items-center justify-center border border-dashed border-slate-200 dark:border-slate-700 rounded-xl bg-white/70 dark:bg-slate-900/70 text-xs text-slate-400 min-h-[160px]">
                     {profile?.default_match
                       ? "🎉 Tuyệt vời! Không có kỹ năng nào thiếu hụt."
                       : "Chưa có kết quả matching để phân tích"}
@@ -1025,15 +1026,15 @@ export function PersonalDashboard() {
                   urgentGapSkills.map((item, idx) => (
                     <div
                       key={idx}
-                      className="p-3 bg-white border border-slate-100 rounded-xl shadow-2xs"
+                      className="p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-2xs"
                     >
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-5 h-5 shrink-0 flex items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-500">
+                          <span className="w-5 h-5 shrink-0 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400">
                             {idx + 1}
                           </span>
-                          <span className="text-sm font-semibold text-slate-900 truncate">
-                            {item.skill_name}
+                          <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                            {toTitleCase(item.skill_name)}
                           </span>
                         </div>
                         <span
@@ -1048,7 +1049,7 @@ export function PersonalDashboard() {
                             : `${item.user_score}%`}
                         </span>
                       </div>
-                      <div className="relative h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="relative h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div
                           className={`absolute h-full rounded-full transition-all ${
                             item.type === "missing"
@@ -1063,7 +1064,7 @@ export function PersonalDashboard() {
                       <div className="flex items-center justify-between mt-1">
                         <p className="text-[10px] text-slate-400">
                           Trọng số:{" "}
-                          <span className="font-semibold text-slate-600">
+                          <span className="font-semibold text-slate-600 dark:text-slate-300">
                             {Math.round((item.weight ?? 0) * 100)}%
                           </span>
                         </p>
@@ -1097,10 +1098,10 @@ export function PersonalDashboard() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-900">
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
                     Tiến bộ điểm phù hợp
                   </h4>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     Điểm match qua các lần phân tích CV của bạn
                   </p>
                 </div>
@@ -1177,7 +1178,7 @@ export function PersonalDashboard() {
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex min-h-[120px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 text-center text-xs text-slate-400">
+                <div className="flex min-h-[120px] items-center justify-center rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-4 text-center text-xs text-slate-400">
                   Chạy đối soát CV để bắt đầu theo dõi tiến bộ điểm phù hợp.
                 </div>
               )}
@@ -1186,10 +1187,10 @@ export function PersonalDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Profile Checklist */}
             <div>
-              <h4 className="text-sm font-semibold text-slate-900 mb-1">
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">
                 Hoàn thiện hồ sơ
               </h4>
-              <p className="text-xs text-slate-500 mb-3">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                 Hồ sơ đầy đủ → gợi ý chính xác hơn
               </p>
               {/* Progress bar */}
@@ -1234,7 +1235,7 @@ export function PersonalDashboard() {
             {/* Recent Activity + Learning */}
             <div className="space-y-5">
               <div>
-                <h4 className="text-sm font-semibold text-slate-900 mb-3">
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
                   Hoạt động gần đây
                 </h4>
                 {/* Hoạt động gần đây */}
@@ -1242,7 +1243,7 @@ export function PersonalDashboard() {
                   {progress?.recent_activities?.map((act, i) => (
                     <div
                       key={i}
-                      className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl"
+                      className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl"
                     >
                       <div
                         className={`w-8 h-8 rounded-lg ${
@@ -1258,7 +1259,7 @@ export function PersonalDashboard() {
                         )}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-900">
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">
                           {act.activity_name}
                         </p>
                         <p className="text-xs text-slate-400 mt-0.5">
@@ -1283,14 +1284,14 @@ export function PersonalDashboard() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-900">
+                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
                       Lộ trình đề xuất
                     </h4>
                     {urgentGapSkills[0] && (
                       <p className="text-[10px] text-slate-400 mt-0.5">
                         Gợi ý cho kỹ năng:{" "}
                         <span className="font-semibold text-blue-600">
-                          {urgentGapSkills[0].skill_name}
+                          {toTitleCase(urgentGapSkills[0].skill_name)}
                         </span>
                       </p>
                     )}
@@ -1309,7 +1310,7 @@ export function PersonalDashboard() {
                     {[1, 2, 3].map((i) => (
                       <div
                         key={i}
-                        className="h-14 bg-slate-100 rounded-xl animate-pulse"
+                        className="h-14 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse"
                       />
                     ))}
                   </div>
@@ -1324,14 +1325,14 @@ export function PersonalDashboard() {
                         href={course.source_url || "/roadmap"}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50 hover:border-blue-100 transition-colors group"
+                        className="flex items-center gap-3 p-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl hover:bg-blue-50 hover:border-blue-100 transition-colors group"
                       >
                         {/* Icon khóa học (thay thumbnail hay bị vỡ) */}
                         <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
                           <BookOpen className="w-4 h-4 text-blue-600" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-slate-800 truncate">
+                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">
                             {course.title}
                           </p>
                           <p className="text-[10px] text-slate-400">
@@ -1382,21 +1383,21 @@ export function PersonalDashboard() {
       )}
 
       {/* ── Market Teaser ── */}
-      <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
+      <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
         <div className="flex items-center gap-3">
           <Flame className="w-5 h-5 text-orange-500 shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-slate-900">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">
               Xem tổng quan thị trường IT
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Top jobs hot, top skills, xu hướng lương — không cần đăng nhập
             </p>
           </div>
         </div>
         <Link
           href="/dashboard"
-          className="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors"
+          className="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
         >
           Thông tin Thị trường <ArrowRight className="w-4 h-4" />
         </Link>

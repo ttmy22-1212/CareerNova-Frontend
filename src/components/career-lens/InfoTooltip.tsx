@@ -23,7 +23,7 @@ export function InfoTooltip({ text }: { text: string }) {
         onClick={() => setOpen((v) => !v)}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
-        className="text-slate-400 hover:text-slate-600 transition-colors"
+        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
       >
         <HelpCircle className="w-3.5 h-3.5" />
       </button>

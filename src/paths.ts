@@ -24,6 +24,7 @@ export const paths = {
   cvMatching: "/cv-matching",
   skillGap: "/skill-gap",
   recommendations: "/recommendations",
+  guide: "/guide",
   roadmap: {
     index: "/roadmap",
     detail: "/roadmap/:roadmapId",

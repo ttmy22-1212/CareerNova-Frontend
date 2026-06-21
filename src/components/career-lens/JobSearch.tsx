@@ -62,7 +62,7 @@ const workTypeLabels: Record<string, string> = {
 const VIEWED_JOB_IDS_STORAGE_KEY = "viewed_job_ids";
 
 const matchColor = (m: number | null) => {
-  if (m === null) return "bg-slate-100 text-slate-500";
+  if (m === null) return "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400";
   return m >= 80
     ? "bg-emerald-100 text-emerald-700"
     : m >= 70
@@ -348,7 +348,7 @@ export function JobSearch() {
 
   return (
     <div className="p-6 space-y-5">
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-4">
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -357,12 +357,12 @@ export function JobSearch() {
               placeholder="Tìm theo chức danh, công ty, kỹ năng hoặc vị trí..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-400"
+              className="w-full pl-11 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-400"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -395,11 +395,11 @@ export function JobSearch() {
               {t.label}
             </button>
           ))}
-          <div className="w-px bg-slate-200 mx-1 h-4" />
+          <div className="w-px bg-slate-200 dark:bg-slate-700 mx-1 h-4" />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            className="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
             <option value="match_score">Phù hợp nhất</option>
             <option value="salary_med">Lương cao nhất</option>
@@ -408,10 +408,10 @@ export function JobSearch() {
         </div>
 
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-slate-100">
+          <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
                   Cấp độ kinh nghiệm
                 </label>
                 <div className="space-y-1">
@@ -432,7 +432,7 @@ export function JobSearch() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
                   Điểm phù hợp tối thiểu
                 </label>
                 <div className="space-y-1">
@@ -458,14 +458,14 @@ export function JobSearch() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
                   Lương (Tham khảo)
                 </label>
                 <div className="space-y-1">
                   {["Bất kỳ mức lương", "Mức thị trường"].map((r, idx) => (
                     <button
                       key={r}
-                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 transition-colors ${idx === 0 ? "bg-slate-50 font-semibold" : ""}`}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors ${idx === 0 ? "bg-slate-50 dark:bg-slate-800/50 font-semibold" : ""}`}
                     >
                       {r}
                     </button>
@@ -500,7 +500,7 @@ export function JobSearch() {
         selectedExp ||
         listedWithinDays) && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold text-slate-500">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
             Đang lọc:
           </span>
           {[
@@ -549,7 +549,7 @@ export function JobSearch() {
               setSearchGroup("");
               setListedWithinDays(undefined);
             }}
-            className="text-xs font-semibold text-slate-400 hover:text-slate-600 hover:underline"
+            className="text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:underline"
           >
             Xóa tất cả
           </button>
@@ -557,15 +557,15 @@ export function JobSearch() {
       )}
 
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-slate-600 dark:text-slate-300">
           {isRecommendedMode ? (
             <>
-              <span className="font-bold text-slate-900">{total}</span> công
+              <span className="font-bold text-slate-900 dark:text-white">{total}</span> công
               việc phù hợp từ CV của bạn
             </>
           ) : (
             <>
-              Tìm thấy <span className="font-bold text-slate-900">{total}</span>{" "}
+              Tìm thấy <span className="font-bold text-slate-900 dark:text-white">{total}</span>{" "}
               vị trí
               {searchTerm && (
                 <>
@@ -581,7 +581,7 @@ export function JobSearch() {
         </p>
         <p className="text-xs text-slate-400">
           Sắp xếp theo:{" "}
-          <span className="text-slate-600 font-medium">
+          <span className="text-slate-600 dark:text-slate-300 font-medium">
             {sortBy === "match_score"
               ? "Phù hợp nhất"
               : sortBy === "salary_med"
@@ -596,18 +596,18 @@ export function JobSearch() {
           {[1, 2, 3, 4, 5].map((i) => (
             <div
               key={i}
-              className="animate-pulse rounded-xl border border-slate-100 bg-white p-4"
+              className="animate-pulse rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 w-2/3 rounded bg-slate-200" />
-                  <div className="h-3 w-1/3 rounded bg-slate-100" />
+                  <div className="h-4 w-2/3 rounded bg-slate-200 dark:bg-slate-700" />
+                  <div className="h-3 w-1/3 rounded bg-slate-100 dark:bg-slate-800" />
                   <div className="flex gap-2 pt-1">
-                    <div className="h-5 w-16 rounded-full bg-slate-100" />
-                    <div className="h-5 w-20 rounded-full bg-slate-100" />
+                    <div className="h-5 w-16 rounded-full bg-slate-100 dark:bg-slate-800" />
+                    <div className="h-5 w-20 rounded-full bg-slate-100 dark:bg-slate-800" />
                   </div>
                 </div>
-                <div className="h-8 w-12 rounded bg-slate-100" />
+                <div className="h-8 w-12 rounded bg-slate-100 dark:bg-slate-800" />
               </div>
             </div>
           ))}
@@ -635,10 +635,10 @@ export function JobSearch() {
               key={job.job_id}
               href={`/jobs/${job.job_id}`}
               onClick={() => trackViewedJob(job.job_id)}
-              className="group block bg-white rounded-xl border border-slate-100 shadow-sm hover:border-blue-200 hover:shadow-md transition-all p-5"
+              className="group block bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm hover:border-blue-200 hover:shadow-md transition-all p-5"
             >
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center shrink-0 border border-slate-200">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700">
                   <Building2 className="w-6 h-6 text-slate-400" />
                 </div>
 
@@ -646,19 +646,19 @@ export function JobSearch() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
-                          {job.title}
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-700 transition-colors">
+                          {toTitleCase(job.title)}
                         </h3>
                         {job.work_type && (
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${typeColors[job.work_type] || "bg-slate-100 text-slate-600"}`}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${typeColors[job.work_type] || "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}
                           >
                             {workTypeLabels[job.work_type] || job.work_type}
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
-                        <span className="flex items-center gap-1 font-medium text-slate-700">
+                      <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-2">
+                        <span className="flex items-center gap-1 font-medium text-slate-700 dark:text-slate-200">
                           <Building2 className="w-3.5 h-3.5" />
                           {job.company.name}
                         </span>
@@ -724,9 +724,9 @@ export function JobSearch() {
                       {job.skills.slice(0, 5).map((skill) => (
                         <span
                           key={skill.skill_id}
-                          className="px-2.5 py-1 bg-slate-100 text-slate-600 text-[11px] font-medium rounded-md hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                          className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-medium rounded-md hover:bg-blue-50 hover:text-blue-700 transition-colors"
                         >
-                          {skill.skill_name}
+                          {toTitleCase(skill.skill_name)}
                         </span>
                       ))}
                     </div>
@@ -740,11 +740,11 @@ export function JobSearch() {
       )}
 
       {!loading && !isRecommendedMode && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-6 border-t border-slate-100">
+        <div className="flex items-center justify-center gap-2 pt-6 border-t border-slate-100 dark:border-slate-800">
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-colors cursor-pointer disabled:cursor-not-allowed"
+            className="p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-40 disabled:hover:bg-white dark:disabled:hover:bg-slate-900 transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -781,7 +781,7 @@ export function JobSearch() {
           <button
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
-            className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-colors cursor-pointer disabled:cursor-not-allowed"
+            className="p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-40 disabled:hover:bg-white dark:disabled:hover:bg-slate-900 transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             <ChevronRight className="w-4 h-4" />
           </button>

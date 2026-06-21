@@ -26,6 +26,7 @@ import JobApi from "@/api/job";
 import { JobDetailResponse } from "@/types/job-insight";
 import ProfileApi from "@/api/profile";
 import { formatSalaryRange } from "@/utils/salary";
+import { toTitleCase } from "@/utils/text";
 
 const JUNK_TEXT_MARKERS = [
   "Thông tin việc làm",
@@ -228,29 +229,29 @@ export function JobDetail() {
     <div className="p-6 max-w-6xl">
       <Link
         href="/jobs"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-blue-700 mb-5 transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-blue-700 mb-5 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Quay lại tìm việc
       </Link>
 
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm mb-5 overflow-hidden">
-        <div className="p-6 border-b border-slate-100">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm mb-5 overflow-hidden">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-4">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 border border-blue-200 flex items-center justify-center shrink-0">
                 <Building2 className="w-8 h-8 text-blue-500" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-900 mb-1">
-                  {job!.title}
+                <h1 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
+                  {toTitleCase(job!.title)}
                 </h1>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-slate-600 font-medium">
+                  <span className="text-slate-600 dark:text-slate-300 font-medium">
                     {company?.name}
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
                   <span className="flex items-center gap-1.5">
                     <MapPin className="w-4 h-4 text-slate-400" />
                     {job!.location || "Làm việc từ xa"}
@@ -274,7 +275,7 @@ export function JobDetail() {
                   </span>
                   {job!.work_type && (
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${typeColors[job!.work_type] || "bg-slate-100 text-slate-600"}`}
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${typeColors[job!.work_type] || "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}
                     >
                       {workTypeLabels[job!.work_type] || job!.work_type}
                     </span>
@@ -310,7 +311,7 @@ export function JobDetail() {
                 </button>
                 <button
                   aria-label="Chia sẻ việc làm"
-                  className="p-2.5 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
+                  className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-300 transition-colors"
                 >
                   <Share2 className="w-4 h-4" />
                 </button>
@@ -320,7 +321,7 @@ export function JobDetail() {
         </div>
 
         {hasMatch ? (
-        <div className="px-6 py-4 bg-slate-50 grid grid-cols-3 divide-x divide-slate-200">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 grid grid-cols-3 divide-x divide-slate-200">
           <div className="px-4 first:pl-0">
             <div className="flex items-center gap-2 text-emerald-600 mb-1">
               <CheckCircle2 className="w-4 h-4" />
@@ -332,7 +333,7 @@ export function JobDetail() {
                   key={i}
                   className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[11px] font-medium rounded"
                 >
-                  {typeof s === "string" ? s : s?.skill}
+                  {toTitleCase(typeof s === "string" ? s : s?.skill)}
                 </span>
               ))}
             </div>
@@ -348,7 +349,7 @@ export function JobDetail() {
                   key={i}
                   className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[11px] font-medium rounded"
                 >
-                  {typeof s === "string" ? s : s?.skill}
+                  {toTitleCase(typeof s === "string" ? s : s?.skill)}
                 </span>
               ))}
             </div>
@@ -364,18 +365,18 @@ export function JobDetail() {
                   key={i}
                   className="px-2 py-0.5 bg-red-100 text-red-600 text-[11px] font-medium rounded"
                 >
-                  {typeof s === "string" ? s : s?.skill}
+                  {toTitleCase(typeof s === "string" ? s : s?.skill)}
                 </span>
               ))}
             </div>
           </div>
         </div>
         ) : (
-          <div className="px-6 py-5 bg-slate-50 text-center">
-            <p className="text-sm font-semibold text-slate-700">
+          <div className="px-6 py-5 bg-slate-50 dark:bg-slate-800/50 text-center">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               Tải CV để xem độ phù hợp với việc này
             </p>
-            <p className="text-xs text-slate-500 mt-1 mb-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-3">
               Hệ thống sẽ đối soát kỹ năng của bạn với yêu cầu công việc này.
             </p>
             <Link
@@ -407,19 +408,19 @@ export function JobDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-            <h2 className="font-bold text-slate-900 mb-4">Mô tả công việc</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-6">
+            <h2 className="font-bold text-slate-900 dark:text-white mb-4">Mô tả công việc</h2>
             {job!.description ? (
               <>
                 <div
-                  className={`text-sm text-slate-700 leading-relaxed overflow-hidden transition-all duration-300
-                    [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-slate-900 [&_h3]:mt-5 [&_h3]:mb-2
-                    [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:mt-5 [&_h2]:mb-2
+                  className={`text-sm text-slate-700 dark:text-slate-200 leading-relaxed overflow-hidden transition-all duration-300
+                    [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-slate-900 dark:[&_h3]:text-white [&_h3]:mt-5 [&_h3]:mb-2
+                    [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-slate-900 dark:[&_h2]:text-white [&_h2]:mt-5 [&_h2]:mb-2
                     [&_p]:mb-2 [&_p]:leading-relaxed
                     [&_ul]:list-disc [&_ul]:ml-5 [&_ul]:mb-3 [&_ul]:space-y-1
                     [&_ol]:list-decimal [&_ol]:ml-5 [&_ol]:mb-3 [&_ol]:space-y-1
-                    [&_li]:text-slate-700
-                    [&_strong]:font-semibold [&_strong]:text-slate-900
+                    [&_li]:text-slate-700 dark:[&_li]:text-slate-200
+                    [&_strong]:font-semibold [&_strong]:text-slate-900 dark:[&_strong]:text-white
                     [&_a]:text-blue-600 [&_a]:underline ${descExpanded ? "" : "max-h-72"}`}
                   style={
                     descExpanded
@@ -449,10 +450,10 @@ export function JobDetail() {
           </div>
 
           {job!.skills_desc && (
-            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-              <h2 className="font-bold text-slate-900 mb-4">Yêu cầu kỹ năng</h2>
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-6">
+              <h2 className="font-bold text-slate-900 dark:text-white mb-4">Yêu cầu kỹ năng</h2>
               <div
-                className="text-sm text-slate-700 leading-relaxed
+                className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed
                   [&_ul]:list-disc [&_ul]:ml-5 [&_ul]:mb-3 [&_ul]:space-y-1
                   [&_ol]:list-decimal [&_ol]:ml-5 [&_ol]:mb-3 [&_ol]:space-y-1
                   [&_li]:text-slate-700
@@ -465,8 +466,8 @@ export function JobDetail() {
           )}
 
           {benefits.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-              <h2 className="font-bold text-slate-900 mb-4">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-6">
+              <h2 className="font-bold text-slate-900 dark:text-white mb-4">
                 Quyền lợi & Phúc lợi
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -476,7 +477,7 @@ export function JobDetail() {
                     className="flex items-center gap-2.5 p-3 bg-emerald-50 rounded-lg border border-emerald-100"
                   >
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span className="text-sm text-slate-700">
+                    <span className="text-sm text-slate-700 dark:text-slate-200">
                       {b.benefit_name}
                     </span>
                   </div>
@@ -487,8 +488,8 @@ export function JobDetail() {
         </div>
 
         <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-            <div className="flex items-center justify-between text-xs text-slate-500 mb-4">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-4">
               <span className="flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" />
                 Hạn nhận hồ sơ{" "}
@@ -509,7 +510,7 @@ export function JobDetail() {
             ) : (
               <button
                 disabled
-                className="mb-3 w-full rounded-xl bg-slate-100 py-3 text-sm font-semibold text-slate-400"
+                className="mb-3 w-full rounded-xl bg-slate-100 dark:bg-slate-800 py-3 text-sm font-semibold text-slate-400"
               >
                 Chưa có URL tuyển dụng
               </button>
@@ -522,8 +523,8 @@ export function JobDetail() {
             </Link>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-            <h3 className="font-bold text-slate-900 mb-3">Kỹ năng yêu cầu</h3>
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
+            <h3 className="font-bold text-slate-900 dark:text-white mb-3">Kỹ năng yêu cầu</h3>
             <div className="flex flex-wrap gap-2">
               {skills.map((s) => (
                 <span
@@ -536,7 +537,7 @@ export function JobDetail() {
                         : "bg-red-50 text-red-600 border-red-200"
                   }`}
                 >
-                  {s.skill_name}
+                  {toTitleCase(s.skill_name)}
                 </span>
               ))}
             </div>
@@ -556,17 +557,17 @@ export function JobDetail() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-            <h3 className="font-bold text-slate-900 mb-3">Về công ty</h3>
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
+            <h3 className="font-bold text-slate-900 dark:text-white mb-3">Về công ty</h3>
             <div className="space-y-3">
               {(company?.company_size_min || company?.company_size_max) && (
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                    <Users className="w-4 h-4 text-slate-500" />
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                    <Users className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                   </div>
                   <div>
-                    <p className="text-[11px] text-slate-500">Quy mô công ty</p>
-                    <p className="text-sm font-medium text-slate-900">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">Quy mô công ty</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">
                       {company.company_size_min && company.company_size_max
                         ? `${company.company_size_min}–${company.company_size_max} nhân viên`
                         : `${company.company_size_min ?? company.company_size_max} nhân viên`}
@@ -575,14 +576,14 @@ export function JobDetail() {
                 </div>
               )}
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                  <Briefcase className="w-4 h-4 text-slate-500" />
+                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  <Briefcase className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                 </div>
                 <div>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
                     Ngành công nghiệp
                   </p>
-                  <p className="text-sm font-medium text-slate-900">
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">
                     {industries.length > 0
                       ? industries.map((i) => i.industry_name).join(", ")
                       : "Chưa rõ"}

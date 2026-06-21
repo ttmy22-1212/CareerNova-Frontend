@@ -5,6 +5,7 @@ import { NextStepBanner } from "./NextStepBanner";
 import { SkillRadar } from "./SkillRadar";
 import { InfoTooltip, GLOSSARY } from "./InfoTooltip";
 import { buildCategoryOverview } from "@/utils/category-overview";
+import { toTitleCase } from "@/utils/text";
 import {
   Target,
   BookOpen,
@@ -119,13 +120,13 @@ function RadarCategoryDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition-all hover:bg-slate-100"
+        className="flex w-full items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-2xs transition-all hover:bg-slate-100 dark:hover:bg-slate-800"
       >
         <span className="truncate">
           {selected === "All" ? "Tất cả nhóm kỹ năng" : selected}
         </span>
         {isLoading ? (
-          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-400 dark:border-slate-600 border-t-transparent" />
         ) : (
           <svg
             className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${
@@ -146,15 +147,15 @@ function RadarCategoryDropdown({
       </button>
 
       {isOpen && (
-        <div className="animate-in fade-in slide-in-from-top-1 absolute left-0 z-20 mt-1 flex max-h-48 w-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg duration-150">
-          <div className="border-b border-slate-100 bg-slate-50/50 p-2">
+        <div className="animate-in fade-in slide-in-from-top-1 absolute left-0 z-20 mt-1 flex max-h-48 w-full flex-col overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg duration-150">
+          <div className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-2">
             <input
               type="text"
               placeholder="Tìm kiếm nhóm kỹ năng..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoFocus
-              className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
@@ -182,7 +183,7 @@ function RadarCategoryDropdown({
                   }
                 `}
               >
-                <span className="truncate">{cat.category}</span>
+                <span className="truncate">{toTitleCase(cat.category)}</span>
                 {!cat.is_matched && (
                   <span className="shrink-0 text-[10px] text-slate-400">
                     (Không khớp)
@@ -366,7 +367,9 @@ export function SkillGapAnalysis() {
     const roundedScore = Number(score.toFixed(1));
 
     return {
-      name: c.category.replace(" Development", "").replace(" & Data", ""),
+      name: toTitleCase(
+        c.category.replace(" Development", "").replace(" & Data", ""),
+      ),
       gap: roundedScore,
       color:
         roundedScore < 0 ? "#ef4444" : roundedScore > 0 ? "#10b981" : "#94a3b8",
@@ -399,7 +402,7 @@ export function SkillGapAnalysis() {
         ].map((stat) => (
           <div
             key={stat.label}
-            className="bg-white rounded-xl border border-slate-100 shadow-sm p-5"
+            className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5"
           >
             <div className="flex items-start justify-between mb-3">
               <div
@@ -411,10 +414,10 @@ export function SkillGapAnalysis() {
                 {stat.change}
               </span>
             </div>
-            <p className="text-2xl font-bold text-slate-900 mb-0.5">
+            <p className="text-2xl font-bold text-slate-900 dark:text-white mb-0.5">
               {stat.value}
             </p>
-            <p className="text-xs text-slate-500">{stat.label}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{stat.label}</p>
           </div>
         ))}
       </div>
@@ -422,21 +425,21 @@ export function SkillGapAnalysis() {
       {/* ── Charts Row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Radar with Category Combo Box */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
           <div className="flex items-center justify-between mb-1">
-            <h3 className="font-bold text-slate-900">Chi tiết kỹ năng</h3>
+            <h3 className="font-bold text-slate-900 dark:text-white">Chi tiết kỹ năng</h3>
           </div>
-          <p className="text-xs text-slate-500 mb-3">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
             Chọn danh mục để xem phân tích kỹ năng chi tiết
           </p>
 
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+          <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/50 p-4">
             <div className="mb-3">
-              <h4 className="flex items-center gap-1 text-sm font-bold text-slate-900">
+              <h4 className="flex items-center gap-1 text-sm font-bold text-slate-900 dark:text-white">
                 Kỹ năng của bạn so với thị trường
                 <InfoTooltip text={GLOSSARY.similarity} />
               </h4>
-              <p className="mt-0.5 text-[11px] text-slate-500">
+              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
                 Theo kết quả so khớp CV mặc định
               </p>
             </div>
@@ -456,7 +459,7 @@ export function SkillGapAnalysis() {
                     categoryOverview.length >= 2;
                   if (!isOverview && matchRadarData.length === 0) {
                     return (
-                      <div className="mt-4 flex min-h-[200px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/70 text-xs text-slate-400">
+                      <div className="mt-4 flex min-h-[200px] items-center justify-center rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/70 text-xs text-slate-400">
                         Không có dữ liệu phân tích kỹ năng cho danh mục này
                       </div>
                     );
@@ -464,7 +467,7 @@ export function SkillGapAnalysis() {
                   return (
                     <div className="mt-4">
                       {isOverview ? (
-                        <p className="mb-2 text-[11px] text-slate-500">
+                        <p className="mb-2 text-[11px] text-slate-500 dark:text-slate-400">
                           Điểm trung bình theo nhóm — bấm vào tên nhóm để xem
                           chi tiết
                         </p>
@@ -489,14 +492,14 @@ export function SkillGapAnalysis() {
                 })()}
               </>
             ) : (
-              <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-200 bg-white/70 px-4 text-center">
+              <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/70 px-4 text-center">
                 <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
                   <Target className="w-6 h-6 text-blue-400" />
                 </div>
-                <p className="text-sm font-semibold text-slate-700">
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                   Chưa có dữ liệu khoảng trống kỹ năng
                 </p>
-                <p className="text-xs text-slate-500 max-w-xs">
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">
                   Tải CV và chạy đối soát để xem bạn còn thiếu kỹ năng nào so
                   với thị trường.
                 </p>
@@ -513,11 +516,11 @@ export function SkillGapAnalysis() {
         </div>
 
         {/* Gap Bar Chart */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-          <h3 className="font-bold text-slate-900 mb-0.5">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
+          <h3 className="font-bold text-slate-900 dark:text-white mb-0.5">
             Độ khớp theo danh mục
           </h3>
-          <p className="text-xs text-slate-500 mb-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
             Điểm khớp theo trọng số kỹ năng từ so khớp mặc định
           </p>
           {chartData.length > 0 ? (
@@ -577,12 +580,12 @@ export function SkillGapAnalysis() {
       </div>
 
       {/* ── Detailed Breakdown ── */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="font-bold text-slate-900">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="font-bold text-slate-900 dark:text-white">
             Phân tích kỹ năng chi tiết
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Mở rộng từng danh mục để xem các kỹ năng
           </p>
         </div>
@@ -599,7 +602,7 @@ export function SkillGapAnalysis() {
                   ? "bg-emerald-100 text-emerald-700"
                   : cat.gap_score < 0
                     ? "bg-red-100 text-red-700"
-                    : "bg-slate-100 text-slate-600";
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300";
               const barFillColor =
                 cat.gap_score > 0
                   ? "#10b981"
@@ -614,13 +617,13 @@ export function SkillGapAnalysis() {
                     onClick={() =>
                       setExpandedCat(isExpanded ? null : cat.category)
                     }
-                    className="w-full flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors text-left"
+                    className="w-full flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left"
                   >
                     <span className="text-xl">🛠️</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-1.5">
-                        <span className="font-semibold text-slate-900 text-sm">
-                          {cat.category}
+                        <span className="font-semibold text-slate-900 dark:text-white text-sm">
+                          {toTitleCase(cat.category)}
                         </span>
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${gapColor}`}
@@ -629,7 +632,7 @@ export function SkillGapAnalysis() {
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="flex-1 max-w-48 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="flex-1 max-w-48 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                           <div
                             className="h-full rounded-full"
                             style={{
@@ -638,13 +641,13 @@ export function SkillGapAnalysis() {
                             }}
                           />
                         </div>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
                           Bạn:{" "}
-                          <span className="font-semibold text-slate-700">
+                          <span className="font-semibold text-slate-700 dark:text-slate-200">
                             {cat.user_rate_avg}%
                           </span>
                           {" · "}Thị trường:{" "}
-                          <span className="font-semibold text-slate-700">
+                          <span className="font-semibold text-slate-700 dark:text-slate-200">
                             {cat.market_rate_avg}%
                           </span>
                         </span>
@@ -668,15 +671,15 @@ export function SkillGapAnalysis() {
                         return (
                           <div
                             key={skill.skill_id}
-                            className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl"
+                            className="flex items-center gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl"
                           >
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-semibold text-slate-900">
-                                  {skill.skill_name}
+                                <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                                  {toTitleCase(skill.skill_name)}
                                 </span>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-[11px] text-slate-500">
+                                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
                                     {skill.user_rate}% / {skill.market_rate}%
                                   </span>
                                   <span
@@ -686,7 +689,7 @@ export function SkillGapAnalysis() {
                                   </span>
                                 </div>
                               </div>
-                              <div className="relative h-2 bg-white border border-slate-200 rounded-full overflow-hidden">
+                              <div className="relative h-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-full overflow-hidden">
                                 <div
                                   className={`absolute h-full rounded-full transition-all ${sc.barColor}`}
                                   style={{ width: `${skillUserRate}%` }}
@@ -723,11 +726,11 @@ export function SkillGapAnalysis() {
       </div>
 
       {/* ── Learning Paths ── */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div>
-            <h2 className="font-bold text-slate-900">Lộ trình học đề xuất</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <h2 className="font-bold text-slate-900 dark:text-white">Lộ trình học đề xuất</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Ưu tiên để tối đa hóa điểm phù hợp công việc
             </p>
           </div>
@@ -744,7 +747,7 @@ export function SkillGapAnalysis() {
               {[1, 2, 3].map((item) => (
                 <div
                   key={item}
-                  className="h-16 rounded-xl bg-slate-100 animate-pulse"
+                  className="h-16 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse"
                 />
               ))}
             </div>
@@ -764,8 +767,8 @@ export function SkillGapAnalysis() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <h3 className="font-bold text-slate-900 text-sm">
-                          {path.skill_name}
+                        <h3 className="font-bold text-slate-900 dark:text-white text-sm">
+                          {toTitleCase(path.skill_name)}
                         </h3>
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${pc.bg} ${pc.color}`}
@@ -789,18 +792,18 @@ export function SkillGapAnalysis() {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 mb-2">
-                        {path.category || "General"}
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                        {toTitleCase(path.category || "General")}
                       </p>
                       <div className="flex flex-wrap items-center gap-3 text-xs">
-                        <span className="flex items-center gap-1 text-slate-600">
+                        <span className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
                           <Clock className="w-3 h-3" />
                           {path.estimated_time}
                         </span>
                         <span className="text-emerald-600 font-semibold">
                           {path.impact}
                         </span>
-                        <span className="text-slate-500">
+                        <span className="text-slate-500 dark:text-slate-400">
                           {path.jobs_requiring}
                         </span>
                       </div>
@@ -811,7 +814,7 @@ export function SkillGapAnalysis() {
                         onClick={() =>
                           setExpandedPath(isExpanded ? null : path.id)
                         }
-                        className="px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 transition-colors flex items-center gap-1"
+                        className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors flex items-center gap-1"
                       >
                         {isExpanded ? "Thu gọn" : "Chi tiết"}
                         {isExpanded ? (
@@ -842,7 +845,7 @@ export function SkillGapAnalysis() {
                   {isExpanded && (
                     <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2 uppercase tracking-wide">
                           Khóa học gợi ý
                         </p>
                         <div className="space-y-2">
@@ -856,7 +859,7 @@ export function SkillGapAnalysis() {
                                   ? "noopener noreferrer"
                                   : undefined
                               }
-                              className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-lg hover:bg-blue-50 transition-colors group"
+                              className="flex items-center gap-3 p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg hover:bg-blue-50 transition-colors group"
                             >
                               <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 text-base">
                                 {course.image || (
@@ -864,10 +867,10 @@ export function SkillGapAnalysis() {
                                 )}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs font-semibold text-slate-900 truncate">
+                                <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                                   {course.title}
                                 </p>
-                                <p className="text-[11px] text-slate-500">
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
                                   {course.provider} · {course.duration}
                                 </p>
                               </div>
@@ -888,16 +891,16 @@ export function SkillGapAnalysis() {
                           {path.paths.map((learningPath) => (
                             <div
                               key={learningPath.id}
-                              className="flex items-start gap-3 rounded-lg bg-slate-50 p-2.5"
+                              className="flex items-start gap-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2.5"
                             >
                               <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0 text-base">
                                 {learningPath.icon}
                               </div>
                               <div className="min-w-0">
-                                <p className="text-xs font-semibold text-slate-900">
+                                <p className="text-xs font-semibold text-slate-900 dark:text-white">
                                   {learningPath.title}
                                 </p>
-                                <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-2">
+                                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">
                                   {learningPath.description}
                                 </p>
                                 <p className="mt-1 text-[10px] font-semibold text-emerald-600">
@@ -909,7 +912,7 @@ export function SkillGapAnalysis() {
                           ))}
                           {path.courses.length === 0 &&
                             path.paths.length === 0 && (
-                              <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-400">
+                              <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3 text-xs text-slate-400">
                                 Chưa có khóa học phù hợp cho kỹ năng này
                               </div>
                             )}
@@ -917,7 +920,7 @@ export function SkillGapAnalysis() {
                       </div>
 
                       <div>
-                        <p className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2 uppercase tracking-wide">
                           Các bước học
                         </p>
                         <div className="space-y-2">
@@ -936,17 +939,17 @@ export function SkillGapAnalysis() {
                                   <Circle className="w-3 h-3 text-slate-400" />
                                 )}
                               </div>
-                              <p className="text-xs text-slate-700 leading-relaxed">
+                              <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
                                 {step}
                               </p>
                             </div>
                           ))}
-                          <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
-                            <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                          <div className="mt-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-3">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200">
                               <Award className="h-3.5 w-3.5 text-blue-600" />
                               Chi tiết matching
                             </div>
-                            <p className="mt-1 text-[11px] text-slate-500">
+                            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
                               Hiện tại: {path.user_rate}% · Mức độ ưu tiên theo{" "}
                               {path.jobs_requiring.toLowerCase()}
                             </p>

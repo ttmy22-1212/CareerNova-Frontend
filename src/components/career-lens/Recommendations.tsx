@@ -38,6 +38,7 @@ import {
 import { JobDetailResponse } from "@/types/job-insight";
 import { SkillGapLearningRecommendationDto } from "@/types/skill-gap";
 import { formatSalaryRange } from "@/utils/salary";
+import { toTitleCase } from "@/utils/text";
 
 type PipelineJobItem = {
   job: {
@@ -64,7 +65,7 @@ const urgencyConfig: Record<
     text: "text-orange-700",
   },
   medium: { label: "Trung bình", bg: "bg-amber-100", text: "text-amber-700" },
-  low: { label: "Theo dõi", bg: "bg-slate-100", text: "text-slate-600" },
+  low: { label: "Theo dõi", bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-600 dark:text-slate-300" },
 };
 
 const parseMatchRate = (matchRate?: string | null) => {
@@ -386,13 +387,13 @@ export function Recommendations() {
     const parts: string[] = [];
     if (topJob) {
       const rate = topJob.match_rate ? ` (khớp ${topJob.match_rate})` : "";
-      parts.push(`Vị trí phù hợp nhất với bạn: ${topJob.title}${rate}.`);
+      parts.push(`Vị trí phù hợp nhất với bạn: ${toTitleCase(topJob.title)}${rate}.`);
     } else if (profile.major) {
       parts.push(`Chuyên ngành: ${profile.major}.`);
     }
     if (topSkill) {
       parts.push(
-        `Kỹ năng nên ưu tiên phát triển: ${topSkill.skill_name}.`,
+        `Kỹ năng nên ưu tiên phát triển: ${toTitleCase(topSkill.skill_name)}.`,
       );
     }
     return (
@@ -412,8 +413,8 @@ export function Recommendations() {
       {/* ── Profile Snapshot ── */}
       <div className="relative bg-gradient-to-r from-violet-600 via-purple-700 to-indigo-700 rounded-2xl p-6 overflow-hidden">
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute -top-8 -right-8 w-64 h-64 bg-white rounded-full" />
-          <div className="absolute -bottom-12 left-32 w-40 h-40 bg-white rounded-full" />
+          <div className="absolute -top-8 -right-8 w-64 h-64 bg-white dark:bg-slate-900 rounded-full" />
+          <div className="absolute -bottom-12 left-32 w-40 h-40 bg-white dark:bg-slate-900 rounded-full" />
         </div>
         <div className="relative flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
@@ -429,16 +430,16 @@ export function Recommendations() {
             <div className="flex flex-wrap gap-2">
               {bannerStats ? (
                 <>
-                  <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
+                  <span className="px-3 py-1 bg-white/20 dark:bg-slate-900/20 text-white text-xs font-semibold rounded-full">
                     {bannerStats.profileCompletion}% Độ hoàn thiện hồ sơ
                   </span>
                   {bannerStats.suitableJobs > 0 && (
-                    <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
+                    <span className="px-3 py-1 bg-white/20 dark:bg-slate-900/20 text-white text-xs font-semibold rounded-full">
                       {bannerStats.suitableJobs} Công việc phù hợp
                     </span>
                   )}
                   {apiJobs.length > 0 && (
-                    <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
+                    <span className="px-3 py-1 bg-white/20 dark:bg-slate-900/20 text-white text-xs font-semibold rounded-full">
                       {apiJobs.length} Đề xuất hàng đầu
                     </span>
                   )}
@@ -449,7 +450,7 @@ export function Recommendations() {
                   )}
                 </>
               ) : (
-                <span className="px-3 py-1 bg-white/20 text-white/60 text-xs font-semibold rounded-full animate-pulse">
+                <span className="px-3 py-1 bg-white/20 dark:bg-slate-900/20 text-white/60 text-xs font-semibold rounded-full animate-pulse">
                   Đang tải dữ liệu…
                 </span>
               )}
@@ -459,7 +460,7 @@ export function Recommendations() {
             <div className="hidden lg:block text-right shrink-0">
               <p className="text-violet-200 text-xs mb-1">Phù Hợp Hàng Đầu</p>
               <p className="text-white font-bold text-sm leading-tight max-w-[160px] text-right">
-                {topJob.title}
+                {toTitleCase(topJob.title)}
               </p>
               <p className="text-violet-200 text-xs mt-0.5">{topJob.salary_text || "Thỏa thuận"}</p>
               <p className="text-emerald-300 text-xs font-bold mt-1">{topJob.match_rate} phù hợp</p>
@@ -472,10 +473,10 @@ export function Recommendations() {
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 dark:bg-slate-900 dark:border-slate-800">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white dark:text-slate-100">
               Luồng công việc của bạn
             </h3>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
               Các công việc bạn đã lưu để xem lại.
             </p>
           </div>
@@ -509,7 +510,7 @@ export function Recommendations() {
                       {stage.desc}
                     </p>
                   </div>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="rounded-full bg-white dark:bg-slate-900 px-2 py-0.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                     {items.length}
                   </span>
                 </div>
@@ -529,11 +530,11 @@ export function Recommendations() {
                         >
                           <Link
                             href={`/jobs/${m.job.job_id}`}
-                            className="block text-xs font-semibold text-slate-900 hover:text-blue-700 line-clamp-2 dark:text-slate-100"
+                            className="block text-xs font-semibold text-slate-900 dark:text-white hover:text-blue-700 line-clamp-2 dark:text-slate-100"
                           >
-                            {m.job.title}
+                            {toTitleCase(m.job.title)}
                           </Link>
-                          <p className="mt-0.5 text-xs text-slate-500 truncate">
+                          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 truncate">
                             {m.job.company.name}
                           </p>
                           <div className="mt-2 flex items-center justify-between">
@@ -563,7 +564,7 @@ export function Recommendations() {
       </div>
 
       {/* ── Tabs ── */}
-      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
         {tabs.map((tab) => (
           <button
             key={tab.key}
@@ -583,9 +584,9 @@ export function Recommendations() {
       {/* ── Thẻ Tổng Quan ── */}
       {activeTab === "overview" && (
         <div className="space-y-5">
-          <p className="rounded-lg bg-slate-50 px-4 py-2.5 text-xs text-slate-500">
+          <p className="rounded-lg bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
             Đây là trang tổng hợp nhanh. Bấm{" "}
-            <span className="font-semibold text-slate-700">“chi tiết”</span> ở
+            <span className="font-semibold text-slate-700 dark:text-slate-200">“chi tiết”</span> ở
             mỗi mục để tới trang chuyên sâu (Tìm việc, Phân tích kỹ năng,
             Roadmap).
           </p>
@@ -594,7 +595,7 @@ export function Recommendations() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-blue-600" />
-                <h2 className="font-bold text-slate-900">
+                <h2 className="font-bold text-slate-900 dark:text-white">
                   Những công việc phù hợp với bạn
                 </h2>
               </div>
@@ -605,7 +606,7 @@ export function Recommendations() {
                 Xem tất cả <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
-            <div className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
               {apiJobs.length === 0 ? (
                 <EmptyState
                   icon={Briefcase}
@@ -621,15 +622,15 @@ export function Recommendations() {
                     <Link
                       key={job.job_id}
                       href={`/jobs/${job.job_id}`}
-                      className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors group"
+                      className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-700 transition-colors">
-                            {job.title}
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-blue-700 transition-colors">
+                            {toTitleCase(job.title)}
                           </p>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                           <span className="flex items-center gap-1">
                             <Building2 className="w-3 h-3" />
                             {job.company_name}
@@ -644,7 +645,7 @@ export function Recommendations() {
                         <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
                           {job.match_rate}
                         </span>
-                        <p className="text-xs font-semibold text-slate-900">
+                        <p className="text-xs font-semibold text-slate-900 dark:text-white">
                           {job.salary_text}
                         </p>
                         <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
@@ -670,7 +671,7 @@ export function Recommendations() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-orange-500" />
-                <h2 className="font-bold text-slate-900">
+                <h2 className="font-bold text-slate-900 dark:text-white">
                   Kỹ Năng Ưu Tiên Cần Phát Triển
                 </h2>
               </div>
@@ -681,7 +682,7 @@ export function Recommendations() {
                 Phân tích chi tiết <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
-            <div className="bg-white rounded-xl border border-slate-100 shadow-sm divide-y divide-slate-50">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm divide-y divide-slate-50">
               {prioritySkills.length === 0 ? (
                 <EmptyState
                   icon={TrendingUp}
@@ -700,21 +701,21 @@ export function Recommendations() {
                       <div className="flex items-start justify-between gap-4 mb-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h3 className="font-bold text-slate-900 text-sm">
-                              {skill.skill_name}
+                            <h3 className="font-bold text-slate-900 dark:text-white text-sm">
+                              {toTitleCase(skill.skill_name)}
                             </h3>
                             <span
                               className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${uc.bg} ${uc.text}`}
                             >
                               {uc.label}
                             </span>
-                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold">
+                            <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold">
                               {skill.status === "Missing"
                                 ? "Đang thiếu"
                                 : "Khớp một phần"}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
                             {skill.reason}
                           </p>
                         </div>
@@ -729,7 +730,7 @@ export function Recommendations() {
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1 text-xs text-slate-500">
+                        <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                           <Clock className="w-3 h-3" />
                           {skill.timeframe}
                         </span>
@@ -752,7 +753,7 @@ export function Recommendations() {
             <div className="mb-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Award className="h-5 w-5 text-violet-600" />
-                <h2 className="font-bold text-slate-900 dark:text-slate-100">
+                <h2 className="font-bold text-slate-900 dark:text-white dark:text-slate-100">
                   Lộ trình nghề nghiệp đề xuất
                 </h2>
               </div>
@@ -764,9 +765,9 @@ export function Recommendations() {
               </Link>
             </div>
             {careerPaths.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-white p-5 text-center dark:border-slate-800 dark:bg-slate-900">
+              <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white p-5 text-center dark:border-slate-800 dark:bg-slate-900">
                 <Award className="mx-auto mb-2 h-8 w-8 text-slate-300 dark:text-slate-700" />
-                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                <p className="text-sm font-bold text-slate-900 dark:text-white dark:text-slate-100">
                   Chưa có lộ trình nghề nghiệp đề xuất
                 </p>
                 <p className="mx-auto mt-1 max-w-xl text-xs text-slate-500 dark:text-slate-400">
@@ -792,7 +793,7 @@ export function Recommendations() {
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-300">
                           {path.readiness_label}
                         </p>
-                        <h3 className="mt-1 line-clamp-2 text-sm font-bold text-slate-900 dark:text-slate-100">
+                        <h3 className="mt-1 line-clamp-2 text-sm font-bold text-slate-900 dark:text-white dark:text-slate-100">
                           {path.title}
                         </h3>
                       </div>
@@ -803,8 +804,8 @@ export function Recommendations() {
 
                     <div className="mb-3">
                       <div className="mb-1.5 flex items-center justify-between text-xs">
-                        <span className="text-slate-500">Mức độ sẵn sàng</span>
-                        <span className="font-bold text-slate-900 dark:text-slate-100">
+                        <span className="text-slate-500 dark:text-slate-400">Mức độ sẵn sàng</span>
+                        <span className="font-bold text-slate-900 dark:text-white dark:text-slate-100">
                           {path.current_match}% → {path.target_match}%
                         </span>
                       </div>
@@ -829,7 +830,7 @@ export function Recommendations() {
                     </div>
 
                     <div className="mb-3">
-                      <p className="mb-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      <p className="mb-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                         Kỹ năng nên bổ sung:
                       </p>
                       {path.skill_gaps.length === 0 ? (
@@ -845,7 +846,7 @@ export function Recommendations() {
                                 key={`${path.id}-${gap.skill_id}`}
                                 className={`rounded px-2 py-0.5 text-[10px] font-medium ${tone.bg} ${tone.text}`}
                               >
-                                {gap.skill_name}
+                                {toTitleCase(gap.skill_name)}
                               </span>
                             );
                           })}
@@ -855,15 +856,15 @@ export function Recommendations() {
 
                     <div className="space-y-1.5 border-t border-slate-100 pt-3 dark:border-slate-800">
                       <div className="flex items-center justify-between gap-3 text-xs">
-                        <span className="flex items-center gap-1 text-slate-500">
+                        <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
                           <Clock className="h-3 w-3" /> Thời gian chuẩn bị
                         </span>
-                        <span className="font-semibold text-slate-900 dark:text-slate-100">
+                        <span className="font-semibold text-slate-900 dark:text-white dark:text-slate-100">
                           {path.time_to_ready}
                         </span>
                       </div>
                       <div className="flex items-center justify-between gap-3 text-xs">
-                        <span className="flex items-center gap-1 text-slate-500">
+                        <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
                           <DollarSign className="h-3 w-3" /> Khoảng lương
                         </span>
                         <span className="text-right font-bold text-emerald-600">
@@ -871,7 +872,7 @@ export function Recommendations() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between gap-3 text-xs">
-                        <span className="flex items-center gap-1 text-slate-500">
+                        <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
                           <Briefcase className="h-3 w-3" /> Cơ hội đang mở
                         </span>
                         <span className="font-semibold text-blue-700 dark:text-blue-300">
@@ -879,9 +880,9 @@ export function Recommendations() {
                         </span>
                       </div>
                       {path.learning_path_title && (
-                        <p className="line-clamp-1 text-xs text-slate-500">
+                        <p className="line-clamp-1 text-xs text-slate-500 dark:text-slate-400">
                           Lộ trình liên quan:{" "}
-                          <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          <span className="font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                             {path.learning_path_title}
                           </span>
                         </p>
@@ -918,7 +919,7 @@ export function Recommendations() {
               </div>
               <Link
                 href="/cv-matching"
-                className="mt-4 flex items-center justify-center gap-2 py-2.5 bg-white text-blue-700 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors"
+                className="mt-4 flex items-center justify-center gap-2 py-2.5 bg-white dark:bg-slate-900 text-blue-700 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors"
               >
                 Bắt đầu <ChevronRight className="w-4 h-4" />
               </Link>
@@ -931,17 +932,17 @@ export function Recommendations() {
       {activeTab === "saved" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               {savedReports.length} Đề xuất
             </p>
           </div>
           {savedReports.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center">
+            <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center">
               <FileText className="mx-auto mb-3 h-9 w-9 text-slate-300" />
-              <p className="text-sm font-bold text-slate-900">
+              <p className="text-sm font-bold text-slate-900 dark:text-white">
                 Chưa có báo cáo đề xuất
               </p>
-              <p className="mx-auto mt-1 max-w-lg text-xs text-slate-500">
+              <p className="mx-auto mt-1 max-w-lg text-xs text-slate-500 dark:text-slate-400">
                 Chạy phân tích CV hoặc mở một báo cáo matching để hệ thống lưu
                 lịch sử đề xuất thật cho hồ sơ của bạn.
               </p>
@@ -956,7 +957,7 @@ export function Recommendations() {
             savedReports.map((report) => (
             <div
               key={report.id}
-              className="bg-white rounded-xl border border-slate-100 shadow-sm p-5"
+              className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
@@ -976,17 +977,17 @@ export function Recommendations() {
                     )}
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm mb-0.5">
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm mb-0.5">
                       {report.title}
                     </h3>
-                    <p className="text-xs text-slate-500 mb-2">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                       {report.subtitle}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {report.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-medium rounded"
+                          className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-medium rounded"
                         >
                           {tag}
                         </span>
@@ -1012,11 +1013,11 @@ export function Recommendations() {
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2 mt-4 border-t border-slate-50 pt-3">
+              <div className="flex gap-2 mt-4 border-t border-slate-50 dark:border-slate-800 pt-3">
                 <button
                   onClick={() => report.onViewReport()}
                   disabled={isRedirecting}
-                  className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors disabled:opacity-50"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   {isRedirecting ? "Đang mở..." : "Xem báo cáo"}
@@ -1032,7 +1033,7 @@ export function Recommendations() {
       {activeTab === "resources" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Gợi ý nhanh dựa trên kỹ năng còn thiếu — xem đầy đủ khóa học & lộ
               trình ở trang Roadmap.
             </p>
@@ -1062,7 +1063,7 @@ export function Recommendations() {
                 const resourceTitle =
                   primaryCourse?.title ||
                   primaryPath?.title ||
-                  `Bổ sung ${recommendation.skill_name}`;
+                  `Bổ sung ${toTitleCase(recommendation.skill_name)}`;
                 const resourceProvider =
                   primaryCourse?.provider ||
                   (primaryPath ? "Lộ trình học" : "Nova");
@@ -1081,7 +1082,7 @@ export function Recommendations() {
                 return (
                   <div
                     key={recommendation.id}
-                    className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow"
+                    className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5 hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div>
@@ -1098,18 +1099,18 @@ export function Recommendations() {
                               : "Khớp một phần"}
                           </span>
                           <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-bold">
-                            {recommendation.skill_name}
+                            {toTitleCase(recommendation.skill_name)}
                           </span>
                         </div>
-                        <h3 className="font-bold text-slate-900 text-sm">
+                        <h3 className="font-bold text-slate-900 dark:text-white text-sm">
                           {resourceTitle}
                         </h3>
-                        <p className="text-xs text-slate-500 mt-0.5">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                           {resourceProvider}
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="font-bold text-slate-900 text-sm">
+                        <p className="font-bold text-slate-900 dark:text-white text-sm">
                           {primaryCourse
                             ? formatCoursePrice(primaryCourse.price)
                             : "Lộ trình"}
@@ -1126,18 +1127,18 @@ export function Recommendations() {
                                 }`}
                               />
                             ))}
-                            <span className="text-[10px] text-slate-500 ml-0.5">
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 ml-0.5">
                               {resourceRating}
                             </span>
                           </div>
                         )}
                       </div>
                     </div>
-                    <p className="mb-3 line-clamp-2 text-xs text-slate-500">
+                    <p className="mb-3 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
                       {recommendation.impact}
                     </p>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                         <Clock className="w-3 h-3" />
                         {resourceDuration}
                       </div>

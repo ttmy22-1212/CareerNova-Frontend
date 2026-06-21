@@ -25,6 +25,7 @@ import {
   Moon,
   LogOut,
   Settings,
+  HelpCircle,
 } from "lucide-react";
 import { paths } from "@/paths";
 import {
@@ -149,6 +150,10 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
     title: "Kiểm tra hướng nghiệp",
     subtitle: "Khám phá định hướng phù hợp",
   },
+  [paths.guide]: {
+    title: "Hướng dẫn sử dụng",
+    subtitle: "Cách dùng Career Nova từ A đến Z",
+  },
 };
 
 function findActive(pathname: string) {
@@ -204,8 +209,8 @@ export default function UserLayout({
 
   if (!authReady || (!user && !isPublicPage)) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="flex items-center gap-3 text-sm text-slate-500">
+      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-800/50 dark:bg-slate-950">
+        <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
           Đang kiểm tra phiên đăng nhập…
         </div>
@@ -264,7 +269,7 @@ export default function UserLayout({
   }) => (
     <PopoverContent side="top" align="end" className="w-60 p-1.5">
       <div className="border-b border-slate-100 px-3 py-2 dark:border-slate-800">
-        <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white dark:text-slate-100">
           {user?.full_name}
         </p>
         <p className="truncate text-xs text-slate-500 dark:text-slate-400">
@@ -277,7 +282,7 @@ export default function UserLayout({
           toggleTheme();
           closeDropdown();
         }}
-        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         {theme === "dark" ? (
           <>
@@ -298,7 +303,7 @@ export default function UserLayout({
           setMobileOpen(false);
           closeDropdown(); // Đóng dropdown lập tức khi chuyển trang
         }}
-        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         <User className="h-4 w-4 text-slate-400" />
         Hồ sơ của tôi
@@ -310,10 +315,22 @@ export default function UserLayout({
           setMobileOpen(false);
           closeDropdown(); // Đóng dropdown lập tức khi chuyển trang
         }}
-        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         <Settings className="h-4 w-4 text-slate-400" />
         Cập nhật onboarding
+      </Link>
+
+      <Link
+        href={paths.guide}
+        onClick={() => {
+          setMobileOpen(false);
+          closeDropdown(); // Đóng dropdown lập tức khi chuyển trang
+        }}
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 dark:text-slate-200 dark:hover:bg-slate-800"
+      >
+        <HelpCircle className="h-4 w-4 text-slate-400" />
+        Hướng dẫn sử dụng
       </Link>
 
       <button
@@ -348,7 +365,7 @@ export default function UserLayout({
 
           {!collapsed && (
             <div className="whitespace-nowrap">
-              <p className="text-sm font-bold leading-tight text-slate-900 dark:text-slate-100">
+              <p className="text-sm font-bold leading-tight text-slate-900 dark:text-white dark:text-slate-100">
                 Career Nova
               </p>
               <p className="text-[11px] font-medium leading-tight text-slate-400">
@@ -362,7 +379,7 @@ export default function UserLayout({
           <button
             onClick={() => setCollapsed(true)}
             aria-label="Thu nhỏ menu"
-            className="ml-auto hidden rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 md:block dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+            className="ml-auto hidden rounded-lg p-2 text-slate-500 dark:text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900 md:block dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
           >
             <ChevronRight className="h-4 w-4 rotate-180" />
           </button>
@@ -459,10 +476,10 @@ export default function UserLayout({
             </PopoverTrigger>
             <PopoverContent side="right" align="end" className="w-80">
               <div className="mb-3">
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white dark:text-slate-100">
                   Hoàn thiện hồ sơ
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Càng đầy đủ, gợi ý job & lộ trình càng chính xác.
                 </p>
               </div>
@@ -514,7 +531,7 @@ export default function UserLayout({
                 {!collapsed && (
                   <>
                     <div className="min-w-0 flex-1 text-left">
-                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-white dark:text-slate-100">
                         {user.full_name}
                       </p>
                       <p className="truncate text-xs text-slate-500 dark:text-slate-400">
@@ -535,7 +552,7 @@ export default function UserLayout({
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
+    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-800/50 dark:bg-slate-950">
       <aside
         className={`z-20 hidden shrink-0 flex-col border-r border-slate-200 bg-white transition-all duration-300 md:flex dark:border-slate-800 dark:bg-slate-900 ${
           collapsed ? "w-20" : "w-64"
@@ -552,11 +569,11 @@ export default function UserLayout({
       </Sheet>
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="z-10 flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 md:gap-4 md:px-6 dark:border-slate-800 dark:bg-slate-900">
+        <header className="z-10 flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 dark:border-slate-700 bg-white px-4 md:gap-4 md:px-6 dark:border-slate-800 dark:bg-slate-900">
           <button
             onClick={() => setMobileOpen(true)}
             aria-label="Mở menu"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 md:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800/50 text-slate-600 md:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
           >
             <Menu className="h-4 w-4" />
           </button>
@@ -564,7 +581,7 @@ export default function UserLayout({
           <div className="min-w-0 flex-1">
             {groupTitle && (
               <nav className="hidden items-center gap-1 text-xs text-slate-400 md:flex">
-                <Link href={paths.dashboard} className="hover:text-slate-600">
+                <Link href={paths.dashboard} className="hover:text-slate-600 dark:hover:text-slate-200">
                   Career Nova
                 </Link>
                 <ChevronRight className="h-3 w-3" />
@@ -575,7 +592,7 @@ export default function UserLayout({
                 </span>
               </nav>
             )}
-            <h1 className="truncate text-base font-bold leading-tight text-slate-900 dark:text-slate-100">
+            <h1 className="truncate text-base font-bold leading-tight text-slate-900 dark:text-white dark:text-slate-100">
               {meta.title}
             </h1>
           </div>
@@ -598,7 +615,7 @@ export default function UserLayout({
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-100/80 active:scale-95 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200 dark:hover:bg-slate-800"
+                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-100/80 dark:hover:bg-slate-800/80 active:scale-95 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   <FileText className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                   <span>CV và So khớp mặc định</span>
@@ -608,7 +625,7 @@ export default function UserLayout({
 
               <PopoverContent
                 align="end"
-                className="w-[420px] p-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+                className="w-[420px] p-0 overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
               >
                 <DefaultCvManager />
               </PopoverContent>
@@ -623,12 +640,12 @@ export default function UserLayout({
                 : "Chuyển sang dark mode"
             }
             title={theme === "dark" ? "Light mode" : "Dark mode"}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800/50 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
           >
             {theme === "dark" ? (
               <Sun className="h-4 w-4 text-amber-400" />
             ) : (
-              <Moon className="h-4 w-4 text-slate-600" />
+              <Moon className="h-4 w-4 text-slate-600 dark:text-slate-300" />
             )}
           </button>
 
@@ -638,9 +655,9 @@ export default function UserLayout({
               onOpenChange={setHeaderDropdownOpen}
             >
               <PopoverTrigger asChild>
-                <button className="hidden items-center gap-2 rounded-lg border border-transparent py-1 pl-1 pr-3 transition-all hover:border-slate-200 hover:bg-slate-50 sm:flex dark:hover:border-slate-700 dark:hover:bg-slate-800">
+                <button className="hidden items-center gap-2 rounded-lg border border-transparent py-1 pl-1 pr-3 transition-all hover:border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 sm:flex dark:hover:border-slate-700 dark:hover:bg-slate-800">
                   <UserAvatar />
-                  <span className="hidden text-sm font-medium text-slate-700 lg:block dark:text-slate-300">
+                  <span className="hidden text-sm font-medium text-slate-700 dark:text-slate-200 lg:block dark:text-slate-300">
                     {user?.full_name
                       ? user.full_name.split(/\s+/).slice(-1)[0]
                       : "Thành viên"}
@@ -692,7 +709,7 @@ function JourneyBar({ journey }: { journey: AnyJourneyStage[] }) {
   return (
     <div
       data-tour="journey-bar"
-      className="border-b border-slate-200 bg-white px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900 md:px-6"
+      className="border-b border-slate-200 dark:border-slate-700 bg-white px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900 md:px-6"
     >
       <div className="flex items-center gap-3">
         <div className="hidden shrink-0 items-center gap-2 md:flex">
@@ -745,7 +762,7 @@ function JourneyBar({ journey }: { journey: AnyJourneyStage[] }) {
                     <p className="text-xs font-semibold leading-tight whitespace-nowrap flex items-center gap-1">
                       {stage.label}
                       {isHere && (
-                        <span className="inline-flex items-center rounded-full bg-white/20 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide">
+                        <span className="inline-flex items-center rounded-full bg-white/20 dark:bg-slate-900/20 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide">
                           Đang ở đây
                         </span>
                       )}

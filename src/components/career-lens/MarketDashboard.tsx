@@ -53,8 +53,8 @@ import { toTitleCase } from "@/utils/text";
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload?.length) {
     return (
-      <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-lg text-sm">
-        <p className="font-semibold text-slate-900 mb-1">{label}</p>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-lg text-sm">
+        <p className="font-semibold text-slate-900 dark:text-white mb-1">{label}</p>
         {payload.map((p: any) => (
           <p key={p.dataKey} style={{ color: p.color }}>
             {p.name}:{" "}
@@ -120,9 +120,9 @@ const TreemapTooltip = ({ active, payload }: any) => {
     const d = payload[0]?.payload;
     if (!d) return null;
     return (
-      <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-lg text-sm">
-        <p className="font-semibold text-slate-900 mb-0.5">{d.name}</p>
-        <p className="text-slate-600">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-lg text-sm">
+        <p className="font-semibold text-slate-900 dark:text-white mb-0.5">{d.name}</p>
+        <p className="text-slate-600 dark:text-slate-300">
           <span className="font-medium">{d.count?.toLocaleString()}</span> công
           việc · {d.percentage}%
         </p>
@@ -394,8 +394,8 @@ export function MarketDashboard({
       )}
 
       {/* ── Tầng giao diện Bộ lọc Filters động từ DB ── */}
-      <div className="sticky top-0 z-20 -mx-2 flex flex-wrap items-center gap-3 rounded-xl border border-slate-100 bg-white/90 px-3 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-white/70">
-        <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
+      <div className="sticky top-0 z-20 -mx-2 flex flex-wrap items-center gap-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 px-3 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:bg-slate-900/70">
+        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 font-medium">
           <Filter className="w-4 h-4" />
           Lọc:
         </div>
@@ -404,7 +404,7 @@ export function MarketDashboard({
         <select
           value={region}
           onChange={(e) => setRegion(e.target.value)}
-          className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+          className="px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
         >
           {filterOptions?.locations.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -419,7 +419,7 @@ export function MarketDashboard({
           onChange={(e) =>
             setTimePeriod(e.target.value as DashboardFilterDto["time_range"])
           }
-          className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+          className="px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
         >
           {filterOptions?.timeRanges.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -434,7 +434,7 @@ export function MarketDashboard({
           onChange={(e) =>
             setJobType(e.target.value as DashboardFilterDto["work_type"] | "")
           }
-          className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+          className="px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
         >
           {filterOptions?.workTypes.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -494,11 +494,11 @@ export function MarketDashboard({
               ? "bg-emerald-50 text-emerald-700"
               : card.badge.tone === "negative"
                 ? "bg-red-50 text-red-700"
-                : "bg-slate-100 text-slate-500";
+                : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400";
           return (
             <div
               key={card.label}
-              className="bg-white rounded-xl border border-slate-100 shadow-sm p-5"
+              className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5"
             >
               <div className="flex items-start justify-between mb-4">
                 {/* Icon-chip thống nhất 1 tông thương hiệu — màu không mã hoá
@@ -518,10 +518,10 @@ export function MarketDashboard({
                   {card.badge.text}
                 </span>
               </div>
-              <p className="text-2xl font-bold text-slate-900 mb-0.5">
+              <p className="text-2xl font-bold text-slate-900 dark:text-white mb-0.5">
                 {card.value}
               </p>
-              <p className="text-xs font-medium text-slate-500">{card.label}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{card.label}</p>
               <p className="text-[11px] text-slate-400 mt-0.5">{card.sub}</p>
             </div>
           );
@@ -533,7 +533,7 @@ export function MarketDashboard({
         <p className="-mt-2 flex items-center gap-1.5 text-xs text-slate-400">
           <BarChart3 className="h-3.5 w-3.5" />
           Đang phân tích{" "}
-          <span className="font-semibold text-slate-500">
+          <span className="font-semibold text-slate-500 dark:text-slate-400">
             {stats.active_jobs.count.toLocaleString()}
           </span>{" "}
           tin tuyển dụng IT đang mở · dữ liệu thu thập tự động, cập nhật định kỳ
@@ -542,10 +542,10 @@ export function MarketDashboard({
 
       {/* ── Trend Chart + Industry ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="font-semibold text-slate-900">
+              <h3 className="font-semibold text-slate-900 dark:text-white">
                 Xu hướng tin tuyển dụng
               </h3>
             </div>
@@ -606,11 +606,11 @@ export function MarketDashboard({
             </AreaChart>
           </ResponsiveContainer>
           <div className="flex items-center gap-5 mt-3 justify-center">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
               <span className="w-6 h-0.5 bg-blue-500 rounded-full inline-block" />
               Tổng tin
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
               <span className="w-6 h-0.5 bg-emerald-500 rounded-full inline-block" />
               Việc từ xa
             </div>
@@ -618,11 +618,11 @@ export function MarketDashboard({
         </div>
 
         {/* Industry Breakdown */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-          <h3 className="font-semibold text-slate-900 mb-0.5">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
+          <h3 className="font-semibold text-slate-900 dark:text-white mb-0.5">
             Phân bổ thị trường
           </h3>
-          <p className="text-xs text-slate-500 mb-3">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
             Phân bổ công việc theo nhóm kỹ năng
           </p>
           {industryTreemapData.length > 0 ? (
@@ -659,11 +659,11 @@ export function MarketDashboard({
                       backgroundColor: categoryColor(i),
                     }}
                   />
-                  <span className="text-slate-600">
+                  <span className="text-slate-600 dark:text-slate-300">
                     {toTitleCase(item.category_name || item.industry_name)}
                   </span>
                 </div>
-                <span className="font-semibold text-slate-900 shrink-0">
+                <span className="font-semibold text-slate-900 dark:text-white shrink-0">
                   {item.percentage}%
                 </span>
               </div>
@@ -673,15 +673,15 @@ export function MarketDashboard({
       </div>
 
       {/* ── Top 5 Hot Jobs This Week ── */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Flame className="w-5 h-5 text-orange-500" />
             <div>
-              <h3 className="font-semibold text-slate-900">
+              <h3 className="font-semibold text-slate-900 dark:text-white">
                 Top 5 vị trí được tuyển nhiều nhất tuần này
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Các vị trí có nhiều tin tuyển dụng nhất trong 7 ngày gần đây
               </p>
             </div>
@@ -710,7 +710,7 @@ export function MarketDashboard({
                   if (region) params.set("location", region);
                   return `/jobs?${params.toString()}`;
                 })()}
-                className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors group"
+                className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
               >
                 <span
                   className={`text-lg font-black w-7 shrink-0 ${i === 0 ? "text-orange-500" : i === 1 ? "text-slate-400" : i === 2 ? "text-amber-600" : "text-slate-300"}`}
@@ -719,7 +719,7 @@ export function MarketDashboard({
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <span className="text-sm font-semibold text-slate-900 group-hover:text-blue-700 transition-colors">
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-blue-700 transition-colors">
                       {toTitleCase(job.title)}
                     </span>
                     {i < 2 && (
@@ -735,8 +735,8 @@ export function MarketDashboard({
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
-                    <span className="flex items-center gap-1 font-medium text-slate-600">
+                  <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+                    <span className="flex items-center gap-1 font-medium text-slate-600 dark:text-slate-300">
                       <Briefcase className="w-3 h-3" />
                       {job.job_count} tin tuyển
                     </span>
@@ -770,13 +770,13 @@ export function MarketDashboard({
       {/* ── Top 10 Skills + Rising Skills ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Top 10 Skills */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-semibold text-slate-900">
+              <h3 className="font-semibold text-slate-900 dark:text-white">
                 Top 10 Kỹ Năng Được Yêu Cầu
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Số công việc yêu cầu kỹ năng này trên sàn
               </p>
             </div>
@@ -792,14 +792,14 @@ export function MarketDashboard({
                 </span>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium text-slate-700">
-                      {item.skill_name}
+                    <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                      {toTitleCase(item.skill_name)}
                     </span>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
                       {item.job_count} công việc
                     </span>
                   </div>
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
@@ -816,7 +816,7 @@ export function MarketDashboard({
             <p className="mt-4 flex items-start gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
               <Sparkles className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
-                <b>{inDemandSkillsData[0].skill_name}</b> đang được yêu cầu nhiều
+                <b>{toTitleCase(inDemandSkillsData[0].skill_name)}</b> đang được yêu cầu nhiều
                 nhất — ưu tiên thành thạo kỹ năng này để khớp nhiều việc hơn.
               </span>
             </p>
@@ -824,14 +824,14 @@ export function MarketDashboard({
         </div>
 
         {/* Kỹ năng tăng trưởng nhanh */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
             <Flame className="w-5 h-5 text-orange-500" />
             <div>
-              <h3 className="font-semibold text-slate-900">
+              <h3 className="font-semibold text-slate-900 dark:text-white">
                 Kỹ năng tăng trưởng nhanh
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Kỹ năng có nhu cầu tuyển dụng tăng mạnh nhất theo bộ lọc
               </p>
             </div>
@@ -841,17 +841,17 @@ export function MarketDashboard({
               risingSkillsData.map((s) => (
                 <div
                   key={s.skill_id}
-                  className={`flex items-center justify-between p-3 rounded-xl border transition-colors hover:shadow-sm ${s.growth_percentage >= 50 ? "border-orange-100 bg-orange-50" : "border-slate-100 bg-slate-50"}`}
+                  className={`flex items-center justify-between p-3 rounded-xl border transition-colors hover:shadow-sm ${s.growth_percentage >= 50 ? "border-orange-100 bg-orange-50 dark:border-orange-900/40 dark:bg-orange-950/20" : "border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50"}`}
                 >
                   <div className="flex items-center gap-2.5">
                     {s.growth_percentage >= 50 && (
                       <Flame className="w-4 h-4 text-orange-500 shrink-0" />
                     )}
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        {s.skill_name}
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {toTitleCase(s.skill_name)}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         {s.job_count_current.toLocaleString()} công việc
                       </p>
                     </div>
@@ -864,7 +864,7 @@ export function MarketDashboard({
                 </div>
               ))
             ) : (
-              <p className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm text-slate-500">
+              <p className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-3 text-sm text-slate-500 dark:text-slate-400">
                 Chưa có đủ dữ liệu kỹ năng tăng trưởng cho bộ lọc này.
               </p>
             )}
@@ -873,7 +873,7 @@ export function MarketDashboard({
             <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-orange-50 px-3 py-2 text-xs text-orange-700">
               <Flame className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
-                <b>{risingSkillsData[0].skill_name}</b> đang tăng nhanh nhất (+
+                <b>{toTitleCase(risingSkillsData[0].skill_name)}</b> đang tăng nhanh nhất (+
                 {risingSkillsData[0].growth_percentage}%) — học sớm để đón đầu
                 xu hướng.
               </span>
@@ -886,7 +886,7 @@ export function MarketDashboard({
       {!isLoggedIn && (
         <div className="relative bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 overflow-hidden text-center">
           <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-0 left-1/2 w-64 h-64 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute top-0 left-1/2 w-64 h-64 bg-white dark:bg-slate-900 rounded-full -translate-x-1/2 -translate-y-1/2" />
           </div>
           <div className="relative">
             <Sparkles className="w-8 h-8 text-yellow-300 mx-auto mb-3" />
@@ -900,7 +900,7 @@ export function MarketDashboard({
             <div className="flex items-center justify-center gap-3">
               <Link
                 href="/auth/register"
-                className="px-6 py-2.5 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-colors shadow-lg"
+                className="px-6 py-2.5 bg-white dark:bg-slate-900 text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-colors shadow-lg"
               >
                 Đăng ký miễn phí
               </Link>

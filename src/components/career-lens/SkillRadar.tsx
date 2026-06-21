@@ -62,11 +62,11 @@ export function SkillRadar({
 
   const Legend = () => (
     <div className="mt-2 flex items-center justify-center gap-5">
-      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
         <span className="inline-block h-0.5 w-4 rounded-full bg-blue-500" />
         {youLabel}
       </div>
-      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
         <span className="inline-block h-0.5 w-4 rounded-full bg-emerald-500" />
         {requiredLabel}
       </div>
@@ -78,14 +78,14 @@ export function SkillRadar({
   if (useBars) {
     return (
       <div className="w-full space-y-4 py-2">
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[11px] text-slate-500 dark:text-slate-400">
           Nhóm này có ít kỹ năng — hiển thị dạng thanh để dễ so sánh với mức yêu
           cầu.
         </p>
         {data.map((d) => (
           <div key={d.subject}>
             <div className="mb-1 flex items-center justify-between text-xs">
-              <span className="flex items-center gap-1.5 font-semibold text-slate-800">
+              <span className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-100">
                 {d.subject}
                 {showVia(d) && (
                   <span className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-normal text-violet-500">
@@ -95,7 +95,7 @@ export function SkillRadar({
               </span>
               <span className="font-bold text-blue-600">{d.you}%</span>
             </div>
-            <div className="relative h-2.5 overflow-hidden rounded-full bg-slate-100">
+            <div className="relative h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
               <div
                 className="absolute inset-y-0 left-0 bg-emerald-100"
                 style={{ width: `${d.required ?? 100}%` }}
@@ -107,7 +107,7 @@ export function SkillRadar({
             </div>
           </div>
         ))}
-        <div className="flex items-center gap-4 pt-1 text-[11px] text-slate-500">
+        <div className="flex items-center gap-4 pt-1 text-[11px] text-slate-500 dark:text-slate-400">
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-2 w-3 rounded bg-blue-500" />
             {youLabel}
@@ -125,8 +125,8 @@ export function SkillRadar({
     if (!active || !payload?.length) return null;
     const d = payload[0].payload as SkillRadarPoint;
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-3 text-xs font-medium shadow-xl">
-        <p className="mb-1 flex items-center gap-1 font-semibold text-slate-900">
+      <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-xs font-medium shadow-xl">
+        <p className="mb-1 flex items-center gap-1 font-semibold text-slate-900 dark:text-white">
           <span>{d.subject}</span>
           {showVia(d) && (
             <span className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-normal text-violet-500">

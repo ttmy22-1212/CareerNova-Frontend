@@ -18,6 +18,10 @@ import {
   Star,
   History,
   Eye,
+  FileSearch,
+  ScanSearch,
+  Gauge,
+  Lightbulb,
 } from "lucide-react";
 import Link from "next/link";
 import { SkillRadar } from "./SkillRadar";
@@ -32,6 +36,34 @@ import { InfoTooltip, GLOSSARY } from "./InfoTooltip";
 import { RoleComparison } from "./RoleComparison";
 
 type InputMode = "role" | "url";
+
+// Các bước hiển thị trong lúc "câu giờ" khi đang phân tích CV.
+const LOADING_STEPS = [
+  {
+    Icon: FileSearch,
+    title: "Đọc & trích xuất kỹ năng từ CV",
+    desc: "Nhận diện kỹ năng, kinh nghiệm trong hồ sơ của bạn",
+  },
+  {
+    Icon: ScanSearch,
+    title: "Đối soát ngữ nghĩa với yêu cầu công việc",
+    desc: "So sánh từng kỹ năng với nhu cầu thị trường bằng AI",
+  },
+  {
+    Icon: Gauge,
+    title: "Tính điểm phù hợp & khoảng trống kỹ năng",
+    desc: "Tổng hợp mức độ phù hợp và những gì còn thiếu",
+  },
+];
+
+// Mẹo xoay vòng để người dùng đỡ sốt ruột trong lúc chờ.
+const LOADING_TIPS = [
+  "Đặt một CV làm “Mặc định” để điểm match hiển thị thống nhất trên mọi trang.",
+  "Mỗi lần so khớp đều được lưu vào lịch sử — bạn có thể mở lại để so sánh.",
+  "Kỹ năng “khớp một phần” vẫn được tính điểm — đừng bỏ qua chúng.",
+  "Thử so khớp với nhiều nhóm nghề khác nhau để tìm hướng phù hợp nhất.",
+  "Bổ sung kỹ năng còn thiếu qua mục “Khoá học & Lộ trình” để tăng điểm match.",
+];
 
 function CategoryDropdown({
   categories,
@@ -56,7 +88,7 @@ function CategoryDropdown({
     <div ref={dropdownRef} className="relative w-full">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-all"
+        className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
       >
         <span className="truncate">
           {selected === "All" ? "Tất cả nhóm kỹ năng" : selected}
@@ -74,15 +106,15 @@ function CategoryDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute z-40 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-1 duration-150">
-          <div className="p-2 border-b border-slate-100 bg-slate-50/50">
+        <div className="absolute z-40 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg max-h-60 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="p-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
             <input
               type="text"
               placeholder="Tìm kiếm nhóm kỹ năng..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoFocus
-              className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400 text-slate-700"
+              className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400 text-slate-700 dark:text-slate-200"
             />
           </div>
 
@@ -219,8 +251,33 @@ export function CVMatching() {
   // ── STATES QUẢN LÝ DỮ LIỆU REAL TỪ API ──
   const [matchResult, setMatchResult] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [tipIndex, setTipIndex] = useState(0);
+  const loadingRef = useRef<HTMLDivElement | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isUpdatingDefault, setIsUpdatingDefault] = useState<boolean>(false);
+
+  // Hiệu ứng "câu giờ" khi đang phân tích: chạy lần lượt các bước + xoay mẹo,
+  // và cuộn tới khu vực loading để người dùng thấy ngay (trước đây nằm tận dưới).
+  useEffect(() => {
+    if (!isLoading) return;
+    setLoadingStep(0);
+    setTipIndex(0);
+    const t = setTimeout(() => {
+      loadingRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+    const stepTimer = setInterval(() => {
+      setLoadingStep((s) => (s < LOADING_STEPS.length - 1 ? s + 1 : s));
+    }, 1500);
+    const tipTimer = setInterval(() => {
+      setTipIndex((i) => (i + 1) % LOADING_TIPS.length);
+    }, 3500);
+    return () => {
+      clearTimeout(t);
+      clearInterval(stepTimer);
+      clearInterval(tipTimer);
+    };
+  }, [isLoading]);
 
   // ── THÊM ĐOẠN QUẢN LÝ UPLOAD CV NHANH CHO Ô BÊN PHẢI ──
   const [rightFile, setRightFile] = useState<File | null>(null);
@@ -750,12 +807,12 @@ export function CVMatching() {
       )}
 
       {/* ── Input Panel ── */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
-        <div className="p-5 border-b border-slate-100">
-          <h2 className="font-bold text-slate-900 mb-0.5">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="font-bold text-slate-900 dark:text-white mb-0.5">
             Cấu hình phân tích
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Tải lên CV của bạn và cung cấp mô tả công việc hoặc vị trí so sánh
             để bắt đầu so sánh.
           </p>
@@ -768,16 +825,16 @@ export function CVMatching() {
             <div className="space-y-4">
               {/* Hàng 1: Hiển thị System Default CV */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide">
                   CV Mặc định của bạn
                 </label>
                 {defaultCv ? (
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
                     <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
                       <Star className="w-4 h-4 text-blue-600 fill-blue-500" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-slate-800 truncate">
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
                         {defaultCv.file_name}
                       </p>
                     </div>
@@ -794,7 +851,7 @@ export function CVMatching() {
 
               {/* Hàng 2: Hiển thị Active CV để quét và Dropdown chọn All CVs bên dưới */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide">
                   Chọn CV để phân tích
                 </label>
                 {activeCv ? (
@@ -807,7 +864,7 @@ export function CVMatching() {
                         <p className="text-xs text-emerald-700 font-medium">
                           Đang chọn quét AI
                         </p>
-                        <p className="text-sm font-semibold text-slate-900 truncate">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                           {activeCv.file_name}
                         </p>
                       </div>
@@ -841,7 +898,7 @@ export function CVMatching() {
 
                     {/* Dropdown bốc all_cvs và tích hợp nút cài đặt default */}
                     {allCvs.length > 0 && (
-                      <div className="p-3 border border-slate-100 bg-slate-50/50 rounded-xl flex items-center gap-3 justify-between">
+                      <div className="p-3 border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl flex items-center gap-3 justify-between">
                         <div className="flex-1">
                           <select
                             value={activeCv.cv_id}
@@ -851,7 +908,7 @@ export function CVMatching() {
                               );
                               if (selected) setActiveCv(selected);
                             }}
-                            className="w-full bg-white border border-slate-200 px-2.5 py-1.5 text-xs rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 font-medium"
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-xs rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 dark:text-slate-200 font-medium"
                           >
                             {allCvs.map((cv) => (
                               <option key={cv.cv_id} value={cv.cv_id}>
@@ -867,7 +924,7 @@ export function CVMatching() {
                             activeCv.cv_id === defaultCv?.cv_id
                           }
                           onClick={() => handleSetDefaultCv(activeCv.cv_id)}
-                          className="px-2.5 py-1.5 border border-slate-200 bg-white text-slate-700 font-semibold rounded-lg text-[11px] hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400 whitespace-nowrap transition-all"
+                          className="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-semibold rounded-lg text-[11px] hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 whitespace-nowrap transition-all"
                         >
                           {isUpdatingDefault
                             ? "Đang cập nhật..."
@@ -879,9 +936,9 @@ export function CVMatching() {
                     )}
                   </div>
                 ) : (
-                  <div className="border border-dashed border-slate-200 bg-slate-50/50 rounded-xl p-4 text-center flex flex-col justify-center items-center h-[114px]">
+                  <div className="border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl p-4 text-center flex flex-col justify-center items-center h-[114px]">
                     <AlertCircle className="w-5 h-5 text-slate-400 mb-1" />
-                    <p className="text-xs font-semibold text-slate-600 mb-0.5">
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-0.5">
                       Không có tài liệu CV nào được chọn
                     </p>
                     <p className="text-[11px] text-slate-400">
@@ -897,7 +954,7 @@ export function CVMatching() {
             <div className="space-y-4">
               {/* Hàng 1: Khối Upload CV nhanh */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide">
                   Tải CV mới
                 </label>
                 <input
@@ -911,19 +968,19 @@ export function CVMatching() {
                   onClick={() =>
                     !isUploadingRight && rightFileInputRef.current?.click()
                   }
-                  className="border-2 border-dashed border-slate-200 rounded-xl px-4 py-2.5 text-center hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer flex items-center justify-center min-h-[58px]"
+                  className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-center hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer flex items-center justify-center min-h-[58px]"
                 >
                   {isUploadingRight ? (
                     <div className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                      <p className="text-xs font-medium text-slate-600">
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
                         Đang tải lên...
                       </p>
                     </div>
                   ) : rightFile ? (
                     <div className="flex items-center gap-2 w-full justify-center">
                       <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <p className="text-xs font-semibold text-slate-800 truncate max-w-[180px]">
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[180px]">
                         {rightFile.name}
                       </p>
                       <span className="text-[10px] text-emerald-600 font-medium shrink-0">
@@ -931,7 +988,7 @@ export function CVMatching() {
                       </span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 text-slate-500">
+                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
                       <Upload className="w-4 h-4 text-slate-400" />
                       <p className="text-xs font-medium">
                         Tải lên CV để phân tích (.pdf, .jpg, .png)
@@ -949,10 +1006,10 @@ export function CVMatching() {
               {/* Hàng 2: Trình chọn Source và Action Match */}
               <div className="space-y-2.5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide">
                     Nguồn so khớp
                   </label>
-                  <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl mb-2">
+                  <div className="flex gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-2">
                     {modeButtons.map((b) => (
                       <button
                         key={b.key}
@@ -975,10 +1032,10 @@ export function CVMatching() {
                       <button
                         type="button"
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 font-medium h-[34px] flex items-center justify-between text-left shadow-sm hover:bg-slate-100/50 transition-all"
+                        className="w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 dark:text-slate-200 font-medium h-[34px] flex items-center justify-between text-left shadow-sm hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all"
                       >
                         <span className="truncate">
-                          {selectedRole || "Chọn vị trí tuyển dụng..."}
+                          {selectedRole ? toTitleCase(selectedRole) : "Chọn vị trí tuyển dụng..."}
                         </span>
                         <ChevronDown
                           className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isDropdownOpen ? "transform rotate-180" : ""}`}
@@ -987,16 +1044,16 @@ export function CVMatching() {
 
                       {/* Khung tìm kiếm và danh sách lựa chọn */}
                       {isDropdownOpen && (
-                        <div className="absolute z-30 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-1 duration-150">
+                        <div className="absolute z-30 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg max-h-60 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-1 duration-150">
                           {/* Ô nhập từ khóa tìm kiếm */}
-                          <div className="p-2 border-b border-slate-100 bg-slate-50/50">
+                          <div className="p-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
                             <input
                               type="text"
                               placeholder="Tìm kiếm vị trí..."
                               value={searchTerm}
                               onChange={(e) => setSearchTerm(e.target.value)}
                               autoFocus
-                              className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400 text-slate-700"
+                              className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400 text-slate-700 dark:text-slate-200"
                             />
                           </div>
 
@@ -1018,7 +1075,7 @@ export function CVMatching() {
                                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                                   }`}
                                 >
-                                  {role}
+                                  {toTitleCase(role)}
                                 </button>
                               ))
                             ) : (
@@ -1037,7 +1094,7 @@ export function CVMatching() {
                       placeholder="https://linkedin.com/jobs/view/..."
                       value={jdUrl}
                       onChange={(e) => setJdUrl(e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400 h-[34px]"
+                      className="w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400 h-[34px]"
                     />
                   )}
                 </div>
@@ -1064,15 +1121,15 @@ export function CVMatching() {
           </div>
 
           {activeCv && (
-            <div className="pt-4 border-t border-slate-100 w-full">
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide flex items-center gap-1">
-                <History className="w-3 h-3 text-slate-500" /> Lịch sử phù hợp
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 w-full">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide flex items-center gap-1">
+                <History className="w-3 h-3 text-slate-500 dark:text-slate-400" /> Lịch sử phù hợp
                 cho CV này
               </label>
               <select
                 value={selectedMatchingId}
                 onChange={(e) => handleSelectHistoryMatching(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 px-3 py-2 text-xs rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 font-medium"
+                className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 dark:text-slate-200 font-medium"
               >
                   <option value="">-- Chọn lần phân tích phù hợp --</option>
                 {allMatchings.map((match) => (
@@ -1091,51 +1148,135 @@ export function CVMatching() {
       </div>
 
       {isLoading ? (
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-10">
-          <div className="flex flex-col items-center text-center mb-6">
-            <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-3">
-              <Loader2 className="w-7 h-7 text-blue-500 animate-spin" />
-            </div>
-            <h3 className="font-bold text-slate-900">Đang phân tích CV của bạn…</h3>
-            <p className="text-sm text-slate-500 mt-1">
-              Quá trình này có thể mất ít giây — AI đang xử lý hồ sơ của bạn.
-            </p>
+        <div
+          ref={loadingRef}
+          className="relative overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"
+        >
+          {/* Dải gradient động trên đỉnh */}
+          <div className="absolute inset-x-0 top-0 h-1 overflow-hidden">
+            <div className="h-full w-1/3 animate-[loadingBar_1.4s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
           </div>
-          <div className="max-w-md mx-auto space-y-2.5">
-            {[
-              "Đọc & trích xuất kỹ năng từ CV",
-              "Đối soát ngữ nghĩa với yêu cầu công việc",
-              "Tính điểm phù hợp & khoảng trống kỹ năng",
-            ].map((step, i) => (
-              <div
-                key={step}
-                className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5"
-              >
-                <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-[11px] font-bold flex items-center justify-center shrink-0">
-                  {i + 1}
-                </span>
-                <span className="text-sm text-slate-600">{step}</span>
-                <span className="ml-auto flex gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-300 animate-pulse" />
+
+          <div className="px-6 py-9 sm:px-10">
+            <div className="flex flex-col items-center text-center">
+              {/* Icon bước hiện tại, đổi theo tiến trình */}
+              <div className="relative mb-4">
+                <span className="absolute inset-0 animate-ping rounded-2xl bg-blue-400/30" />
+                <span className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30">
+                  {(() => {
+                    const Icon = LOADING_STEPS[loadingStep].Icon;
+                    return <Icon className="h-7 w-7" />;
+                  })()}
                 </span>
               </div>
-            ))}
-          </div>
-          {/* Skeleton chỗ kết quả */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 animate-pulse">
-            <div className="h-28 rounded-xl bg-slate-100" />
-            <div className="h-28 rounded-xl bg-slate-100" />
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                Đang phân tích CV của bạn…
+              </h3>
+              <p className="mt-1 min-h-[20px] text-sm text-slate-500 dark:text-slate-400">
+                {LOADING_STEPS[loadingStep].desc}
+              </p>
+
+              {/* Thanh tiến trình */}
+              <div className="mt-5 h-2 w-full max-w-md overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-700 ease-out"
+                  style={{
+                    width: `${Math.min(
+                      ((loadingStep + 1) / LOADING_STEPS.length) * 100,
+                      92,
+                    )}%`,
+                  }}
+                />
+              </div>
+              <span className="mt-2 text-xs font-medium text-slate-400">
+                Bước {loadingStep + 1}/{LOADING_STEPS.length}
+              </span>
+            </div>
+
+            {/* Danh sách bước với trạng thái xong / đang chạy / chờ */}
+            <div className="mx-auto mt-7 max-w-md space-y-2.5">
+              {LOADING_STEPS.map((step, i) => {
+                const done = i < loadingStep;
+                const active = i === loadingStep;
+                return (
+                  <div
+                    key={step.title}
+                    className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 transition-all duration-300 ${
+                      active
+                        ? "border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/30"
+                        : done
+                          ? "border-emerald-100 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/20"
+                          : "border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                        active
+                          ? "bg-blue-600 text-white"
+                          : done
+                            ? "bg-emerald-500 text-white"
+                            : "bg-slate-200 text-slate-400 dark:bg-slate-700 dark:text-slate-500"
+                      }`}
+                    >
+                      {done ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : active ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <step.Icon className="h-4 w-4" />
+                      )}
+                    </span>
+                    <div className="min-w-0 text-left">
+                      <p
+                        className={`text-sm font-semibold ${
+                          active
+                            ? "text-blue-700 dark:text-blue-300"
+                            : done
+                              ? "text-emerald-700 dark:text-emerald-300"
+                              : "text-slate-500 dark:text-slate-400"
+                        }`}
+                      >
+                        {step.title}
+                      </p>
+                    </div>
+                    {done && (
+                      <span className="ml-auto text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        Xong
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Mẹo xoay vòng để đỡ sốt ruột */}
+            <div className="mx-auto mt-7 max-w-md rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+              <div className="flex items-start gap-2.5">
+                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-500 dark:text-amber-400" />
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                    Mẹo nhỏ
+                  </p>
+                  <p
+                    key={tipIndex}
+                    className="mt-0.5 text-sm text-amber-900/90 duration-500 animate-in fade-in slide-in-from-bottom-1 dark:text-amber-100/80"
+                  >
+                    {LOADING_TIPS[tipIndex]}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       ) : !analyzed || !matchResult ? (
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-16 text-center">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-16 text-center">
           <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <BarChart3 className="w-8 h-8 text-blue-400" />
           </div>
-          <h3 className="font-bold text-slate-900 mb-2">
+          <h3 className="font-bold text-slate-900 dark:text-white mb-2">
             Sẵn sàng để phân tích
           </h3>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Tải lên CV của bạn và cung cấp mô tả công việc để xem phân tích phù
             hợp cá nhân hóa.
           </p>
@@ -1162,9 +1303,9 @@ export function CVMatching() {
             ].map((card, i) => (
               <div
                 key={i}
-                className="bg-white rounded-xl border border-slate-100 shadow-sm p-5"
+                className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5"
               >
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-1">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3 flex items-center gap-1">
                   {card.label}
                   {(card as any).tip && (
                     <InfoTooltip text={(card as any).tip} />
@@ -1174,10 +1315,10 @@ export function CVMatching() {
                   <div className="flex items-center gap-4">
                     <ScoreRing score={card.value as number} />
                     <div>
-                      <p className="text-sm font-medium text-slate-700">
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
                         {scoreVerdict(card.value as number)}
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">{card.sub}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{card.sub}</p>
                     </div>
                   </div>
                 ) : (
@@ -1185,7 +1326,7 @@ export function CVMatching() {
                     <p className={`text-3xl font-bold mb-1 ${card.color}`}>
                       {card.value}
                     </p>
-                    <p className="text-xs text-slate-500 leading-relaxed">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                       {card.sub}
                     </p>
                   </>
@@ -1197,7 +1338,7 @@ export function CVMatching() {
           <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl px-6 py-4 flex items-center justify-between">
             <div>
               <p className="text-slate-400 text-xs mb-0.5">Phân tích so sánh</p>
-              <p className="text-white font-bold">{matchResult.jobTitle}</p>
+              <p className="text-white font-bold">{toTitleCase(matchResult.jobTitle)}</p>
               <p className="text-slate-400 text-xs">{matchResult.company}</p>
             </div>
             <Link
@@ -1214,20 +1355,20 @@ export function CVMatching() {
             {/* Skills Breakdown */}
             <div className="lg:col-span-3 space-y-4">
               {/* Strong Matches */}
-              <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
                 <button
                   onClick={() => toggleSection("strong")}
-                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
+                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     </div>
                     <div className="text-left">
-                      <p className="font-bold text-slate-900 text-sm">
+                      <p className="font-bold text-slate-900 dark:text-white text-sm">
                         Tương thích mạnh
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         Kỹ năng bạn đã thể hiện đầy đủ
                       </p>
                     </div>
@@ -1248,13 +1389,13 @@ export function CVMatching() {
                         key={item.skill}
                         className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full"
                       >
-                        {item.skill}
+                        {toTitleCase(item.skill)}
                       </span>
                     ))}
                   </div>
                 )}
                 {expandedSection === "strong" && (
-                  <div className="border-t border-slate-100 divide-y divide-slate-50">
+                  <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-50">
                     {matchResult.analysis.strongMatches.map((item: any) => (
                       <div
                         key={item.skill}
@@ -1262,26 +1403,26 @@ export function CVMatching() {
                       >
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-sm font-semibold text-slate-900">
-                              {item.skill}
+                            <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                              {toTitleCase(item.skill)}
                             </span>
                             <span className="text-xs font-bold text-emerald-600">
                               {item.match}% Tương thích
                             </span>
                           </div>
-                          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                             <div className="h-full bg-emerald-500 rounded-full w-full" />
                           </div>
-                          <div className="flex gap-4 mt-1.5 text-[11px] text-slate-500">
+                          <div className="flex gap-4 mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                             <span>
                               Độ tương đồng:{" "}
-                              <span className="font-semibold text-slate-700">
+                              <span className="font-semibold text-slate-700 dark:text-slate-200">
                                 {item.match}%
                               </span>
                             </span>
                             <span>
                               Yêu cầu:{" "}
-                              <span className="font-semibold text-slate-700">
+                              <span className="font-semibold text-slate-700 dark:text-slate-200">
                                 {item.required}
                               </span>
                             </span>
@@ -1294,20 +1435,20 @@ export function CVMatching() {
               </div>
 
               {/* Partial Matches */}
-              <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
                 <button
                   onClick={() => toggleSection("partial")}
-                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
+                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
                       <AlertCircle className="w-4 h-4 text-amber-600" />
                     </div>
                     <div className="text-left">
-                      <p className="font-bold text-slate-900 text-sm">
+                      <p className="font-bold text-slate-900 dark:text-white text-sm">
                         Tương thích một phần
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         Kỹ năng bạn có nhưng cần nâng cấp
                       </p>
                     </div>
@@ -1328,19 +1469,19 @@ export function CVMatching() {
                         key={item.skill}
                         className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full"
                       >
-                        {item.skill}
+                        {toTitleCase(item.skill)}
                       </span>
                     ))}
                   </div>
                 )}
                 {expandedSection === "partial" && (
-                  <div className="border-t border-slate-100 divide-y divide-slate-50">
+                  <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-50">
                     {matchResult.analysis.partialMatches.map((item: any) => (
                       <div key={item.skill} className="px-5 py-3">
                         <div className="flex items-center justify-between mb-1.5 gap-2">
                           <div className="flex items-center gap-2 flex-wrap min-w-0">
-                            <span className="text-sm font-semibold text-slate-900">
-                              {item.skill}
+                            <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                              {toTitleCase(item.skill)}
                             </span>
                             {item.matchedVia &&
                               item.matchedVia.toLowerCase() !==
@@ -1362,16 +1503,16 @@ export function CVMatching() {
                             {item.match}%
                           </span>
                         </div>
-                        <div className="relative h-1.5 bg-slate-100 rounded-full overflow-hidden mb-1.5">
+                        <div className="relative h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-1.5">
                           <div
                             className="h-full bg-amber-400 rounded-full"
                             style={{ width: `${item.match}%` }}
                           />
                         </div>
-                        <div className="flex gap-4 text-[11px] text-slate-500">
+                        <div className="flex gap-4 text-[11px] text-slate-500 dark:text-slate-400">
                           <span>
                             Yêu cầu:{" "}
-                            <span className="font-semibold text-slate-700">
+                            <span className="font-semibold text-slate-700 dark:text-slate-200">
                               {item.required}
                             </span>
                           </span>
@@ -1390,20 +1531,20 @@ export function CVMatching() {
               </div>
 
               {/* Missing Skills */}
-              <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
                 <button
                   onClick={() => toggleSection("missing")}
-                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
+                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
                       <XCircle className="w-4 h-4 text-red-500" />
                     </div>
                     <div className="text-left">
-                      <p className="font-bold text-slate-900 text-sm">
+                      <p className="font-bold text-slate-900 dark:text-white text-sm">
                         Kỹ năng thiếu
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         Kỹ năng chưa có trong hồ sơ của bạn
                       </p>
                     </div>
@@ -1424,24 +1565,24 @@ export function CVMatching() {
                         key={item.skill}
                         className="px-3 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded-full border border-red-200"
                       >
-                        {item.skill}
+                        {toTitleCase(item.skill)}
                       </span>
                     ))}
                   </div>
                 )}
                 {expandedSection === "missing" && (
-                  <div className="border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3 p-4">
+                  <div className="border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3 p-4">
                     {matchResult.analysis.missingSkills.map((item: any) => (
                       <div
                         key={item.skill}
                         className="p-3 bg-red-50 border border-red-100 rounded-xl"
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-bold text-slate-900">
-                            {item.skill}
+                          <span className="text-sm font-bold text-slate-900 dark:text-white">
+                            {toTitleCase(item.skill)}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500 mb-1.5">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
                           Yêu cầu: {item.required}
                         </p>
                         <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-full">
@@ -1456,8 +1597,8 @@ export function CVMatching() {
 
             {/* Radar Chart Sidebar */}
             <div className="lg:col-span-2 space-y-4">
-              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-                <h3 className="font-bold text-slate-900 mb-1">Radar kỹ năng</h3>
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
+                <h3 className="font-bold text-slate-900 dark:text-white mb-1">Radar kỹ năng</h3>
 
                 {categories.length > 0 && (
                   <div className="mb-4">
@@ -1492,7 +1633,7 @@ export function CVMatching() {
                         </button>
                       )}
                       {isOverview && (
-                        <p className="mb-2 text-[11px] text-slate-500">
+                        <p className="mb-2 text-[11px] text-slate-500 dark:text-slate-400">
                           Điểm trung bình theo nhóm — bấm vào tên nhóm để xem chi tiết
                         </p>
                       )}
@@ -1583,17 +1724,17 @@ export function CVMatching() {
 
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-              <div className="bg-white rounded-2xl shadow-xl max-w-[90vw] w-full max-h-[90vh] overflow-y-auto p-6 relative flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-[90vw] w-full max-h-[90vh] overflow-y-auto p-6 relative flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
                 {/* Header của Modal */}
-                <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                       <Sparkles className="w-5 h-5 text-violet-500" />
                       Kết quả phân tích đối sánh mới
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       Dưới đây là đánh giá mức độ tương thích đối với vị trí{" "}
-                      <span className="font-semibold text-slate-700">
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">
                         {toTitleCase(analyzeResult.search_group || selectedRole)}
                       </span>
                       .
@@ -1601,7 +1742,7 @@ export function CVMatching() {
                   </div>
                   <button
                     onClick={() => setShowResultModal(false)}
-                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+                    className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                   >
                     <XCircle className="w-5 h-5" />
                   </button>
@@ -1612,21 +1753,21 @@ export function CVMatching() {
                   {/* Cột 1 & 2: Danh sách kỹ năng */}
                   <div className="lg:col-span-2 space-y-4">
                     {/* Tóm tắt điểm số nhanh trong Modal */}
-                    <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
                       <ScoreRing score={modalScore} size={80} />
                       <div>
-                        <p className="text-sm font-bold text-slate-800">
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
                           Điểm tương thích tổng thể
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           Hệ thống ghi nhận độ tương thích cốt lõi đạt{" "}
                           {modalScore}%.
                         </p>
                       </div>
                     </div>
 
-                    <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
-                      <div className="bg-emerald-50/50 px-4 py-3 border-b border-slate-100 flex justify-between items-center">
+                    <div className="border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+                      <div className="bg-emerald-50/50 px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                         <span className="text-xs font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-1.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600" />{" "}
                           Tương thích mạnh ({strongMatches.length})
@@ -1639,7 +1780,7 @@ export function CVMatching() {
                               key={item.skill_id}
                               className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full"
                             >
-                              {item.skill_name} (
+                              {toTitleCase(item.skill_name)} (
                               {normalizePercent(item.similarity)}%)
                             </span>
                           ))
@@ -1651,8 +1792,8 @@ export function CVMatching() {
                       </div>
                     </div>
 
-                    <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
-                      <div className="bg-amber-50/50 px-4 py-3 border-b border-slate-100 flex justify-between items-center">
+                    <div className="border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+                      <div className="bg-amber-50/50 px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                         <span className="text-xs font-bold text-amber-800 uppercase tracking-wide flex items-center gap-1.5">
                           <AlertCircle className="w-4 h-4 text-amber-600" />{" "}
                           Tương thích một phần ({partialMatches.length})
@@ -1677,7 +1818,7 @@ export function CVMatching() {
                                     : "Độ tương đồng ngữ nghĩa với yêu cầu"
                                 }
                               >
-                                {item.skill_name} (
+                                {toTitleCase(item.skill_name)} (
                                 {normalizePercent(item.similarity)}%)
                                 {showVia && (
                                   <span className="ml-1 font-normal text-violet-600">
@@ -1695,8 +1836,8 @@ export function CVMatching() {
                       </div>
                     </div>
 
-                    <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
-                      <div className="bg-red-50/50 px-4 py-3 border-b border-slate-100 flex justify-between items-center">
+                    <div className="border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+                      <div className="bg-red-50/50 px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                         <span className="text-xs font-bold text-red-700 uppercase tracking-wide flex items-center gap-1.5">
                           <XCircle className="w-4 h-4 text-red-500" /> Kỹ năng
                           thiếu ({missingSkills.length})
@@ -1709,7 +1850,7 @@ export function CVMatching() {
                               key={item.skill_id}
                               className="px-2.5 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded-full border border-red-100"
                             >
-                              {item.skill_name}
+                              {toTitleCase(item.skill_name)}
                             </span>
                           ))
                         ) : (
@@ -1721,8 +1862,8 @@ export function CVMatching() {
                     </div>
                   </div>
 
-                  <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-4 flex flex-col justify-center items-center min-h-[300px]">
-                    <p className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide self-start">
+                  <div className="bg-slate-50/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-center items-center min-h-[300px]">
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2 uppercase tracking-wide self-start">
                       Biểu đồ radar kỹ năng
                     </p>
 
@@ -1764,7 +1905,7 @@ export function CVMatching() {
                             </button>
                           )}
                           {isModalOverview && (
-                            <p className="mb-2 text-[11px] text-slate-500">
+                            <p className="mb-2 text-[11px] text-slate-500 dark:text-slate-400">
                               Điểm trung bình theo nhóm — bấm vào tên nhóm để xem
                               chi tiết
                             </p>
@@ -1796,8 +1937,8 @@ export function CVMatching() {
                 </div>
 
                 {/* Footer chứa Action đặt làm Default */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-4 mt-auto">
-                  <div className="flex items-center gap-2 text-slate-600 text-xs text-center sm:text-left">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 dark:border-slate-800 pt-4 mt-auto">
+                  <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 text-xs text-center sm:text-left">
                     <Info className="w-4 h-4 text-slate-400 shrink-0 hidden sm:inline" />
                     <span>
                       Bạn có muốn đặt CV này làm mặc định? Hệ thống sẽ tự động
@@ -1808,7 +1949,7 @@ export function CVMatching() {
                   <div className="flex gap-2 w-full sm:w-auto shrink-0">
                     <button
                       onClick={() => setShowResultModal(false)}
-                      className="flex-1 sm:flex-none px-4 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                      className="flex-1 sm:flex-none px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
                     >
                       Bỏ qua
                     </button>
@@ -1827,12 +1968,12 @@ export function CVMatching() {
 
       {viewingCvUrl && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden border border-slate-100">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden border border-slate-100 dark:border-slate-800">
             {/* Header của Popup */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
               <div className="flex items-center gap-2 min-w-0">
                 <FileText className="w-5 h-5 text-violet-600 shrink-0" />
-                <h3 className="text-sm font-bold text-slate-800 truncate">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
                   Chi tiết tài liệu: {viewingCvName}
                 </h3>
               </div>
@@ -1841,17 +1982,17 @@ export function CVMatching() {
                   setViewingCvUrl(null);
                   setViewingCvName("");
                 }}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors"
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 rounded-xl transition-colors"
               >
                 <XCircle className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 bg-slate-100 p-4 flex justify-center items-center overflow-auto">
+            <div className="flex-1 bg-slate-100 dark:bg-slate-800 p-4 flex justify-center items-center overflow-auto">
               {viewingCvUrl.toLowerCase().includes(".pdf") ? (
                 <iframe
                   src={`${viewingCvUrl}#toolbar=0&navpanes=0`}
-                  className="w-full h-full rounded-lg bg-white border border-slate-200"
+                  className="w-full h-full rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700"
                   title="PDF Preview"
                 />
               ) : (
@@ -1859,7 +2000,7 @@ export function CVMatching() {
                   <img
                     src={viewingCvUrl}
                     alt="CV Preview"
-                    className="max-w-full h-auto object-contain rounded-lg shadow-md bg-white"
+                    className="max-w-full h-auto object-contain rounded-lg shadow-md bg-white dark:bg-slate-900"
                   />
                 </div>
               )}

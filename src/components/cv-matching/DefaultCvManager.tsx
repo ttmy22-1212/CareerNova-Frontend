@@ -86,7 +86,7 @@ export function DefaultCvManager() {
               <FileText className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              <p className="text-sm font-bold text-slate-900 dark:text-white dark:text-slate-100">
                 CV mặc định
               </p>
               <p className="truncate text-xs text-slate-500 dark:text-slate-400">
@@ -98,7 +98,7 @@ export function DefaultCvManager() {
 
         <div className="space-y-4 p-4">
           {isLoading ? (
-            <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-4 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
+            <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 dark:bg-slate-800/50 px-3 py-4 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
               <Loader2 className="h-4 w-4 animate-spin" />
               Đang tải cấu hình CV...
             </div>
@@ -127,7 +127,7 @@ export function DefaultCvManager() {
                           CV mặc định
                         </p>
                         <p
-                          className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100"
+                          className="truncate text-sm font-semibold text-slate-900 dark:text-white dark:text-slate-100"
                           title={defaultCv.file_name}
                         >
                           {defaultCv.file_name}
@@ -142,7 +142,7 @@ export function DefaultCvManager() {
                           setViewingCvUrl(defaultCv.file_url);
                           setViewingCvName(defaultCv.file_name);
                         }}
-                        className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                        className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-2 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                       >
                         <Eye className="h-3.5 w-3.5" />
                         Xem
@@ -150,7 +150,7 @@ export function DefaultCvManager() {
                     )}
                   </div>
                 ) : (
-                  <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
+                  <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 dark:bg-slate-800/50 p-4 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
                     <AlertCircle className="mx-auto mb-1 h-4 w-4 text-slate-400" />
                     Chưa thiết lập CV mặc định.
                   </div>
@@ -165,7 +165,7 @@ export function DefaultCvManager() {
                       disabled={isUpdating}
                       value={defaultCv?.cv_id || ""}
                       onChange={(e) => handleSetDefaultCv(e.target.value)}
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-500 dark:focus:bg-slate-800"
+                      className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800/50 px-3 text-sm font-medium text-slate-700 dark:text-slate-200 outline-none transition focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-100 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-500 dark:focus:bg-slate-800"
                     >
                       <option value="" disabled>
                         Chọn CV hệ thống
@@ -188,7 +188,7 @@ export function DefaultCvManager() {
                 )}
               </section>
 
-              <section className="space-y-2 rounded-lg border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/60">
+              <section className="space-y-2 rounded-lg border border-slate-100 bg-slate-50 dark:bg-slate-800/50 p-3 dark:border-slate-800 dark:bg-slate-800/60">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
                   Cấu hình so khớp mặc định
                 </p>
@@ -266,12 +266,12 @@ export function DefaultCvManager() {
           }
         }}
       >
-        <DialogContent className="!max-w-[80vw] w-full h-[95vh] flex flex-col p-0 overflow-hidden !rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-2xl">
-          <div className="flex h-14 items-center justify-between bg-white px-5 dark:bg-slate-950 shrink-0 z-10">
+        <DialogContent className="!max-w-[80vw] w-full h-[95vh] flex flex-col p-0 overflow-hidden !rounded-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-800 bg-white dark:bg-slate-900 dark:bg-slate-950 shadow-2xl">
+          <div className="flex h-14 items-center justify-between bg-white dark:bg-slate-900 px-5 dark:bg-slate-950 shrink-0 z-10">
             <DialogTitle className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
               <FileText className="w-4 h-4 text-blue-500" />
               Đang xem tài liệu:{" "}
-              <span className="text-base font-bold text-slate-900 dark:text-slate-100 truncate max-w-xl md:max-w-2xl ml-1">
+              <span className="text-base font-bold text-slate-900 dark:text-white dark:text-slate-100 truncate max-w-xl md:max-w-2xl ml-1">
                 {viewingCvName}
               </span>
             </DialogTitle>
@@ -294,7 +294,7 @@ export function DefaultCvManager() {
                 <img
                   src={viewingCvUrl!}
                   alt="CV Preview"
-                  className="max-h-full max-w-full bg-white object-contain shadow-xs transition-all"
+                  className="max-h-full max-w-full bg-white dark:bg-slate-900 object-contain shadow-xs transition-all"
                 />
               </div>
             )}

@@ -27,7 +27,7 @@ export function NextStepBanner({
       </div>
       <Link
         href={href}
-        className="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-blue-700 shadow-lg hover:bg-blue-50 transition-colors"
+        className="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-white dark:bg-slate-900 px-5 py-2.5 text-sm font-bold text-blue-700 shadow-lg hover:bg-blue-50 transition-colors"
       >
         {cta}
         <ArrowRight className="w-4 h-4" />

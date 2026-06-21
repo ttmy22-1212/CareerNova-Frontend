@@ -79,7 +79,7 @@ export default function AllowMatchingModal({
           </button>
           <button
             onClick={onClose}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             <X className="h-3.5 w-3.5" />
             Bỏ qua

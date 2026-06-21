@@ -10,7 +10,7 @@ const priorityColor: Record<string, string> = {
   critical: "bg-red-100 text-red-700",
   high: "bg-orange-100 text-orange-700",
   medium: "bg-amber-100 text-amber-700",
-  low: "bg-slate-100 text-slate-600",
+  low: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300",
 };
 
 // So sánh CV của bạn với nhiều vai trò cạnh nhau — dùng dữ liệu career-paths (không tốn thêm lệnh AI).
@@ -43,7 +43,7 @@ export function RoleComparison({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-8 flex items-center justify-center text-sm text-slate-400">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-8 flex items-center justify-center text-sm text-slate-400">
         <Loader2 className="w-4 h-4 animate-spin mr-2" />
         Đang tìm các vai trò phù hợp với CV của bạn…
       </div>
@@ -56,13 +56,13 @@ export function RoleComparison({
   const bestScore = Math.max(...paths.map((p) => p.current_match));
 
   return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
       <div className="mb-4">
-        <h3 className="font-bold text-slate-900 flex items-center gap-2">
+        <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-blue-600" />
           So sánh vai trò phù hợp với CV của bạn
         </h3>
-        <p className="text-xs text-slate-500 mt-0.5">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
           Đang phân vân chọn hướng? Đây là mức độ sẵn sàng của bạn cho từng vai
           trò — chọn vai trò để đối soát chi tiết.
         </p>
@@ -83,7 +83,7 @@ export function RoleComparison({
               }`}
             >
               <div className="flex items-start justify-between gap-2 mb-2">
-                <p className="text-sm font-bold text-slate-900 leading-tight">
+                <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
                   {toTitleCase(p.title)}
                 </p>
                 {isBest && (
@@ -96,12 +96,12 @@ export function RoleComparison({
 
               {/* Mức độ sẵn sàng */}
               <div className="mb-1 flex items-center justify-between text-xs">
-                <span className="text-slate-500">Mức độ sẵn sàng</span>
-                <span className="font-bold text-slate-900">
+                <span className="text-slate-500 dark:text-slate-400">Mức độ sẵn sàng</span>
+                <span className="font-bold text-slate-900 dark:text-white">
                   {p.current_match}% → {p.target_match}%
                 </span>
               </div>
-              <div className="h-2 rounded-full bg-slate-200 overflow-hidden mb-1.5">
+              <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden mb-1.5">
                 <div
                   className="h-full rounded-full bg-blue-600"
                   style={{ width: `${p.current_match}%` }}
@@ -109,11 +109,11 @@ export function RoleComparison({
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5 mb-3 text-[10px]">
-                <span className="rounded-full bg-white border border-slate-200 px-1.5 py-0.5 font-medium text-slate-600">
+                <span className="rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 font-medium text-slate-600 dark:text-slate-300">
                   {p.readiness_label}
                 </span>
                 {p.time_to_ready && (
-                  <span className="inline-flex items-center gap-0.5 text-slate-500">
+                  <span className="inline-flex items-center gap-0.5 text-slate-500 dark:text-slate-400">
                     <Clock className="w-2.5 h-2.5" />
                     {p.time_to_ready}
                   </span>
@@ -139,7 +139,7 @@ export function RoleComparison({
                           priorityColor[g.priority] || priorityColor.low
                         }`}
                       >
-                        {g.skill_name}
+                        {toTitleCase(g.skill_name)}
                       </span>
                     ))}
                     {p.skill_gaps.length > 3 && (
@@ -162,7 +162,7 @@ export function RoleComparison({
                   </button>
                 )}
                 {p.search_group === currentRole && (
-                  <span className="inline-flex items-center justify-center rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-500">
+                  <span className="inline-flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
                     Đang xem vai trò này
                   </span>
                 )}

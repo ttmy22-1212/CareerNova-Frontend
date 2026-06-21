@@ -136,6 +136,16 @@
   }
 }
 
+/* Dải gradient chạy ngang cho trạng thái loading (So khớp CV) */
+@keyframes loadingBar {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(360%);
+  }
+}
+
 /* Keep MUI scrollbar styling */
 div::-webkit-scrollbar {
   width: 16px;

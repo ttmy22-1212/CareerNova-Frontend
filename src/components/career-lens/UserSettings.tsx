@@ -226,12 +226,12 @@ export function UserSettings() {
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
           Cài đặt
         </h1>
-        <p className="mt-1 text-slate-600 dark:text-slate-400">
+        <p className="mt-1 text-slate-600 dark:text-slate-300 dark:text-slate-400">
           Quản lý thông tin hồ sơ và dữ liệu tài khoản từ backend hiện có.
         </p>
       </div>
 
-      <div className="overflow-x-auto border-b border-slate-200 dark:border-slate-800">
+      <div className="overflow-x-auto border-b border-slate-200 dark:border-slate-700 dark:border-slate-800">
         <div className="flex gap-4">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -272,21 +272,21 @@ export function UserSettings() {
       )}
 
       {isLoading ? (
-        <div className="flex min-h-[260px] items-center justify-center rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex min-h-[260px] items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:border-slate-800 dark:bg-slate-900">
           <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
         </div>
       ) : (
         <div>
           {activeTab === "profile" && (
             <div className="space-y-6">
-              <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+              <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
                 <h2 className="mb-6 text-lg font-semibold text-slate-900 dark:text-white">
                   Thông tin hồ sơ
                 </h2>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200 dark:text-slate-300">
                       Họ và tên
                     </span>
                     <input
@@ -295,12 +295,12 @@ export function UserSettings() {
                       onChange={(e) =>
                         handleInputChange("full_name", e.target.value)
                       }
-                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                     />
                   </label>
 
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200 dark:text-slate-300">
                       Email
                     </span>
                     <input
@@ -312,7 +312,7 @@ export function UserSettings() {
                   </label>
 
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200 dark:text-slate-300">
                       Ngành học
                     </span>
                     <input
@@ -321,12 +321,12 @@ export function UserSettings() {
                       onChange={(e) =>
                         handleInputChange("major", e.target.value)
                       }
-                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                     />
                   </label>
 
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200 dark:text-slate-300">
                       Trường
                     </span>
                     <input
@@ -335,12 +335,12 @@ export function UserSettings() {
                       onChange={(e) =>
                         handleInputChange("school", e.target.value)
                       }
-                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                     />
                   </label>
 
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200 dark:text-slate-300">
                       Năm học
                     </span>
                     <input
@@ -350,12 +350,12 @@ export function UserSettings() {
                       onChange={(e) =>
                         handleInputChange("current_year", e.target.value)
                       }
-                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                     />
                   </label>
 
                   <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200 dark:text-slate-300">
                       Lương mục tiêu
                     </span>
                     <input
@@ -365,12 +365,12 @@ export function UserSettings() {
                       onChange={(e) =>
                         handleInputChange("target_salary", e.target.value)
                       }
-                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                     />
                   </label>
 
                   <label className="block md:col-span-2">
-                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200 dark:text-slate-300">
                       Định hướng nghề nghiệp
                     </span>
                     <input
@@ -379,12 +379,12 @@ export function UserSettings() {
                       onChange={(e) =>
                         handleInputChange("orientation", e.target.value)
                       }
-                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                     />
                   </label>
 
                   <label className="block md:col-span-2">
-                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200 dark:text-slate-300">
                       Mục tiêu
                     </span>
                     <textarea
@@ -393,7 +393,7 @@ export function UserSettings() {
                         handleInputChange("objective", e.target.value)
                       }
                       rows={3}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                     />
                   </label>
                 </div>
@@ -404,7 +404,7 @@ export function UserSettings() {
                       <span className="block text-sm font-semibold text-slate-900 dark:text-white">
                         Ưu tiên job remote
                       </span>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
                         Dùng cho gợi ý việc làm và matching cá nhân hóa.
                       </span>
                     </span>
@@ -423,7 +423,7 @@ export function UserSettings() {
                       <span className="block text-sm font-semibold text-slate-900 dark:text-white">
                         Cho phép matching CV mặc định
                       </span>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
                         Backend dùng CV mặc định để tính job gợi ý trên
                         dashboard.
                       </span>
@@ -446,7 +446,7 @@ export function UserSettings() {
               <button
                 onClick={handleSaveProfile}
                 disabled={isSaving || hasInvalidNumber}
-                className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-600"
               >
                 {isSaving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -460,7 +460,7 @@ export function UserSettings() {
 
           {activeTab === "security" && (
             <div className="space-y-6">
-              <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+              <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
                 <h2 className="mb-6 text-lg font-semibold text-slate-900 dark:text-white">
                   Đổi mật khẩu
                 </h2>
@@ -476,7 +476,7 @@ export function UserSettings() {
                       }))
                     }
                     placeholder="Mật khẩu hiện tại"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                   />
                   <input
                     type="password"
@@ -488,7 +488,7 @@ export function UserSettings() {
                       }))
                     }
                     placeholder="Mật khẩu mới"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                   />
                   <input
                     type="password"
@@ -500,7 +500,7 @@ export function UserSettings() {
                       }))
                     }
                     placeholder="Nhập lại mật khẩu mới"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
               </div>
@@ -513,7 +513,7 @@ export function UserSettings() {
                   !passwordForm.new_password ||
                   !passwordForm.confirm_password
                 }
-                className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-600"
               >
                 {isSaving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -527,11 +527,11 @@ export function UserSettings() {
 
           {activeTab === "data" && (
             <div className="space-y-4">
-              <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+              <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
                 <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">
                   Dữ liệu tài khoản
                 </h2>
-                <p className="mb-5 text-sm text-slate-600 dark:text-slate-400">
+                <p className="mb-5 text-sm text-slate-600 dark:text-slate-300 dark:text-slate-400">
                   Tải hồ sơ PDF từ backend hoặc chuyển tới luồng xóa tài khoản.
                 </p>
 
@@ -539,7 +539,7 @@ export function UserSettings() {
                   <button
                     onClick={handleExportProfile}
                     disabled={isExporting}
-                    className="flex w-full items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                    className="flex w-full items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                   >
                     {isExporting ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -571,7 +571,7 @@ export function UserSettings() {
               </div>
 
               {profile?.auth_providers?.length ? (
-                <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+                <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
                   <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
                     Phương thức đăng nhập
                   </h3>
@@ -579,7 +579,7 @@ export function UserSettings() {
                     {profile.auth_providers.map((provider) => (
                       <div
                         key={`${provider.provider}-${provider.last_login_at || ""}`}
-                        className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                        className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                       >
                         <span>{provider.provider}</span>
                         <span className="text-xs text-slate-400">

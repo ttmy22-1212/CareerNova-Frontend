@@ -283,10 +283,10 @@ export function SpotlightTour() {
 
         {/* Content */}
         <div className="px-4 pt-3 pb-1 space-y-2">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white dark:text-slate-100 leading-snug">
             {cur.title}
           </h3>
-          <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+          <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300 dark:text-slate-400">
             {cur.desc}
           </p>
           {cur.tip && (
@@ -312,7 +312,7 @@ export function SpotlightTour() {
           ) : (
             <button
               onClick={dismiss}
-              className="px-2.5 py-1.5 text-[11px] text-slate-400 hover:text-slate-600 transition-colors"
+              className="px-2.5 py-1.5 text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             >
               Bỏ qua
             </button>
