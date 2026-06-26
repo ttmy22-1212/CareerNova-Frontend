@@ -253,19 +253,28 @@ const computeRiasecScores = (answers: number[]) => {
     .sort((a, b) => b.score - a.score);
 };
 
-const getCareerQuizSuggestions = (answers: number[]): CareerInterest[] => {
+// Tính điểm khớp của TỪNG nghề với hồ sơ sở thích của user, kèm % để hiển thị.
+// Điểm khớp = cosine giữa vector sở thích user và vector RIASEC của nghề —
+// hoàn toàn suy ra từ câu trả lời, KHÔNG phải danh sách cố định.
+const getCareerQuizMatches = (
+  answers: number[],
+): { career: CareerInterest; score: number; percent: number; order: number }[] => {
   // Vector sở thích của user theo 6 nhóm RIASEC, chuẩn hóa 0..1
   const dims = computeRiasecScores(answers);
   const userVec: Record<Riasec, number> = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
   dims.forEach((d) => {
     userVec[d.dim] = d.score / MAX_DIM_SCORE;
   });
+  // Độ lớn vector user — để quy đổi cosine về 0..1 cho phần trăm hiển thị.
+  // (Là hằng số giữa các nghề nên KHÔNG ảnh hưởng thứ hạng, chỉ dùng cho %.)
+  const userNorm =
+    Math.sqrt(
+      (Object.values(userVec) as number[]).reduce((s, v) => s + v * v, 0),
+    ) || 1;
 
-  // Điểm khớp mỗi nghề = cosine giữa vector sở thích user và vector nghề.
   // Chuẩn hoá theo độ lớn vector nghề để KHÔNG thiên vị nghề có tổng trọng số
   // lớn hoặc nhóm I (trọng số 3) — đây là nguyên nhân khiến user mạnh E/A vẫn
-  // bị đẩy sang nghề thiên phân tích. (Norm của user là hằng số giữa các nghề
-  // nên có thể bỏ qua mà không đổi thứ hạng.)
+  // bị đẩy sang nghề thiên phân tích.
   return careerResultOrder
     .map((career) => {
       const entries = Object.entries(ROLE_RIASEC_PROFILE[career] || {}) as [
@@ -275,17 +284,23 @@ const getCareerQuizSuggestions = (answers: number[]): CareerInterest[] => {
       const dot = entries.reduce((sum, [dim, w]) => sum + userVec[dim] * w, 0);
       const roleNorm =
         Math.sqrt(entries.reduce((s, [, w]) => s + w * w, 0)) || 1;
+      // cosine ∈ [0,1] → % khớp thực tế tính từ bài test.
+      const cosine = dot / (userNorm * roleNorm);
       return {
         career,
-        score: dot / roleNorm,
+        score: cosine,
+        percent: Math.round(cosine * 100),
         order: careerResultOrder.indexOf(career),
       };
     })
     .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score || a.order - b.order)
+    .sort((a, b) => b.score - a.score || a.order - b.order);
+};
+
+const getCareerQuizSuggestions = (answers: number[]): CareerInterest[] =>
+  getCareerQuizMatches(answers)
     .slice(0, 3)
     .map((item) => item.career);
-};
 
 // Nhóm RIASEC khớp NHẤT giữa user và nghề (đóng góp lớn nhất vào điểm match) —
 // dùng để giải thích "vì sao hợp" theo đúng thế mạnh của user, thay vì nhóm
@@ -590,6 +605,11 @@ export default function OnboardingWizard() {
       computeRiasecScores(quizAnswers).forEach((d) => {
         userVec[d.dim] = d.score / MAX_DIM_SCORE;
       });
+    // % khớp từng nghề — tính trực tiếp từ câu trả lời (cosine), để thấy rõ kết
+    // quả đến từ bài test chứ không phải danh sách cố định.
+    const quizMatches = quizTaken ? getCareerQuizMatches(quizAnswers) : [];
+    const matchPercentOf = (career: CareerInterest) =>
+      quizMatches.find((m) => m.career === career)?.percent ?? 0;
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 px-4 py-10 flex items-center justify-center">
         <div className="mx-auto max-w-lg w-full text-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
@@ -641,23 +661,45 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          <p className="mb-2 text-left text-sm font-semibold text-slate-800">
+          <p className="mb-1 text-left text-sm font-semibold text-slate-800">
             Hướng nghề IT phù hợp nhất với bạn:
           </p>
+          {quizTaken && (
+            <p className="mb-2 text-left text-[11px] text-slate-500">
+              Điểm khớp được tính trực tiếp từ câu trả lời của bạn (mô hình
+              RIASEC).
+            </p>
+          )}
           <div className="space-y-2.5 mb-8">
             {calculatedPaths.map((path) => {
               // Nhóm RIASEC mà user & nghề khớp nhất (giải thích "vì sao hợp")
               const domDim = getAlignedDim(path, userVec);
+              const percent = matchPercentOf(path);
               return (
                 <div
                   key={path}
                   className="rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3 text-left shadow-sm"
                 >
-                  <p className="text-sm font-semibold text-blue-700">
-                    🚀 {interestLabelMap[path] ?? path}
-                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-blue-700">
+                      🚀 {interestLabelMap[path] ?? path}
+                    </p>
+                    {quizTaken && (
+                      <span className="shrink-0 text-xs font-bold text-blue-600">
+                        {percent}% khớp
+                      </span>
+                    )}
+                  </div>
+                  {quizTaken && (
+                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-blue-100">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  )}
                   {quizTaken && domDim && (
-                    <p className="mt-0.5 text-[11px] text-blue-600/80">
+                    <p className="mt-1 text-[11px] text-blue-600/80">
                       Hợp với thiên hướng{" "}
                       <b>{RIASEC_META[domDim].label}</b> của bạn
                     </p>

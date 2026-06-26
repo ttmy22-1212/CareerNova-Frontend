@@ -30,7 +30,7 @@ import { toTitleCase } from "@/utils/text";
 import CvApi from "@/api/cv";
 import MatchingApi from "@/api/matching";
 import profileApi from "@/api/profile";
-import { MatchedSkillDetail, MatchCategoryResponse } from "@/types/matching";
+import { MatchCategoryResponse } from "@/types/matching";
 import { CvItemDto } from "@/types/cv";
 import { InfoTooltip, GLOSSARY } from "./InfoTooltip";
 import { RoleComparison } from "./RoleComparison";
@@ -180,6 +180,33 @@ const normalizePercent = (value: number | string | null | undefined) => {
   return Math.min(Math.round(percent), 100);
 };
 
+// Dựng 3 nhóm kỹ năng (mạnh / một phần / cần bổ sung) từ radar_data + gap_report.
+// Dùng chung cho cả kết quả tổng thể và khi LỌC theo nhóm kỹ năng (category) —
+// nhờ vậy danh sách bên trái luôn đồng bộ với radar bên phải.
+// "missing" vẫn kèm `match` (độ tương đồng cao nhất, thường thấp) để hiển thị
+// minh bạch thay vì coi như hoàn toàn không có.
+const buildAnalysis = (radarSource: any[], gapReport: any) => ({
+  strongMatches: (radarSource || [])
+    .filter((s: any) => normalizePercent(s.similarity) >= 70)
+    .map((s: any) => ({
+      skill: s.skill_name,
+      required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
+      match: normalizePercent(s.similarity),
+    })),
+  partialMatches: (gapReport?.partially_matched_skills || []).map((s: any) => ({
+    skill: s.skill_name,
+    required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
+    match: normalizePercent(s.similarity),
+    matchedVia: s.matched_via || null,
+  })),
+  missingSkills: (gapReport?.missing_skills || []).map((s: any) => ({
+    skill: s.skill_name,
+    required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
+    priority: s.weight >= 0.2 ? "Tối thiểu" : "Tốt để có",
+    match: normalizePercent(s.similarity),
+  })),
+});
+
 function ScoreRing({ score, size = 96 }: { score: number; size?: number }) {
   const r = (size - 12) / 2;
   const circ = 2 * Math.PI * r;
@@ -310,6 +337,14 @@ export function CVMatching() {
   const [modalCategoryOverview, setModalCategoryOverview] = useState<any[]>([]);
   const [isOverviewLoading, setIsOverviewLoading] = useState(false);
 
+  // Danh sách kỹ năng (mạnh / một phần / cần bổ sung) ĐÃ LỌC theo nhóm đang chọn.
+  // null = đang xem tổng quan (hiện toàn bộ). Giúp các trường bên trái đổi theo
+  // radar bên phải khi user bấm xem từng nhóm kỹ năng.
+  const [categoryAnalysis, setCategoryAnalysis] = useState<any | null>(null);
+  const [modalCategoryAnalysis, setModalCategoryAnalysis] = useState<
+    any | null
+  >(null);
+
   const filteredRoles = benchmarkRoles.filter((role) =>
     role.toLowerCase().includes(searchTerm.toLowerCase()),
   );
@@ -412,6 +447,7 @@ export function CVMatching() {
     if (showResultModal && analyzeResult?.match_id) {
       fetchCategories(analyzeResult.match_id, true);
       setSelectedModalCategory("All");
+      setModalCategoryAnalysis(null);
 
       const allData = [
         ...(analyzeResult.radar_data || []),
@@ -439,31 +475,7 @@ export function CVMatching() {
       overallScore: normalizePercent(backendData.match_score),
       jobTitle: backendData.job_title || backendData.search_group || "",
       company: backendData.company_name || "",
-      analysis: {
-        strongMatches: (backendData.radar_data || [])
-          .filter((s: MatchedSkillDetail) => normalizePercent(s.similarity) >= 70)
-          .map((s: MatchedSkillDetail) => ({
-            skill: s.skill_name,
-            required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
-            match: normalizePercent(s.similarity),
-          })),
-        partialMatches: (
-          backendData.gap_report?.partially_matched_skills || []
-        ).map((s: any) => ({
-          skill: s.skill_name,
-          required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
-          // % hiển thị = độ tương đồng ngữ nghĩa (max_sim) — dễ hiểu & không gây hiểu lầm
-          match: normalizePercent(s.similarity),
-          matchedVia: s.matched_via || null,
-        })),
-        missingSkills: (backendData.gap_report?.missing_skills || []).map(
-          (s: any) => ({
-            skill: s.skill_name,
-            required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
-            priority: s.weight >= 0.2 ? "Tối thiểu" : "Tốt để có",
-          }),
-        ),
-      },
+      analysis: buildAnalysis(backendData.radar_data, backendData.gap_report),
       radarData: allSkillsForRadar.map((s: any) => ({
         subject: s.skill_name,
         you: normalizePercent(s.similarity),
@@ -562,13 +574,16 @@ export function CVMatching() {
     else setSelectedCategory(category);
 
     if (category === "All") {
+      // Về tổng quan: bỏ lọc cả radar lẫn danh sách kỹ năng bên trái.
       if (isModal) {
         setModalRadarDataFiltered(originalModalRadarData);
+        setModalCategoryAnalysis(null);
       } else {
         setMatchResult((prev: any) => ({
           ...prev,
           radarData: originalRadarData,
         }));
+        setCategoryAnalysis(null);
       }
       return;
     }
@@ -580,6 +595,19 @@ export function CVMatching() {
       if (res) {
         const rawRadar = res.data.radar_data || [];
         const rawGapReport = (res.data.gap_report as any) || {};
+
+        // Đồng bộ danh sách kỹ năng bên trái với nhóm đang xem.
+        if (isModal) {
+          setModalCategoryAnalysis({
+            strongMatches: rawRadar.filter(
+              (s: any) => normalizePercent(s.similarity) >= 70,
+            ),
+            partialMatches: rawGapReport.partially_matched_skills || [],
+            missingSkills: rawGapReport.missing_skills || [],
+          });
+        } else {
+          setCategoryAnalysis(buildAnalysis(rawRadar, rawGapReport));
+        }
 
         const combinedSkills = [
           ...rawRadar,
@@ -702,6 +730,7 @@ export function CVMatching() {
         mapAndSetMatchResult(res.data);
         fetchCategories(matchId); // Thêm dòng này
         setSelectedCategory("All"); // Reset filter
+        setCategoryAnalysis(null);
       }
     } catch (err) {
       console.error("Lỗi khi tải chi tiết lịch sử đối sánh:", err);
@@ -795,6 +824,13 @@ export function CVMatching() {
     isLoading ||
     (!activeCv?.cv_id && !rightFile) ||
     (mode === "url" && !jdUrl.trim());
+
+  // Danh sách kỹ năng hiển thị bên trái: theo nhóm đang lọc nếu có, ngược lại tổng quan.
+  // (Thẻ điểm tổng ở trên vẫn giữ số liệu toàn bộ — chỉ các trường chi tiết đổi theo radar.)
+  const displayAnalysis =
+    selectedCategory !== "All" && categoryAnalysis
+      ? categoryAnalysis
+      : matchResult?.analysis;
 
   return (
     <div className="p-6 space-y-5">
@@ -1354,6 +1390,23 @@ export function CVMatching() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
             {/* Skills Breakdown */}
             <div className="lg:col-span-3 space-y-4">
+              {/* Báo hiệu danh sách đang lọc theo nhóm kỹ năng (đồng bộ với radar) */}
+              {selectedCategory !== "All" && (
+                <div className="flex items-center justify-between gap-2 rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/60 dark:bg-blue-900/20 px-4 py-2.5">
+                  <p className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                    Đang xem nhóm kỹ năng:{" "}
+                    <span className="font-bold">{selectedCategory}</span>
+                  </p>
+                  <button
+                    onClick={() =>
+                      handleCategoryChange(selectedMatchingId, "All")
+                    }
+                    className="shrink-0 text-xs font-semibold text-blue-600 hover:underline"
+                  >
+                    Xem tất cả
+                  </button>
+                </div>
+              )}
               {/* Strong Matches */}
               <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
                 <button
@@ -1373,7 +1426,7 @@ export function CVMatching() {
                       </p>
                     </div>
                     <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full ml-1">
-                      {matchResult.analysis.strongMatches.length}
+                      {displayAnalysis.strongMatches.length}
                     </span>
                   </div>
                   {expandedSection === "strong" ? (
@@ -1384,7 +1437,7 @@ export function CVMatching() {
                 </button>
                 {expandedSection !== "strong" && (
                   <div className="px-5 pb-4 flex flex-wrap gap-2">
-                    {matchResult.analysis.strongMatches.map((item: any) => (
+                    {displayAnalysis.strongMatches.map((item: any) => (
                       <span
                         key={item.skill}
                         className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full"
@@ -1396,7 +1449,7 @@ export function CVMatching() {
                 )}
                 {expandedSection === "strong" && (
                   <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-50">
-                    {matchResult.analysis.strongMatches.map((item: any) => (
+                    {displayAnalysis.strongMatches.map((item: any) => (
                       <div
                         key={item.skill}
                         className="px-5 py-3 flex items-center gap-4"
@@ -1453,7 +1506,7 @@ export function CVMatching() {
                       </p>
                     </div>
                     <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full ml-1">
-                      {matchResult.analysis.partialMatches.length}
+                      {displayAnalysis.partialMatches.length}
                     </span>
                   </div>
                   {expandedSection === "partial" ? (
@@ -1464,7 +1517,7 @@ export function CVMatching() {
                 </button>
                 {expandedSection !== "partial" && (
                   <div className="px-5 pb-4 flex flex-wrap gap-2">
-                    {matchResult.analysis.partialMatches.map((item: any) => (
+                    {displayAnalysis.partialMatches.map((item: any) => (
                       <span
                         key={item.skill}
                         className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full"
@@ -1476,7 +1529,7 @@ export function CVMatching() {
                 )}
                 {expandedSection === "partial" && (
                   <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-50">
-                    {matchResult.analysis.partialMatches.map((item: any) => (
+                    {displayAnalysis.partialMatches.map((item: any) => (
                       <div key={item.skill} className="px-5 py-3">
                         <div className="flex items-center justify-between mb-1.5 gap-2">
                           <div className="flex items-center gap-2 flex-wrap min-w-0">
@@ -1542,14 +1595,14 @@ export function CVMatching() {
                     </div>
                     <div className="text-left">
                       <p className="font-bold text-slate-900 dark:text-white text-sm">
-                        Kỹ năng thiếu
+                        Kỹ năng cần bổ sung
                       </p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Kỹ năng chưa có trong hồ sơ của bạn
+                        Yêu cầu vị trí mà hồ sơ chưa thể hiện rõ
                       </p>
                     </div>
                     <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded-full ml-1">
-                      {matchResult.analysis.missingSkills.length}
+                      {displayAnalysis.missingSkills.length}
                     </span>
                   </div>
                   {expandedSection === "missing" ? (
@@ -1560,27 +1613,43 @@ export function CVMatching() {
                 </button>
                 {expandedSection !== "missing" && (
                   <div className="px-5 pb-4 flex flex-wrap gap-2">
-                    {matchResult.analysis.missingSkills.map((item: any) => (
+                    {displayAnalysis.missingSkills.map((item: any) => (
                       <span
                         key={item.skill}
                         className="px-3 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded-full border border-red-200"
+                        title="Độ tương đồng ngữ nghĩa cao nhất với kỹ năng trong hồ sơ của bạn"
                       >
                         {toTitleCase(item.skill)}
+                        <span className="ml-1 font-normal text-red-400">
+                          {item.match}%
+                        </span>
                       </span>
                     ))}
                   </div>
                 )}
                 {expandedSection === "missing" && (
                   <div className="border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3 p-4">
-                    {matchResult.analysis.missingSkills.map((item: any) => (
+                    {displayAnalysis.missingSkills.map((item: any) => (
                       <div
                         key={item.skill}
                         className="p-3 bg-red-50 border border-red-100 rounded-xl"
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-bold text-slate-900 dark:text-white">
+                        <div className="flex items-center justify-between mb-1 gap-2">
+                          <span className="text-sm font-bold text-slate-900 dark:text-white min-w-0 truncate">
                             {toTitleCase(item.skill)}
                           </span>
+                          <span
+                            className="shrink-0 text-[11px] font-bold text-red-500"
+                            title="Độ tương đồng ngữ nghĩa cao nhất với kỹ năng trong hồ sơ của bạn"
+                          >
+                            {item.match}%
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-red-100 rounded-full overflow-hidden mb-1.5">
+                          <div
+                            className="h-full bg-red-400 rounded-full"
+                            style={{ width: `${item.match}%` }}
+                          />
                         </div>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
                           Yêu cầu: {item.required}
@@ -1663,8 +1732,8 @@ export function CVMatching() {
               {/* CTA */}
               <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-100 rounded-xl p-5">
                 <p className="text-sm font-bold text-violet-900 mb-1">
-                  {matchResult.analysis.missingSkills.length > 0
-                    ? `Lấp đầy ${matchResult.analysis.missingSkills.length} kỹ năng còn thiếu`
+                  {displayAnalysis.missingSkills.length > 0
+                    ? `Bổ sung ${displayAnalysis.missingSkills.length} kỹ năng cần phát triển`
                     : "Nâng cấp các kỹ năng còn yếu"}
                 </p>
                 <p className="text-xs text-violet-700 mb-3">
@@ -1715,12 +1784,20 @@ export function CVMatching() {
             matchedVia: s.matched_via || null,
           }));
 
-          const strongMatches = (analyzeResult.radar_data || []).filter(
-            (s: any) => normalizePercent(s.similarity) >= 70,
-          );
-          const partialMatches =
-            analyzeResult.gap_report?.partially_matched_skills || [];
-          const missingSkills = analyzeResult.gap_report?.missing_skills || [];
+          // Danh sách kỹ năng theo nhóm đang lọc (nếu có) — đồng bộ với radar bên phải.
+          const useModalCat =
+            selectedModalCategory !== "All" && modalCategoryAnalysis;
+          const strongMatches = useModalCat
+            ? modalCategoryAnalysis.strongMatches
+            : (analyzeResult.radar_data || []).filter(
+                (s: any) => normalizePercent(s.similarity) >= 70,
+              );
+          const partialMatches = useModalCat
+            ? modalCategoryAnalysis.partialMatches
+            : analyzeResult.gap_report?.partially_matched_skills || [];
+          const missingSkills = useModalCat
+            ? modalCategoryAnalysis.missingSkills
+            : analyzeResult.gap_report?.missing_skills || [];
 
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -1765,6 +1842,29 @@ export function CVMatching() {
                         </p>
                       </div>
                     </div>
+
+                    {useModalCat && (
+                      <div className="flex items-center justify-between gap-2 rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/60 dark:bg-blue-900/20 px-4 py-2.5">
+                        <p className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                          Đang xem nhóm kỹ năng:{" "}
+                          <span className="font-bold">
+                            {selectedModalCategory}
+                          </span>
+                        </p>
+                        <button
+                          onClick={() =>
+                            handleCategoryChange(
+                              analyzeResult.match_id,
+                              "All",
+                              true,
+                            )
+                          }
+                          className="shrink-0 text-xs font-semibold text-blue-600 hover:underline"
+                        >
+                          Xem tất cả
+                        </button>
+                      </div>
+                    )}
 
                     <div className="border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
                       <div className="bg-emerald-50/50 px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
@@ -1840,7 +1940,7 @@ export function CVMatching() {
                       <div className="bg-red-50/50 px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                         <span className="text-xs font-bold text-red-700 uppercase tracking-wide flex items-center gap-1.5">
                           <XCircle className="w-4 h-4 text-red-500" /> Kỹ năng
-                          thiếu ({missingSkills.length})
+                          cần bổ sung ({missingSkills.length})
                         </span>
                       </div>
                       <div className="p-4 flex flex-wrap gap-2">
@@ -1849,13 +1949,15 @@ export function CVMatching() {
                             <span
                               key={item.skill_id}
                               className="px-2.5 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded-full border border-red-100"
+                              title="Độ tương đồng ngữ nghĩa cao nhất với kỹ năng trong hồ sơ của bạn"
                             >
-                              {toTitleCase(item.skill_name)}
+                              {toTitleCase(item.skill_name)} (
+                              {normalizePercent(item.similarity)}%)
                             </span>
                           ))
                         ) : (
                           <p className="text-xs text-slate-400 italic">
-                            Tuyệt vời! Không thiếu kỹ năng nào.
+                            Tuyệt vời! Không có kỹ năng nào cần bổ sung thêm.
                           </p>
                         )}
                       </div>
