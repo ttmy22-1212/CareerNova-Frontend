@@ -1125,13 +1125,25 @@ export function CVMatching() {
                     </div>
                   )}
                   {mode === "url" && (
-                    <input
-                      type="url"
-                      placeholder="https://linkedin.com/jobs/view/..."
-                      value={jdUrl}
-                      onChange={(e) => setJdUrl(e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400 h-[34px]"
-                    />
+                    <>
+                      <input
+                        type="url"
+                        placeholder="https://linkedin.com/jobs/view/..."
+                        value={jdUrl}
+                        onChange={(e) => setJdUrl(e.target.value)}
+                        className="w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400 h-[34px]"
+                      />
+                      <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                        <Info className="w-3.5 h-3.5 shrink-0 mt-px text-slate-400" />
+                        <span>
+                          Lưu ý: chỉ nên dùng link từ 4 nguồn{" "}
+                          <span className="font-semibold text-slate-600 dark:text-slate-300">
+                            ITviec, VietnamWorks, CareerViet, LinkedIn
+                          </span>{" "}
+                          để đảm bảo phân tích chính xác.
+                        </span>
+                      </p>
+                    </>
                   )}
                 </div>
 
