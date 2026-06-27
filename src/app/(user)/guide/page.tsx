@@ -330,8 +330,9 @@ export default function GuidePage() {
             </div>
             <ul className="space-y-1.5 text-sm text-slate-600 dark:text-slate-300">
               <li><b className="text-emerald-600 dark:text-emerald-400">80–100%</b> — Rất phù hợp</li>
-              <li><b className="text-amber-600 dark:text-amber-400">60–79%</b> — Khá tốt, cần bổ sung vài kỹ năng</li>
-              <li><b className="text-red-500">Dưới 60%</b> — Còn cách khá xa, nên học thêm</li>
+              <li><b className="text-blue-600 dark:text-blue-400">60–79%</b> — Khá tốt, cần bổ sung vài kỹ năng</li>
+              <li><b className="text-amber-600 dark:text-amber-400">40–59%</b> — Tiềm năng, còn khoảng trống cần lấp</li>
+              <li><b className="text-red-500">Dưới 40%</b> — Còn khoảng cách khá lớn, nên học thêm</li>
             </ul>
           </div>
 

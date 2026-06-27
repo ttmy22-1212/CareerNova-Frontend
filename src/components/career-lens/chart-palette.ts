@@ -14,9 +14,12 @@
 //        semantic(violet)  = khớp ngữ nghĩa (AI) / lộ trình nghề
 //
 //  2) MÀU PHÂN LOẠI (CATEGORY) — chỉ để PHÂN BIỆT các nhóm trung
-//     tính (nhóm kỹ năng, ngành...). Dùng một dải lạnh hài hoà
-//     (xanh dương → chàm → tím), CỐ Ý KHÔNG chứa xanh lá / vàng /
-//     đỏ / cam để không bị đọc nhầm thành trạng thái tốt/xấu.
+//     tính (nhóm kỹ năng, ngành...). Dùng dải JEWEL-TONE trải rộng
+//     xanh dương → lam → chàm → tím → hồng/magenta, XEN KẼ hue + độ
+//     sáng để 2 ô cạnh nhau LUÔN dễ phân biệt. CỐ Ý KHÔNG chứa xanh
+//     lá / vàng / đỏ / cam (trùng nghĩa success/warning/danger).
+//     (Trước đây chỉ dùng dải lạnh xanh→tím nên các ô quá giống nhau —
+//      cô hướng dẫn phản hồi khó phân biệt, nên đã mở rộng dải màu.)
 //
 // Quy tắc cuối: nếu độ dài thanh/diện tích đã mã hoá giá trị thì
 // KHÔNG tô thêm nhiều màu — dùng 1 màu thương hiệu, để hình dạng
@@ -37,17 +40,21 @@ export const SEMANTIC = {
 // (vd: Top kỹ năng) — màu không thêm thông tin nên giữ nhất quán.
 export const BRAND_BAR = SEMANTIC.primary;
 
-// Dải màu phân loại lạnh, hài hoà, medium-dark (chữ trắng đọc được),
-// không trùng hue ngữ nghĩa success/warning/danger.
+// Dải màu phân loại jewel-tone, medium-dark (chữ trắng đọc được), XEN KẼ hue
+// để các ô cạnh nhau tương phản rõ; không trùng hue success/warning/danger.
 export const CATEGORY_COLORS = [
   "#2563eb", // blue-600
+  "#db2777", // pink-600
+  "#0e7490", // cyan-700
   "#7c3aed", // violet-600
+  "#c026d3", // fuchsia-600
   "#0284c7", // sky-700
-  "#4f46e5", // indigo-600
   "#9333ea", // purple-600
-  "#3b82f6", // blue-500
+  "#be185d", // pink-700
+  "#4f46e5", // indigo-600
+  "#a21caf", // fuchsia-700
+  "#1d4ed8", // blue-700
   "#6366f1", // indigo-500
-  "#8b5cf6", // violet-500
 ];
 
 export const categoryColor = (index: number) =>

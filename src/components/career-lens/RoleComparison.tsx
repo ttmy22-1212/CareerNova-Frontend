@@ -52,8 +52,19 @@ export function RoleComparison({
 
   if (paths.length === 0) return null;
 
+  // Vai trò ĐANG XEM hiển thị đúng điểm như vòng tròn "Điểm phù hợp" ở trên
+  // (currentScore), tránh lệch số với current_match (vốn là điểm CAO NHẤT của
+  // nhóm theo từng job) gây khó hiểu cho user.
+  const norm = (s?: string | null) => (s || "").trim().toLowerCase();
+  const effMatchOf = (p: CareerPathRecommendation) =>
+    currentRole &&
+    currentScore != null &&
+    norm(p.search_group) === norm(currentRole)
+      ? currentScore
+      : p.current_match;
+
   // Vai trò có độ phù hợp cao nhất → gợi ý nổi bật
-  const bestScore = Math.max(...paths.map((p) => p.current_match));
+  const bestScore = Math.max(...paths.map(effMatchOf));
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
@@ -70,9 +81,9 @@ export function RoleComparison({
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {paths.map((p) => {
-          const isBest = p.current_match === bestScore;
-          const beatsCurrent =
-            currentScore != null && p.current_match > currentScore;
+          const eff = effMatchOf(p);
+          const isBest = eff === bestScore;
+          const beatsCurrent = currentScore != null && eff > currentScore;
           return (
             <div
               key={p.id}
@@ -98,13 +109,13 @@ export function RoleComparison({
               <div className="mb-1 flex items-center justify-between text-xs">
                 <span className="text-slate-500 dark:text-slate-400">Mức độ sẵn sàng</span>
                 <span className="font-bold text-slate-900 dark:text-white">
-                  {p.current_match}% → {p.target_match}%
+                  {eff}% → {p.target_match}%
                 </span>
               </div>
               <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden mb-1.5">
                 <div
                   className="h-full rounded-full bg-blue-600"
-                  style={{ width: `${p.current_match}%` }}
+                  style={{ width: `${eff}%` }}
                 />
               </div>
 

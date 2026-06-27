@@ -300,7 +300,7 @@ export function LandingPage() {
                 title: "Việc làm phù hợp",
                 desc: "Danh sách việc làm khớp hồ sơ của bạn, lọc theo hình thức, kinh nghiệm và địa điểm.",
                 features: [
-                  "Độ phù hợp ≥ 70%",
+                  "Xếp theo độ phù hợp",
                   "Bộ lọc nâng cao",
                   "Lưu việc & xem lại",
                 ],

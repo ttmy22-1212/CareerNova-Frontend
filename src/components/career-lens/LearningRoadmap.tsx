@@ -257,8 +257,12 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
         </div>
       </div>
 
+      {/* Khi đang lọc theo 1 kỹ năng: đưa "Khóa học cho kỹ năng đó" lên TRƯỚC
+          (bằng CSS order) để hiện thẳng khóa học liên quan; lộ trình theo chủ đề
+          lùi xuống dưới như lựa chọn học bài bản. Không lọc thì giữ thứ tự cũ. */}
+      <div className="flex flex-col gap-6">
       {/* ── Mục 1: Lộ trình theo chủ đề ── */}
-      <section className="space-y-4">
+      <section className={`space-y-4 ${activeSkill ? "order-2" : ""}`}>
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
             <Layers className="h-5 w-5 text-blue-600" />
@@ -437,18 +441,22 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
         )}
       </section>
 
-      {/* ── Mục 2: Khóa học lẻ ── */}
-      <section className="space-y-4">
+      {/* ── Mục 2: Khóa học (đưa lên trước khi đang lọc theo 1 kỹ năng) ── */}
+      <section className={`space-y-4 ${activeSkill ? "order-1" : ""}`}>
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/40">
             <BookOpen className="h-5 w-5 text-violet-600" />
           </div>
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-white">
-              Khóa học lẻ gợi ý
+              {activeSkill
+                ? `Khóa học cho kỹ năng “${activeSkill}”`
+                : "Khóa học lẻ gợi ý"}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Bổ sung nhanh một kỹ năng cụ thể bạn còn thiếu.
+              {activeSkill
+                ? "Các khóa học giúp bạn học nhanh kỹ năng này."
+                : "Bổ sung nhanh một kỹ năng cụ thể bạn còn thiếu."}
             </p>
           </div>
         </div>
@@ -569,6 +577,7 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
           </div>
         )}
       </section>
+      </div>
 
       <NextStepBanner
         href="/jobs"

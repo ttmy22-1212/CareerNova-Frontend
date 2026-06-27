@@ -1813,7 +1813,9 @@ export function CVMatching() {
           {/* So sánh vai trò phù hợp với CV (dùng dữ liệu career-paths) */}
           <RoleComparison
             currentScore={matchResult.overallScore}
-            currentRole={mode === "role" ? selectedRole : undefined}
+            currentRole={
+              mode === "role" ? matchResult.jobTitle || selectedRole : undefined
+            }
             onAnalyzeRole={(sg) => handleAnalyzeAndMatch(sg)}
           />
         </>

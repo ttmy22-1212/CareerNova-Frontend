@@ -144,11 +144,74 @@ export function SkillRadar({
     );
   };
 
-  const chart = (
+  // ── Nhãn trục: xoay radial + cắt ngắn để KHÔNG đè nhau khi nhiều nhóm ──
+  const count = data.length;
+  const tickFontSize = count > 24 ? 9 : count > 14 ? 10 : 11;
+  // Lề chừa quanh vòng + độ dài cắt nhãn DẪN XUẤT TỪ lề, để nhãn luôn nằm gọn
+  // trong khung (không bị cắt mép). Tên đầy đủ xem khi rê chuột / bấm vào nhãn.
+  const room = count > 24 ? 96 : count > 14 ? 92 : count > 8 ? 88 : 56;
+  const maxLabelChars = Math.max(
+    9,
+    Math.floor((room - 10) / (tickFontSize * 0.58)),
+  );
+  const truncate = (s: string) =>
+    s && s.length > maxLabelChars ? s.slice(0, maxLabelChars - 1) + "…" : s;
+
+  // Ít trục thì giữ nhãn ngang (dễ đọc, không đè); nhiều trục thì xoay mỗi nhãn
+  // dọc theo nan của nó để các nhãn cạnh nhau toả ra thay vì chồng lên nhau.
+  // <title> giữ tên đầy đủ khi rê chuột.
+  const useRadial = count > 8;
+  const RadialTick = (props: any) => {
+    const { x, y, cx, cy, payload, textAnchor } = props;
+    let rotation = 0;
+    let anchor: "start" | "end" | "middle" = textAnchor || "middle";
+    if (useRadial && typeof cx === "number" && typeof cy === "number") {
+      const angle = (Math.atan2(y - cy, x - cx) * 180) / Math.PI;
+      const flip = Math.abs(angle) > 90; // nửa trái: lật để chữ không bị ngược
+      rotation = flip ? angle + 180 : angle;
+      anchor = flip ? "end" : "start";
+    }
+    const full = String(payload?.value ?? "");
+    return (
+      <text
+        x={x}
+        y={y}
+        textAnchor={anchor}
+        dominantBaseline="central"
+        fontSize={tickFontSize}
+        fontWeight={clickableLabels ? 600 : 400}
+        fill={clickableLabels ? "#2563eb" : "#64748b"}
+        transform={rotation ? `rotate(${rotation}, ${x}, ${y})` : undefined}
+        style={
+          clickableLabels
+            ? { cursor: "pointer", textDecoration: "underline" }
+            : undefined
+        }
+        onClick={
+          clickableLabels
+            ? (ev) => {
+                ev.stopPropagation();
+                onLabelClick?.(full);
+              }
+            : undefined
+        }
+      >
+        <title>{full}</title>
+        {truncate(full)}
+      </text>
+    );
+  };
+
+  const renderChart = (chartMargin: {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+  }) => (
     <ResponsiveContainer width="100%" height="100%">
       <RadarChart
         data={data}
-        margin={{ top: 10, right: 20, bottom: 10, left: 20 }}
+        margin={chartMargin}
         onClick={(e: any) => {
           if (clickableLabels && onLabelClick && e?.activeLabel) {
             onLabelClick(e.activeLabel);
@@ -157,34 +220,7 @@ export function SkillRadar({
         style={{ cursor: clickableLabels ? "pointer" : "default" }}
       >
         <PolarGrid stroke="#e2e8f0" />
-        <PolarAngleAxis
-          dataKey="subject"
-          tick={
-            clickableLabels
-              ? (props: any) => {
-                  const { x, y, textAnchor, payload } = props;
-                  return (
-                    <text
-                      x={x}
-                      y={y}
-                      textAnchor={textAnchor}
-                      dominantBaseline="central"
-                      fontSize={10}
-                      fontWeight={600}
-                      fill="#2563eb"
-                      style={{ cursor: "pointer", textDecoration: "underline" }}
-                      onClick={(ev) => {
-                        ev.stopPropagation();
-                        onLabelClick?.(payload.value);
-                      }}
-                    >
-                      {payload.value}
-                    </text>
-                  );
-                }
-              : { fontSize: 10, fill: "#64748b" }
-          }
-        />
+        <PolarAngleAxis dataKey="subject" tick={RadialTick} />
         <PolarRadiusAxis tick={false} axisLine={false} domain={[0, 100]} />
         <Radar
           name={youLabel}
@@ -205,35 +241,22 @@ export function SkillRadar({
     </ResponsiveContainer>
   );
 
-  if (scrollable) {
-    const maxLabelLen = data.reduce(
-      (m, d) => Math.max(m, (d.subject || "").length),
-      0,
-    );
-    const innerWidth = 260 + maxLabelLen * 14;
-    return (
-      <>
-        {/* <DrillHint /> */}
-        <div
-          ref={(el) => {
-            if (el) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
-          }}
-          style={{ overflow: "auto" }}
-        >
-          <div style={{ width: innerWidth, height }}>{chart}</div>
-        </div>
-        <Legend />
-      </>
-    );
-  }
-
+  // Khung VUÔNG co theo bề ngang vùng chứa (aspect-ratio 1) → KHÔNG cuộn, KHÔNG
+  // tràn nên nhãn hai bên không bị cắt. To dần theo số nhóm để bán kính đủ rộng;
+  // `height` (nếu truyền) làm cận dưới để giữ tương thích với chỗ gọi cũ.
+  // `scrollable` giữ lại cho tương thích API nhưng không còn đổi layout.
+  void scrollable;
+  const maxSquare = Math.max(
+    height,
+    count > 24 ? 600 : count > 14 ? 520 : count > 8 ? 440 : 320,
+  );
   return (
     <>
-      {/* <DrillHint /> */}
-      {/* w-full: tránh co chiều ngang về 0 khi đặt trong flex căn giữa
-          (items-center) — nguyên nhân radar không hiện trong modal kết quả */}
-      <div className="w-full" style={{ height }}>
-        {chart}
+      <div
+        className="mx-auto w-full"
+        style={{ maxWidth: maxSquare, aspectRatio: "1 / 1" }}
+      >
+        {renderChart({ top: room, right: room, bottom: room, left: room })}
       </div>
       <Legend />
     </>

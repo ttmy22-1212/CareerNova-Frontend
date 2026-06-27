@@ -20,7 +20,6 @@ import {
 import JobApi, { GetJobsQueryDto } from "@/api/job";
 import { JobListItem } from "@/types/job-insight";
 import ProfileApi from "@/api/profile";
-import PersonalDashboardApi from "@/api/personal-dashboard";
 import { formatSalaryRange } from "@/utils/salary";
 import { toTitleCase } from "@/utils/text";
 
@@ -78,9 +77,8 @@ export function JobSearch() {
   const [selectedExp, setSelectedExp] = useState("");
   const [location, setLocation] = useState("");
   const [searchGroup, setSearchGroup] = useState("");
-  const [listedWithinDays, setListedWithinDays] = useState<number | undefined>(
-    undefined,
-  );
+  // Chỉ cho phép tối đa 7 ngày (bỏ "bất kỳ thời gian" vì quá rộng/cũ). Mặc định 7 ngày.
+  const [listedWithinDays, setListedWithinDays] = useState<number>(7);
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<string>("match_score");
 
@@ -92,7 +90,8 @@ export function JobSearch() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [processingJobId, setProcessingJobId] = useState<string | null>(null);
-  const [isRecommendedMode, setIsRecommendedMode] = useState(sortBy === "match_score");
+  // Chế độ "Phù hợp nhất" = đang xếp theo điểm match (suy ra từ sortBy).
+  const isRecommendedMode = sortBy === "match_score";
 
   // Đọc bộ lọc từ URL (vd: điều hướng từ "Top vị trí tuyển nhiều" ở Thị trường)
   useEffect(() => {
@@ -102,13 +101,14 @@ export function JobSearch() {
     const loc = searchParams.get("location") || "";
     const exp = searchParams.get("experience_level") || "";
     const withinDays = searchParams.get("listed_within_days");
+    // Giới hạn trần 7 ngày để đồng nhất với bộ lọc (không nhận giá trị lớn hơn).
 
     if (q) setSearchTerm(q);
     if (sg) setSearchGroup(sg);
     if (wt) setSelectedType(wt);
     if (loc) setLocation(loc);
     if (exp) setSelectedExp(exp);
-    if (withinDays) setListedWithinDays(Number(withinDays));
+    if (withinDays) setListedWithinDays(Math.min(7, Number(withinDays)));
 
     // Có bộ lọc cụ thể → chuyển sang chế độ tìm kiếm thường (không dùng "Phù hợp nhất")
     if (q || sg || wt || loc || exp) {
@@ -121,67 +121,9 @@ export function JobSearch() {
   const loadJobs = useCallback(async () => {
     setLoading(true);
 
-    // ── Chế độ "Phù hợp nhất": lấy từ API recommended-jobs (giống Jobs gợi ý ở dashboard) ──
-    if (sortBy === "match_score") {
-      setIsRecommendedMode(true);
-      try {
-        const [res, savedJobsRes] = await Promise.all([
-          PersonalDashboardApi.getRecommendedJobs(),
-          ProfileApi.getSavedJobs().catch(() => ({ data: [] })),
-        ]);
-        const savedJobIds = new Set(
-          (savedJobsRes?.data || [])
-            .map((item) => String(item.job?.job_id || ""))
-            .filter(Boolean),
-        );
-
-        if (res?.data) {
-          const mapped: DisplayJobItem[] = res.data.map((r) => {
-            const rateNum = parseInt(r.match_rate ?? "", 10);
-            return {
-              job_id: r.job_id,
-              title: r.title,
-              company: { company_id: "", name: r.company_name, url: undefined },
-              location: r.location,
-              salary: null,
-              salary_text: r.salary_text,
-              skills: [],
-              match_score: Number.isFinite(rateNum) ? rateNum : null,
-              is_saved: savedJobIds.has(String(r.job_id)),
-              // Job base fields
-              company_id: null,
-              skills_desc: null,
-              description: null,
-              formatted_experience_level: null,
-              work_type: null,
-              is_remote: false,
-              listed_time: null,
-              expiry_time: null,
-              job_posting_url: null,
-              scraped_at: null,
-              applies: null,
-              views: null,
-              fingerprint: null,
-              job_category: null,
-              search_group: null,
-              source_name: null,
-              source_id: null,
-            };
-          });
-          setJobs(mapped);
-          setTotal(mapped.length);
-          setTotalPages(1);
-        }
-      } catch (error) {
-        console.error("Failed to load recommended jobs:", error);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    // ── Chế độ thông thường: gọi JobApi.findAll ──
-    setIsRecommendedMode(false);
+    // "Phù hợp nhất" dùng chung luồng findAll với sortBy=match_score: backend
+    // xếp điểm cao→thấp và CHỈ trả job đã có điểm match với CV mặc định (không
+    // ép ngưỡng 70%). Bộ lọc "Điểm phù hợp tối thiểu" vẫn áp dụng nếu user chọn.
     try {
       let activeCvId: string | undefined = undefined;
       try {
@@ -193,6 +135,21 @@ export function JobSearch() {
       } catch (cvErr) {
         console.error("Không lấy được CV mặc định:", cvErr);
       }
+
+      // Chế độ "Phù hợp nhất" cần CV để xếp hạng — chưa có thì hiện trạng thái
+      // trống + gợi ý tải CV (thay vì đổ ra toàn bộ job không xếp hạng).
+      if (sortBy === "match_score" && !activeCvId) {
+        setJobs([]);
+        setTotal(0);
+        setTotalPages(1);
+        setLoading(false);
+        return;
+      }
+
+      // "Phù hợp nhất": sàn tối thiểu 1% (loại job 0%) nếu user chưa chọn ngưỡng
+      // cao hơn — vẫn xếp cao→thấp đầy đủ.
+      const effectiveMinMatch =
+        sortBy === "match_score" ? (minMatch ?? 1) : minMatch;
 
       const query: GetJobsQueryDto = {
         page: currentPage,
@@ -206,7 +163,7 @@ export function JobSearch() {
         ...(searchGroup && { search_group: searchGroup }),
         ...(listedWithinDays && { listed_within_days: listedWithinDays }),
         ...(activeCvId && { cv_id: activeCvId }),
-        ...(minMatch !== undefined && { min_match: minMatch }),
+        ...(effectiveMinMatch !== undefined && { min_match: effectiveMinMatch }),
       };
 
       const res = await JobApi.findAll(query);
@@ -459,6 +416,31 @@ export function JobSearch() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
+                  Đăng trong
+                </label>
+                <div className="space-y-1">
+                  {[
+                    { label: "Hôm nay", value: 1 },
+                    { label: "3 ngày qua", value: 3 },
+                    { label: "7 ngày qua", value: 7 },
+                  ].map((r) => (
+                    <button
+                      key={r.label}
+                      onClick={() => setListedWithinDays(r.value)}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        listedWithinDays === r.value
+                          ? "bg-blue-50 text-blue-700"
+                          : "hover:bg-slate-50 text-slate-600"
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
                   Lương (Tham khảo)
                 </label>
                 <div className="space-y-1">
@@ -481,8 +463,9 @@ export function JobSearch() {
         <div className="flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-2.5 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300">
           <span className="text-base">✨</span>
           <span>
-            <strong>Công việc gợi ý từ phân tích CV của bạn</strong> — Chỉ hiển thị
-            công việc có độ phù hợp ≥70% với CV mặc định.{" "}
+            <strong>Xếp theo độ phù hợp với CV mặc định</strong> — công việc phù
+            hợp nhất hiển thị trước (cao → thấp). Muốn lọc ngưỡng tối thiểu? Dùng
+            bộ lọc “Điểm phù hợp tối thiểu”.{" "}
             {total === 0 && !loading && (
               <span className="text-blue-500">
                 Chưa có dữ liệu — hãy tải CV và chạy so khớp CV trước.
@@ -492,13 +475,13 @@ export function JobSearch() {
         </div>
       )}
 
-      {/* Chip bộ lọc đang áp dụng */}
+      {/* Chip bộ lọc đang áp dụng (khoảng thời gian luôn có giá trị nên hiển thị
+          ở panel lọc, không đưa vào chip xoá được) */}
       {(searchGroup ||
         searchTerm ||
         selectedType ||
         location ||
-        selectedExp ||
-        listedWithinDays) && (
+        selectedExp) && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
             Đang lọc:
@@ -524,10 +507,6 @@ export function JobSearch() {
               label: `Kinh nghiệm: ${selectedExp}`,
               clear: () => setSelectedExp(""),
             },
-            listedWithinDays && {
-              label: `${listedWithinDays} ngày qua`,
-              clear: () => setListedWithinDays(undefined),
-            },
           ]
             .filter(Boolean)
             .map((chip: any, i) => (
@@ -547,7 +526,7 @@ export function JobSearch() {
               setSelectedExp("");
               setLocation("");
               setSearchGroup("");
-              setListedWithinDays(undefined);
+              setListedWithinDays(7);
             }}
             className="text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:underline"
           >
@@ -624,7 +603,7 @@ export function JobSearch() {
             setSelectedExp("");
             setLocation("");
             setSearchGroup("");
-            setListedWithinDays(undefined);
+            setListedWithinDays(7);
             setMinMatch(undefined);
           }}
         />
@@ -653,7 +632,8 @@ export function JobSearch() {
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${typeColors[job.work_type] || "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}
                           >
-                            {workTypeLabels[job.work_type] || job.work_type}
+                            {workTypeLabels[job.work_type] ||
+                              toTitleCase(job.work_type)}
                           </span>
                         )}
                       </div>

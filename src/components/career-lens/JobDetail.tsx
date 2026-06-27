@@ -259,7 +259,7 @@ export function JobDetail() {
                   <span className="flex items-center gap-1.5">
                     <Briefcase className="w-4 h-4 text-slate-400" />
                     {job!.work_type
-                      ? workTypeLabels[job!.work_type] || job!.work_type
+                      ? workTypeLabels[job!.work_type] || toTitleCase(job!.work_type)
                       : "Chưa rõ hình thức"}
                   </span>
                   <span className="flex items-center gap-1.5">
@@ -277,7 +277,7 @@ export function JobDetail() {
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${typeColors[job!.work_type] || "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}
                     >
-                      {workTypeLabels[job!.work_type] || job!.work_type}
+                      {workTypeLabels[job!.work_type] || toTitleCase(job!.work_type)}
                     </span>
                   )}
                 </div>
@@ -585,7 +585,9 @@ export function JobDetail() {
                   </p>
                   <p className="text-sm font-medium text-slate-900 dark:text-white">
                     {industries.length > 0
-                      ? industries.map((i) => i.industry_name).join(", ")
+                      ? industries
+                          .map((i) => toTitleCase(i.industry_name))
+                          .join(", ")
                       : "Chưa rõ"}
                   </p>
                 </div>
