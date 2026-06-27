@@ -37,6 +37,22 @@ import { RoleComparison } from "./RoleComparison";
 
 type InputMode = "role" | "url";
 
+// Chỉ chấp nhận link tuyển dụng từ 4 nền tảng uy tín có mô tả công việc chuẩn,
+// giúp việc bóc tách & phân tích chính xác nhất.
+const ALLOWED_JOB_SOURCES = [
+  { label: "ITviec", domain: "itviec.com" },
+  { label: "VietnamWorks", domain: "vietnamworks.com" },
+  { label: "CareerViet", domain: "careerviet.vn" },
+  { label: "LinkedIn", domain: "linkedin.com" },
+];
+
+// true nếu link rỗng (chưa nhập, chưa coi là sai) hoặc thuộc 1 trong 4 nguồn.
+const isAllowedJobUrl = (url: string) => {
+  const value = url.trim().toLowerCase();
+  if (!value) return true;
+  return ALLOWED_JOB_SOURCES.some((s) => value.includes(s.domain));
+};
+
 // Các bước hiển thị trong lúc "câu giờ" khi đang phân tích CV.
 const LOADING_STEPS = [
   {
@@ -819,11 +835,15 @@ export function CVMatching() {
   const toggleSection = (s: string) =>
     setExpandedSection((p) => (p === s ? null : s));
 
+  // Link công việc người dùng nhập không thuộc 4 nguồn cho phép → chặn phân tích.
+  const isJobUrlInvalid = mode === "url" && !isAllowedJobUrl(jdUrl);
+
   // Kiểm soát trạng thái nút bấm: Nếu đã có Active CV chọn sẵn, không làm mờ nút (Trừ trường hợp mode là URL trống)
   const isAnalyzeDisabled =
     isLoading ||
     (!activeCv?.cv_id && !rightFile) ||
-    (mode === "url" && !jdUrl.trim());
+    (mode === "url" && !jdUrl.trim()) ||
+    isJobUrlInvalid;
 
   // Danh sách kỹ năng hiển thị bên trái: theo nhóm đang lọc nếu có, ngược lại tổng quan.
   // (Thẻ điểm tổng ở trên vẫn giữ số liệu toàn bộ — chỉ các trường chi tiết đổi theo radar.)
@@ -1131,18 +1151,37 @@ export function CVMatching() {
                         placeholder="https://linkedin.com/jobs/view/..."
                         value={jdUrl}
                         onChange={(e) => setJdUrl(e.target.value)}
-                        className="w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400 h-[34px]"
+                        className={`w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/50 border rounded-lg focus:outline-none focus:ring-1 placeholder:text-slate-400 h-[34px] ${
+                          isJobUrlInvalid
+                            ? "border-red-300 focus:ring-red-500 dark:border-red-900/60"
+                            : "border-slate-200 dark:border-slate-700 focus:ring-blue-500"
+                        }`}
                       />
-                      <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-                        <Info className="w-3.5 h-3.5 shrink-0 mt-px text-slate-400" />
-                        <span>
-                          Lưu ý: chỉ nên dùng link từ 4 nguồn{" "}
-                          <span className="font-semibold text-slate-600 dark:text-slate-300">
-                            ITviec, VietnamWorks, CareerViet, LinkedIn
-                          </span>{" "}
-                          để đảm bảo phân tích chính xác.
-                        </span>
-                      </p>
+                      {isJobUrlInvalid ? (
+                        <div className="mt-1.5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 dark:border-red-900/40 dark:bg-red-950/20">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-px text-red-500 dark:text-red-400" />
+                          <p className="text-[11px] leading-relaxed text-red-800 dark:text-red-200/90">
+                            Link không thuộc nguồn được hỗ trợ. Vui lòng dùng link
+                            từ{" "}
+                            <span className="font-bold">
+                              ITviec, VietnamWorks, CareerViet, LinkedIn
+                            </span>
+                            .
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="mt-1.5 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 dark:border-amber-900/40 dark:bg-amber-950/20">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-px text-amber-500 dark:text-amber-400" />
+                          <p className="text-[11px] leading-relaxed text-amber-900/90 dark:text-amber-100/80">
+                            Vui lòng dùng link từ{" "}
+                            <span className="font-bold text-amber-900 dark:text-amber-100">
+                              ITviec, VietnamWorks, CareerViet, LinkedIn
+                            </span>
+                            . Đây là các nền tảng uy tín có mô tả công việc chuẩn,
+                            giúp kết quả phân tích chính xác nhất.
+                          </p>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
