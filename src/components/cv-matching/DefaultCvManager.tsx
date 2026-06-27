@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import ProfileApi from "@/api/profile";
+import { CvDocViewer } from "./CvDocViewer";
 import { toTitleCase } from "@/utils/text";
 import { UserProfileResponse } from "@/types/profile";
 import {
@@ -283,20 +284,8 @@ export function DefaultCvManager() {
           </div>
 
           <div className="flex-1 w-full bg-[#525659] dark:bg-slate-900 overflow-hidden relative">
-            {viewingCvUrl && viewingCvUrl.toLowerCase().includes(".pdf") ? (
-              <iframe
-                src={`${viewingCvUrl}#toolbar=0&navpanes=0&view=FitH`}
-                className="absolute inset-0 h-full w-full border-none m-0 p-0 block bg-[#525659]"
-                title="PDF Preview"
-              />
-            ) : (
-              <div className="absolute inset-0 overflow-auto flex items-center justify-center p-4 custom-scrollbar">
-                <img
-                  src={viewingCvUrl!}
-                  alt="CV Preview"
-                  className="max-h-full max-w-full bg-white dark:bg-slate-900 object-contain shadow-xs transition-all"
-                />
-              </div>
+            {viewingCvUrl && (
+              <CvDocViewer url={viewingCvUrl} name={viewingCvName} />
             )}
           </div>
         </DialogContent>

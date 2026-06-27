@@ -58,6 +58,7 @@ import { GetSavedJobsResponse, GetSavedCoursesResponse } from "@/types/profile";
 import ProfileApi from "@/api/profile";
 import LearningRoadmapApi from "@/api/learning-roadmap";
 import CvApi from "@/api/cv";
+import { CvDocViewer } from "@/components/cv-matching/CvDocViewer";
 import { CvItemDto } from "@/types/cv";
 import { toTitleCase } from "@/utils/text";
 
@@ -1711,21 +1712,7 @@ export default function ProfilePage() {
 
             {/* Nội dung file hiển thị */}
             <div className="flex-1 bg-slate-100/50 dark:bg-slate-800/50 dark:bg-slate-950 p-4 flex justify-center items-center overflow-auto">
-              {viewingCvUrl.toLowerCase().includes(".pdf") ? (
-                <iframe
-                  src={`${viewingCvUrl}#toolbar=0&navpanes=0`}
-                  className="w-full h-full rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 dark:border-slate-800"
-                  title="CV Preview"
-                />
-              ) : (
-                <div className="max-w-full max-h-full overflow-auto flex justify-center">
-                  <img
-                    src={viewingCvUrl}
-                    alt="CV Preview"
-                    className="max-w-full h-auto object-contain rounded-lg shadow-md bg-white dark:bg-slate-900 dark:bg-slate-800"
-                  />
-                </div>
-              )}
+              <CvDocViewer url={viewingCvUrl} name={viewingCvName} />
             </div>
           </div>
         </div>

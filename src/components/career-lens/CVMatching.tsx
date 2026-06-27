@@ -34,6 +34,7 @@ import { MatchCategoryResponse } from "@/types/matching";
 import { CvItemDto } from "@/types/cv";
 import { InfoTooltip, GLOSSARY } from "./InfoTooltip";
 import { RoleComparison } from "./RoleComparison";
+import { CvDocViewer } from "../cv-matching/CvDocViewer";
 
 type InputMode = "role" | "url";
 
@@ -2142,21 +2143,7 @@ export function CVMatching() {
             </div>
 
             <div className="flex-1 bg-slate-100 dark:bg-slate-800 p-4 flex justify-center items-center overflow-auto">
-              {viewingCvUrl.toLowerCase().includes(".pdf") ? (
-                <iframe
-                  src={`${viewingCvUrl}#toolbar=0&navpanes=0`}
-                  className="w-full h-full rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700"
-                  title="PDF Preview"
-                />
-              ) : (
-                <div className="max-w-full max-h-full overflow-auto flex justify-center">
-                  <img
-                    src={viewingCvUrl}
-                    alt="CV Preview"
-                    className="max-w-full h-auto object-contain rounded-lg shadow-md bg-white dark:bg-slate-900"
-                  />
-                </div>
-              )}
+              <CvDocViewer url={viewingCvUrl} name={viewingCvName} />
             </div>
           </div>
         </div>
