@@ -386,7 +386,10 @@ export default function UserLayout({
         )}
       </div>
 
-      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+      <nav
+        data-tour="nav-groups"
+        className="flex-1 space-y-5 overflow-y-auto px-3 py-4"
+      >
         {navGroups.map((group) => (
           <div key={group.title}>
             {!collapsed && (

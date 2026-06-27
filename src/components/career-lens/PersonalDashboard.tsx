@@ -620,7 +620,10 @@ export function PersonalDashboard() {
 
 
       {/* ── Hành trình của bạn ── */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
+      <div
+        data-tour="journey-strip"
+        className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5"
+      >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
             <Zap className="w-4 h-4 text-blue-600" />
@@ -672,7 +675,10 @@ export function PersonalDashboard() {
 
       {/* ── Thẻ Bắt đầu cho user chưa có CV (tránh loạn thông tin) ── */}
       {!hasCV && (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm">
+        <div
+          data-tour="start-3-steps"
+          className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-sm"
+        >
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">
             Bắt đầu trong 3 bước
           </h3>

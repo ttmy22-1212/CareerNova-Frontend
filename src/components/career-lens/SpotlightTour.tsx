@@ -4,13 +4,24 @@
  * SpotlightTour — highlights real UI elements one by one with a cutout overlay.
  * Uses the CSS box-shadow "giant shadow" technique to darken everything except
  * the target element.  No external dependencies.
+ *
+ * Luồng được thiết kế cho user MỚI ngay sau đăng nhập: app luôn đưa họ về
+ * /my-dashboard (Tổng quan cá nhân), nên các bước chỉ trỏ vào anchor THỰC SỰ
+ * có mặt trên trang đó.
+ *
+ * - `optional`      : tự bỏ qua nếu anchor vắng/ẩn (dùng cho phần không thiết yếu).
+ * - `centerFallback`: nếu anchor vắng/ẩn (vd sidebar ẩn trên mobile) thì hiển thị
+ *                     dưới dạng thẻ-giữa-màn với cùng nội dung — KHÔNG bỏ qua, để
+ *                     user mobile vẫn nắm được chức năng cốt lõi.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, ChevronLeft, ChevronRight, X, Zap } from "lucide-react";
 import { useAuth } from "@/contexts/auth/auth-context";
+import { paths } from "@/paths";
 
-const TOUR_KEY = "career-lens.tour.v1";
+const TOUR_KEY = "career-lens.tour.v2"; // bump v1→v2: thiết kế lại luồng → mọi user thấy tour mới
 const TW = 312; // tooltip width  (px)
 const PAD = 8; // spotlight padding (px)
 
@@ -22,48 +33,60 @@ interface Step {
   desc: string;
   placement?: "top" | "bottom" | "left" | "right";
   tip?: string;
+  /** true ⇒ tự bỏ qua nếu anchor vắng/ẩn (kích thước 0×0 / display:none). */
+  optional?: boolean;
+  /** true ⇒ nếu anchor vắng/ẩn thì hiện như thẻ-giữa-màn thay vì bỏ qua. */
+  centerFallback?: boolean;
 }
 
 const STEPS: Step[] = [
+  // 1 — Toàn cảnh: app này để làm gì + có thể bỏ qua bất cứ lúc nào
   {
     title: "Chào mừng đến Career Nova! 👋",
-    desc: "Mình sẽ hướng dẫn bạn trực tiếp trên giao diện thực — không phải demo giả. Bấm Tiếp theo để bắt đầu!",
-    tip: "6 bước · Khoảng 1 phút",
+    desc: "Career Nova giúp bạn 3 việc: đo độ khớp CV với tin tuyển dụng, chỉ ra kỹ năng còn thiếu, và gợi ý khóa học để lấp đầy. Mình dẫn một vòng ~1 phút ngay trên giao diện thật. Không muốn xem? Bấm “Bỏ qua” ở góc dưới bất cứ lúc nào.",
+    tip: "Khoảng 1 phút · Có thể bỏ qua bất cứ lúc nào",
   },
-  {
-    target: "journey-bar",
-    title: "🗺️ Hành trình sự nghiệp",
-    desc: "Thanh 4 bước theo đúng luồng hiện có: khám phá hồ sơ, phân tích CV, lưu tài nguyên học và lưu cơ hội việc làm để xem lại.",
-    placement: "bottom",
-    tip: "Bấm trực tiếp vào từng bước để xem",
-  },
-  {
-    target: "sidebar-cv-matching",
-    title: "📄 So khớp CV — Bắt đầu từ đây",
-    desc: "Tải CV rồi paste mô tả job bất kỳ. Hệ thống tính ngay điểm match (0–100%) và chỉ ra đúng kỹ năng nào bạn còn thiếu so với yêu cầu tuyển dụng.",
-    placement: "right",
-    tip: "Đây là bước quan trọng nhất — làm ngay nhé!",
-  },
-  {
-    target: "profile-strength",
-    title: "💪 Độ hoàn thiện hồ sơ",
-    desc: "Mỗi bước hoàn thiện hồ sơ tăng thêm %. Càng cao, gợi ý job và lộ trình học càng chính xác hơn. Bấm để xem checklist các bước còn thiếu.",
-    placement: "top",
-    tip: "Mục tiêu: đạt ít nhất 50% để mở insight",
-  },
+  // 2 — CỐT LÕI: trang Tổng quan này nghĩa là gì (gộp: ý nghĩa + chỉ số + nút chính)
   {
     target: "welcome-banner",
-    title: "📊 Tổng kết cá nhân của bạn",
-    desc: "Sau khi Tải CV, banner này hiện số jobs khớp với hồ sơ và điểm match trung bình. Dữ liệu tự cập nhật khi bạn thêm thông tin vào hồ sơ.",
+    title: "📊 Đây là Tổng quan cá nhân của bạn",
+    desc: "Trang chủ sau khi đăng nhập — tóm tắt nhanh tình hình của bạn: số việc làm phù hợp, điểm match CV trung bình và việc nên làm tiếp. Mọi con số tự cập nhật theo hồ sơ & CV của bạn.",
     placement: "bottom",
-    tip: "Số liệu cập nhật tự động theo hồ sơ",
+    tip: "Bắt đầu bằng nút CV ngay trên banner này",
   },
+  // 3 — CỐT LÕI: toàn bộ luồng dùng app, giải thích từng bước + thứ tự nên đi
   {
-    target: "next-actions",
-    title: "⚡ Hành động được gợi ý",
-    desc: "3 card hành động quan trọng nhất dựa trên trạng thái hồ sơ hiện tại. Hệ thống tự chọn và cập nhật khi bạn tiến bộ — bấm vào bất kỳ card nào để bắt đầu.",
+    target: "journey-strip",
+    title: "🗺️ Hành trình 5 bước — luồng dùng chính",
+    desc: "Đây là toàn bộ cách dùng web, đi theo thứ tự: 1) Hồ sơ & CV → 2) Đối soát CV (tính điểm khớp) → 3) Khoảng trống kỹ năng (xem còn thiếu gì) → 4) Lộ trình học (khóa học gợi ý) → 5) Tìm việc phù hợp. Mỗi bước mở khóa và làm tốt hơn cho bước sau.",
     placement: "top",
-    tip: "Bấm vào card để thực hiện ngay",
+    tip: "Cứ làm tuần tự từ trái sang phải",
+  },
+  // 4 — PHỤ (lướt nhanh): bản đồ menu — giới thiệu MỌI chức năng cùng lúc.
+  //     centerFallback: trên mobile sidebar ẩn → vẫn hiện dưới dạng thẻ giữa màn.
+  {
+    target: "nav-groups",
+    title: "🧭 Mọi chức năng đều nằm trong menu",
+    desc: "Web gom thành 4 nhóm: Khám phá thị trường (xu hướng IT), Dành cho bạn (Tổng quan + Kiểm tra hướng nghiệp), Phân tích & đối soát (So khớp CV, Phân tích kỹ năng), và Hành động (Đề xuất, Khoá học & Lộ trình, Tìm việc).",
+    placement: "right",
+    tip: "Trên điện thoại, mở menu bằng nút ☰ ở góc trên",
+    centerFallback: true,
+  },
+  // 5 — CỐT LÕI: tính năng quan trọng nhất, giải thích kỹ.
+  //     centerFallback: mobile vẫn được giới thiệu tính năng cốt lõi này.
+  {
+    target: "sidebar-cv-matching",
+    title: "📄 So khớp CV — tính năng cốt lõi",
+    desc: "Quan trọng nhất cả web: tải CV rồi dán mô tả tuyển dụng bất kỳ. Hệ thống chấm điểm khớp 0–100% và chỉ rõ kỹ năng bạn còn thiếu so với yêu cầu — đây là nền tảng cho gợi ý job, lộ trình học và phân tích kỹ năng.",
+    placement: "right",
+    tip: "Chưa biết bắt đầu từ đâu? Mở mục “So khớp CV”",
+    centerFallback: true,
+  },
+  // 6 — Kết: chốt việc nên làm đầu tiên + nơi mở lại hướng dẫn
+  {
+    title: "🎉 Xong rồi! Bắt đầu thôi",
+    desc: "Việc nên làm đầu tiên là Tải CV để hệ thống phân tích hồ sơ của bạn. Cần xem lại cách dùng? Vào mục “Hướng dẫn sử dụng” ở menu tài khoản. Chúc bạn sớm tìm được hướng đi phù hợp!",
+    tip: "Bấm “Bắt đầu ngay” để tới So khớp CV",
   },
 ];
 
@@ -83,6 +106,14 @@ function getSpot(el: Element): Rect {
     width: r.width + PAD * 2,
     height: r.height + PAD * 2,
   };
+}
+
+/** Anchor dùng được = có trong DOM, không display:none, kích thước > 0. */
+function isUsable(el: Element | null): el is HTMLElement {
+  if (!el) return false;
+  if ((el as HTMLElement).offsetParent === null) return false; // display:none / detached
+  const r = el.getBoundingClientRect();
+  return r.width > 0 && r.height > 0;
 }
 
 function tooltipPos(
@@ -117,10 +148,19 @@ function tooltipPos(
 // ── Component ──────────────────────────────────────────────────────
 export function SpotlightTour() {
   const { user, ready } = useAuth();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [spot, setSpot] = useState<Rect | null>(null);
   const [vp, setVp] = useState({ w: 1280, h: 800 });
+
+  // Hướng điều hướng hiện tại (+1 tiến / -1 lùi) để biết auto-skip về phía nào.
+  const dirRef = useRef(1);
+  // Đếm số bước optional bị bỏ qua liên tiếp → chặn lặp vô hạn nếu mọi anchor vắng.
+  const skipCountRef = useRef(0);
+  // a11y: focus nút chính khi mở/đổi bước + bẫy focus trong hộp thoại.
+  const cardRef = useRef<HTMLDivElement>(null);
+  const nextBtnRef = useRef<HTMLButtonElement>(null);
 
   // Sync viewport
   useEffect(() => {
@@ -140,57 +180,147 @@ export function SpotlightTour() {
     }
   }, [ready, user]);
 
-  // Resolve spotlight for current step
-  const resolveSpot = useCallback((idx: number) => {
-    const target = STEPS[idx].target;
-    if (!target) {
+  function dismiss() {
+    if (user) localStorage.setItem(`${TOUR_KEY}.${user.id}`, "done");
+    setOpen(false);
+    setSpot(null);
+  }
+
+  // Resolve spotlight cho bước hiện tại — có retry ngắn + tự bỏ qua / fallback giữa màn.
+  useEffect(() => {
+    if (!open) return;
+    const stepDef = STEPS[step];
+
+    // Bước thẻ-giữa: không có spotlight.
+    if (!stepDef.target) {
       setSpot(null);
+      skipCountRef.current = 0;
       return;
     }
 
+    let cancelled = false;
     let tries = 0;
-    const find = () => {
-      const el = document.querySelector(`[data-tour="${target}"]`);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        // wait for scroll to settle
-        setTimeout(() => setSpot(getSpot(el)), 380);
-      } else if (tries++ < 20) {
-        setTimeout(find, 200);
+
+    const handleMissing = () => {
+      if (cancelled) return;
+      if (stepDef.centerFallback) {
+        // Anchor ẩn (vd sidebar trên mobile) → hiện như thẻ giữa màn, KHÔNG bỏ qua.
+        setSpot(null);
+        skipCountRef.current = 0;
+      } else if (stepDef.optional) {
+        // Tự nhảy theo hướng đang đi thay vì kẹt ở center fallback.
+        skipCountRef.current += 1;
+        if (skipCountRef.current > STEPS.length) {
+          dismiss();
+          return;
+        }
+        const next = step + dirRef.current;
+        if (next < 0 || next >= STEPS.length) {
+          dismiss();
+        } else {
+          setStep(next);
+        }
       } else {
-        setSpot(null); // element not in DOM — fallback to center card
+        // Bước bắt buộc nhưng anchor vắng (hiếm) → center fallback mượt.
+        setSpot(null);
+        skipCountRef.current = 0;
       }
     };
+
+    const find = () => {
+      if (cancelled) return;
+      const el = document.querySelector(`[data-tour="${stepDef.target}"]`);
+      if (isUsable(el)) {
+        skipCountRef.current = 0;
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        // chờ scroll ổn định rồi mới chốt vị trí spotlight
+        setTimeout(() => {
+          if (cancelled) return;
+          const el2 = document.querySelector(`[data-tour="${stepDef.target}"]`);
+          if (isUsable(el2)) setSpot(getSpot(el2));
+          else handleMissing();
+        }, 320);
+      } else if (tries++ < 6) {
+        setTimeout(find, 180); // ~1.2s tổng, đủ cho anchor cùng trang mount
+      } else {
+        handleMissing();
+      }
+    };
+
     find();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+    // dismiss/router ổn định sau khi auth ready — chỉ cần chạy lại theo step/open
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, open]);
 
-  useEffect(() => {
-    if (open) resolveSpot(step);
-  }, [step, open, resolveSpot]);
-
-  // Live-update spotlight on resize
+  // Live-update spotlight on resize (và bỏ spotlight nếu anchor bị ẩn, vd thu về mobile)
   useEffect(() => {
     if (!open) return;
     const target = STEPS[step].target;
     if (!target) return;
     const update = () => {
       const el = document.querySelector(`[data-tour="${target}"]`);
-      if (el) setSpot(getSpot(el));
+      if (isUsable(el)) setSpot(getSpot(el));
+      else setSpot(null);
     };
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, [step, open]);
 
-  function dismiss() {
-    if (user) localStorage.setItem(`${TOUR_KEY}.${user.id}`, "done");
-    setOpen(false);
-    setSpot(null);
-  }
+  // a11y: Esc để đóng
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") dismiss();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // a11y: đưa focus vào nút chính khi mở và mỗi lần đổi bước
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => nextBtnRef.current?.focus(), 60);
+    return () => clearTimeout(t);
+  }, [open, step]);
+
   function goNext() {
-    step < STEPS.length - 1 ? setStep((s) => s + 1) : dismiss();
+    dirRef.current = 1;
+    if (step < STEPS.length - 1) setStep((s) => s + 1);
+    else {
+      // Khép vòng tour bằng hành động thật: đưa user mới tới So khớp CV.
+      dismiss();
+      router.push(paths.cvMatching);
+    }
   }
   function goPrev() {
+    dirRef.current = -1;
     if (step > 0) setStep((s) => s - 1);
+  }
+  function jumpTo(i: number) {
+    dirRef.current = i >= step ? 1 : -1;
+    setStep(i);
+  }
+
+  // a11y: bẫy Tab trong hộp thoại để không lạc focus ra trang nền bị che
+  function trapTab(e: React.KeyboardEvent) {
+    if (e.key !== "Tab") return;
+    const focusables = cardRef.current?.querySelectorAll<HTMLElement>(
+      "button:not([disabled])",
+    );
+    if (!focusables || focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
   }
 
   if (!open) return null;
@@ -207,42 +337,51 @@ export function SpotlightTour() {
     <>
       {/* ── Overlay ─────────────────────────────────────────────── */}
       {isCenter ? (
+        // Thẻ giữa màn: nền tối phủ kín, đồng thời chặn click trang nền.
         <div
           className="fixed inset-0 z-[9998]"
           style={{
             background: "rgba(15,23,42,0.72)",
             backdropFilter: "blur(3px)",
           }}
+          aria-hidden
         />
       ) : (
-        spot && (
-          // The enormous box-shadow IS the dark overlay; the element itself stays lit
-          <div
-            style={{
-              position: "fixed",
-              top: spot.top,
-              left: spot.left,
-              width: spot.width,
-              height: spot.height,
-              borderRadius: 10,
-              boxShadow: "0 0 0 9999px rgba(15,23,42,0.65)",
-              border: "2px solid rgba(99,102,241,0.75)",
-              outline: "4px solid rgba(99,102,241,0.12)",
-              outlineOffset: 3,
-              zIndex: 9998,
-              pointerEvents: "none",
-              transition:
-                "top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease",
-            }}
-          />
-        )
+        <>
+          {/* Lớp chặn click trong suốt: box-shadow KHÔNG chặn được click nên cần
+              lớp này để user không lỡ bấm trúng trang nền làm rời trang / vỡ tour. */}
+          <div className="fixed inset-0 z-[9997]" aria-hidden />
+          {spot && (
+            // The enormous box-shadow IS the dark overlay; the element itself stays lit
+            <div
+              style={{
+                position: "fixed",
+                top: spot.top,
+                left: spot.left,
+                width: spot.width,
+                height: spot.height,
+                borderRadius: 10,
+                boxShadow: "0 0 0 9999px rgba(15,23,42,0.65)",
+                border: "2px solid rgba(99,102,241,0.75)",
+                outline: "4px solid rgba(99,102,241,0.12)",
+                outlineOffset: 3,
+                zIndex: 9998,
+                pointerEvents: "none",
+                transition:
+                  "top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease",
+              }}
+            />
+          )}
+        </>
       )}
 
       {/* ── Tooltip card ────────────────────────────────────────── */}
       <div
+        ref={cardRef}
         role="dialog"
         aria-modal="true"
         aria-label={cur.title}
+        onKeyDown={trapTab}
         style={{
           position: "fixed",
           top: tPos.top,
@@ -258,7 +397,7 @@ export function SpotlightTour() {
           {STEPS.map((_, i) => (
             <button
               key={i}
-              onClick={() => setStep(i)}
+              onClick={() => jumpTo(i)}
               aria-label={`Đến bước ${i + 1}`}
               className={`rounded-full transition-all duration-250 ${
                 i === step
@@ -310,32 +449,38 @@ export function SpotlightTour() {
               Quay lại
             </button>
           ) : (
+            <span aria-hidden />
+          )}
+
+          {/* Nút Bỏ qua luôn hiển thị ở mọi bước cho user không muốn xem hướng dẫn */}
+          <div className="flex items-center gap-1.5">
             <button
               onClick={dismiss}
-              className="px-2.5 py-1.5 text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              className="rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
             >
               Bỏ qua
             </button>
-          )}
 
-          <button
-            onClick={goNext}
-            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-[11px] font-bold transition-all ${
-              isLast
-                ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-300 dark:shadow-indigo-900"
-                : "bg-slate-900 text-white hover:bg-slate-700 dark:bg-indigo-600 dark:hover:bg-indigo-700"
-            }`}
-          >
-            {isLast ? (
-              <>
-                <CheckCircle2 className="h-3.5 w-3.5" /> Bắt đầu ngay!
-              </>
-            ) : (
-              <>
-                Tiếp theo <ChevronRight className="h-3.5 w-3.5" />
-              </>
-            )}
-          </button>
+            <button
+              ref={nextBtnRef}
+              onClick={goNext}
+              className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-[11px] font-bold transition-all ${
+                isLast
+                  ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-300 dark:shadow-indigo-900"
+                  : "bg-slate-900 text-white hover:bg-slate-700 dark:bg-indigo-600 dark:hover:bg-indigo-700"
+              }`}
+            >
+              {isLast ? (
+                <>
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Bắt đầu ngay!
+                </>
+              ) : (
+                <>
+                  Tiếp theo <ChevronRight className="h-3.5 w-3.5" />
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </>
