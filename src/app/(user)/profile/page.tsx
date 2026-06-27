@@ -947,7 +947,7 @@ export default function ProfilePage() {
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
                   </div>
                 ) : sortedCvs.length === 0 ? (
-                  <Empty href="/cv-matching" label="Tải CV (PDF/DOCX)" />
+                  <Empty href="/cv-matching" label="Tải CV (PDF, JPG, PNG)" />
                 ) : (
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 gap-2.5 max-h-[280px] overflow-y-auto pr-1">

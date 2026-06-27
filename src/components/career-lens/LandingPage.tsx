@@ -405,7 +405,7 @@ export function LandingPage() {
               },
               {
                 q: "Tôi cần chuẩn bị gì để bắt đầu?",
-                a: "Chỉ cần một CV (PDF/DOCX). Phần còn lại hệ thống tự trích xuất và phân tích trong vài phút.",
+                a: "Chỉ cần một CV (PDF, JPG hoặc PNG). Phần còn lại hệ thống tự trích xuất và phân tích trong vài phút.",
               },
             ].map((item) => (
               <details
