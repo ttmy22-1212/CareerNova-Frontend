@@ -77,8 +77,9 @@ export function JobSearch() {
   const [selectedExp, setSelectedExp] = useState("");
   const [location, setLocation] = useState("");
   const [searchGroup, setSearchGroup] = useState("");
-  // Chỉ cho phép tối đa 7 ngày (bỏ "bất kỳ thời gian" vì quá rộng/cũ). Mặc định 7 ngày.
-  const [listedWithinDays, setListedWithinDays] = useState<number>(7);
+  const [listedWithinDays, setListedWithinDays] = useState<
+    number | undefined
+  >(undefined);
   const [showFilters, setShowFilters] = useState(false);
   // Mặc định hiển thị việc mới nhất để trang luôn có dữ liệu ngay lần mở đầu.
   // Người dùng vẫn có thể chủ động chuyển sang "Phù hợp nhất" khi muốn dùng CV.
@@ -104,20 +105,28 @@ export function JobSearch() {
     const exp = searchParams.get("experience_level") || "";
     const withinDays = searchParams.get("listed_within_days");
     const requestedSort = searchParams.get("sort");
-    // Giới hạn trần 7 ngày để đồng nhất với bộ lọc (không nhận giá trị lớn hơn).
 
     if (q) setSearchTerm(q);
     if (sg) setSearchGroup(sg);
     if (wt) setSelectedType(wt);
     if (loc) setLocation(loc);
     if (exp) setSelectedExp(exp);
-    if (withinDays) setListedWithinDays(Math.min(7, Number(withinDays)));
-    if (["match_score", "salary_med", "listed_time"].includes(requestedSort || "")) {
+    if (withinDays) {
+      const parsedWithinDays = Number(withinDays);
+      if (Number.isFinite(parsedWithinDays) && parsedWithinDays > 0) {
+        setListedWithinDays(parsedWithinDays);
+      }
+    }
+    if (
+      ["match_score", "salary_med", "listed_time"].includes(
+        requestedSort || "",
+      )
+    ) {
       setSortBy(requestedSort!);
     }
 
     // Có bộ lọc cụ thể → chuyển sang chế độ tìm kiếm thường (không dùng "Phù hợp nhất")
-    if ((q || sg || wt || loc || exp) && !requestedSort) {
+    if ((q || sg || wt || loc || exp || withinDays) && !requestedSort) {
       setSortBy("listed_time");
       setShowFilters(true);
     }
@@ -223,7 +232,7 @@ export function JobSearch() {
     setSelectedExp("");
     setLocation("");
     setSearchGroup("");
-    setListedWithinDays(7);
+    setListedWithinDays(undefined);
     setMinMatch(undefined);
     setSortBy("listed_time");
     setCurrentPage(1);
@@ -448,9 +457,12 @@ export function JobSearch() {
                 </label>
                 <div className="space-y-1">
                   {[
+                    { label: "Bất kỳ thời gian", value: undefined },
                     { label: "Hôm nay", value: 1 },
                     { label: "3 ngày qua", value: 3 },
                     { label: "7 ngày qua", value: 7 },
+                    { label: "14 ngày qua", value: 14 },
+                    { label: "30 ngày qua", value: 30 },
                   ].map((r) => (
                     <button
                       key={r.label}
@@ -503,13 +515,13 @@ export function JobSearch() {
         </div>
       )}
 
-      {/* Chip bộ lọc đang áp dụng (khoảng thời gian luôn có giá trị nên hiển thị
-          ở panel lọc, không đưa vào chip xoá được) */}
+      {/* Chip bộ lọc đang áp dụng */}
       {(searchGroup ||
         searchTerm ||
         selectedType ||
         location ||
-        selectedExp) && (
+        selectedExp ||
+        listedWithinDays) && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
             Đang lọc:
@@ -535,6 +547,10 @@ export function JobSearch() {
               label: `Kinh nghiệm: ${selectedExp}`,
               clear: () => setSelectedExp(""),
             },
+            listedWithinDays && {
+              label: `${listedWithinDays} ngày qua`,
+              clear: () => setListedWithinDays(undefined),
+            },
           ]
             .filter(Boolean)
             .map((chip: any, i) => (
@@ -554,7 +570,7 @@ export function JobSearch() {
               setSelectedExp("");
               setLocation("");
               setSearchGroup("");
-              setListedWithinDays(7);
+              setListedWithinDays(undefined);
             }}
             className="text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:underline"
           >
@@ -631,7 +647,7 @@ export function JobSearch() {
             setSelectedExp("");
             setLocation("");
             setSearchGroup("");
-            setListedWithinDays(7);
+            setListedWithinDays(undefined);
             setMinMatch(undefined);
           }}
         />

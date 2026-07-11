@@ -309,6 +309,16 @@ export function MarketDashboard({
     percentage: item.percentage,
     fill: categoryColor(i),
   }));
+  const selectedTimeRangeDays = timePeriod.replace("days", "");
+  const selectedTimeRangeLabel =
+    filterOptions?.timeRanges.find((option) => option.value === timePeriod)
+      ?.label ??
+    {
+      "7days": "7 ngày qua",
+      "14days": "14 ngày qua",
+      "30days": "30 ngày qua",
+    }[timePeriod] ??
+    "Theo bộ lọc";
 
   return (
     <div className="p-6 space-y-6">
@@ -564,11 +574,7 @@ export function MarketDashboard({
               </h3>
             </div>
             <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full">
-              {{
-                "7days": "7 ngày qua",
-                "14days": "14 ngày qua",
-                "30days": "30 ngày qua",
-              }[timePeriod] ?? "Theo bộ lọc"}
+              {selectedTimeRangeLabel}
             </span>
           </div>
           <ResponsiveContainer width="100%" height={220}>
@@ -686,17 +692,18 @@ export function MarketDashboard({
         </div>
       </div>
 
-      {/* ── Top 5 Hot Jobs This Week ── */}
+      {/* ── Top 5 Hot Jobs ── */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Flame className="w-5 h-5 text-orange-500" />
             <div>
               <h3 className="font-semibold text-slate-900 dark:text-white">
-                Top 5 vị trí được tuyển nhiều nhất tuần này
+                Top 5 vị trí được tuyển nhiều nhất
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Các vị trí có nhiều tin tuyển dụng nhất trong 7 ngày gần đây
+                Các vị trí có nhiều tin tuyển dụng nhất trong{" "}
+                {selectedTimeRangeLabel.toLowerCase()}
               </p>
             </div>
           </div>
@@ -710,7 +717,8 @@ export function MarketDashboard({
         <div className="divide-y divide-slate-50">
           {hotJobsData.length === 0 ? (
             <div className="px-5 py-10 text-center text-sm text-slate-400">
-              Chưa có tin tuyển dụng nào trong 7 ngày gần đây
+              Chưa có tin tuyển dụng nào trong{" "}
+              {selectedTimeRangeLabel.toLowerCase()}
             </div>
           ) : (
             hotJobsData.map((job, i) => (
@@ -719,7 +727,7 @@ export function MarketDashboard({
                 href={(() => {
                   const params = new URLSearchParams();
                   params.set("search_group", job.title);
-                  params.set("listed_within_days", "7");
+                  params.set("listed_within_days", selectedTimeRangeDays);
                   if (jobType) params.set("work_type", jobType);
                   if (region) params.set("location", region);
                   return `/jobs?${params.toString()}`;
