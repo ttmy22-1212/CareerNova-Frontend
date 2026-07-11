@@ -9,7 +9,6 @@ import {
   Search,
   FileText,
   Target,
-  BookmarkCheck,
   TrendingUp,
   ChevronDown,
   Sparkles,
@@ -59,7 +58,7 @@ type NavItem = {
 
 const navGroups: { title: string; items: NavItem[] }[] = [
   {
-    title: "Khám phá thị trường",
+    title: "Khám phá & Tổng quan",
     items: [
       {
         href: paths.dashboard,
@@ -67,11 +66,6 @@ const navGroups: { title: string; items: NavItem[] }[] = [
         Icon: LayoutDashboard,
         end: true,
       },
-    ],
-  },
-  {
-    title: "Dành cho bạn",
-    items: [
       {
         href: paths.personalDashboard,
         label: "Tổng quan",
@@ -100,11 +94,6 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: "Hành động",
     items: [
-      {
-        href: paths.recommendations,
-        label: "Đề xuất",
-        Icon: BookmarkCheck,
-      },
       { href: paths.roadmap.index, label: "Khoá học & Lộ trình", Icon: Map },
       { href: paths.jobs.index, label: "Tìm kiếm việc làm", Icon: Search },
     ],
@@ -133,10 +122,6 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   [paths.skillGap]: {
     title: "Phân tích kỹ năng",
     subtitle: "Khoảng cách kỹ năng so với thị trường",
-  },
-  [paths.recommendations]: {
-    title: "Đề xuất",
-    subtitle: "Tóm tắt nhanh — dẫn tới Tìm việc, Phân tích kỹ năng, Roadmap",
   },
   [paths.profile.detail]: {
     title: "Hồ sơ Người dùng",
@@ -390,15 +375,26 @@ export default function UserLayout({
         data-tour="nav-groups"
         className="flex-1 space-y-5 overflow-y-auto px-3 py-4"
       >
-        {navGroups.map((group) => (
-          <div key={group.title}>
-            {!collapsed && (
-              <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
-                {group.title}
-              </p>
-            )}
-            <div className="space-y-0.5">
-              {group.items.map((item) => {
+        {navGroups.map((group) => {
+          const isGroupActive = group.items.some((item) =>
+            item.end ? pathname === item.href : pathname.startsWith(item.href)
+          );
+
+          return (
+            <div key={group.title}>
+              {!collapsed && (
+                <p
+                  className={`mb-2 px-3 text-xs uppercase tracking-widest transition-colors ${
+                    isGroupActive
+                      ? "text-blue-600 font-bold dark:text-blue-400"
+                      : "text-slate-400 font-semibold"
+                  }`}
+                >
+                  {group.title}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
                 const isActive = item.end
                   ? pathname === item.href
                   : pathname.startsWith(item.href);
@@ -441,7 +437,8 @@ export default function UserLayout({
               })}
             </div>
           </div>
-        ))}
+        );
+        })}
       </nav>
 
       <div className="border-t border-slate-100 p-3 dark:border-slate-800">

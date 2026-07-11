@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useAuth } from "@/contexts/auth/auth-context";
 import {
   Box,
   Button,
@@ -36,6 +37,7 @@ const steps = [
 ];
 
 const OnboardingContent = () => {
+  const { user } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -74,7 +76,10 @@ const OnboardingContent = () => {
           });
 
           if (skills.length > 0) {
-            await CvApi.syncProfileSkills({ cv_id: null, skills });
+            await CvApi.syncProfileSkills({
+              cv_id: user?.default_cv_id || null,
+              skills,
+            });
           }
 
           await ProfileApi.completeOnboarding();

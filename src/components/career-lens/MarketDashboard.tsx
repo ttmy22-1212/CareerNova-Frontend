@@ -362,11 +362,13 @@ export function MarketDashboard({
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
-              href="/cv-matching"
+              href={highMatchCount > 0 ? "/jobs?sort=match_score" : "/jobs"}
               className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
             >
               <Briefcase className="w-3.5 h-3.5" />
-              {highMatchCount} công việc khớp CV của bạn
+              {highMatchCount > 0
+                ? `${highMatchCount} công việc khớp CV của bạn`
+                : "Khám phá công việc mới nhất"}
               <ArrowRight className="w-3 h-3" />
             </Link>
             {missingSkills > 0 && (
@@ -487,7 +489,7 @@ export function MarketDashboard({
             value: stats?.internship_jobs?.count?.toLocaleString() ?? "0",
             badge: { text: "Phù hợp SV", tone: "neutral" },
           },
-        ].map((card) => {
+        ].map((card, cardIndex) => {
           // Màu badge bám ngữ nghĩa: tăng=đạt, giảm=cảnh báo, nhãn=trung tính.
           const badgeClass =
             card.badge.tone === "positive"
@@ -495,10 +497,19 @@ export function MarketDashboard({
               : card.badge.tone === "negative"
                 ? "bg-red-50 text-red-700"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400";
+          const params = new URLSearchParams();
+          params.set("listed_within_days", timePeriod.replace("days", ""));
+          if (region) params.set("location", region);
+          if (jobType || cardIndex === 2) {
+            params.set("work_type", cardIndex === 2 ? "Internship" : jobType || "");
+          }
+
           return (
-            <div
+            <Link
               key={card.label}
-              className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5"
+              href={`/jobs?${params.toString()}`}
+              aria-label={`Xem danh sách ${card.label.toLowerCase()}`}
+              className="group bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5 transition-all hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <div className="flex items-start justify-between mb-4">
                 {/* Icon-chip thống nhất 1 tông thương hiệu — màu không mã hoá
@@ -518,12 +529,15 @@ export function MarketDashboard({
                   {card.badge.text}
                 </span>
               </div>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white mb-0.5">
-                {card.value}
-              </p>
+              <div className="mb-0.5 flex items-center gap-1.5">
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                  {card.value}
+                </p>
+                <ChevronRight className="h-4 w-4 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-500" />
+              </div>
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{card.label}</p>
               <p className="text-[11px] text-slate-400 mt-0.5">{card.sub}</p>
-            </div>
+            </Link>
           );
         })}
       </div>

@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Target,
@@ -20,6 +21,14 @@ import {
   AlertCircle,
   Award,
   Flame,
+  BookmarkCheck,
+  Heart,
+  Clock,
+  DollarSign,
+  ExternalLink,
+  Star,
+  Calendar,
+  Plus,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -39,6 +48,9 @@ import { toTitleCase } from "@/utils/text";
 import CookieHelper from "@/utils/cookie-helper";
 import PersonalDashboardApi from "@/api/personal-dashboard";
 import ProfileApi from "@/api/profile";
+import RecommendationApi from "@/api/recommendation";
+import JobApi from "@/api/job";
+import SkillGapApi from "@/api/skill-gap";
 import {
   DashboardBannerDto,
   DashboardStatisticsDto,
@@ -52,6 +64,85 @@ import MatchingApi from "@/api/matching";
 import { MatchCategoryResponse } from "@/types/matching";
 import LearningRoadmapApi from "@/api/learning-roadmap";
 import { CourseItemDto } from "@/types/learning-roadmap";
+import {
+  CareerPathRecommendation,
+  PrioritySkill,
+  RecommendedJob as RecommendedJobRec,
+  SavedReportItem,
+} from "@/types/recommendation";
+import { JobDetailResponse } from "@/types/job-insight";
+import { SkillGapLearningRecommendationDto } from "@/types/skill-gap";
+import { formatSalaryRange } from "@/utils/salary";
+import { EmptyState } from "./EmptyState";
+
+// ── Helpers cho tab Đề xuất ────────────────────────────────────────
+const VIEWED_JOB_IDS_STORAGE_KEY = "viewed_job_ids";
+
+const urgencyConfig: Record<
+  string,
+  { label: string; bg: string; text: string }
+> = {
+  critical: { label: "Rất quan trọng", bg: "bg-red-100", text: "text-red-700" },
+  high: { label: "Ưu tiên cao", bg: "bg-orange-100", text: "text-orange-700" },
+  medium: { label: "Trung bình", bg: "bg-amber-100", text: "text-amber-700" },
+  low: { label: "Theo dõi", bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-600 dark:text-slate-300" },
+};
+
+type PipelineJobItem = {
+  job: {
+    job_id: string;
+    title: string;
+    company: { name: string };
+    location: string | null;
+    work_type: string | null;
+    salary: { min_salary: string; max_salary: string };
+  };
+  overall_score: number | null;
+};
+
+const parseMatchRate = (matchRate?: string | null) => {
+  const parsedRate = Number.parseInt(String(matchRate || ""), 10);
+  return Number.isFinite(parsedRate) ? parsedRate : null;
+};
+
+const readViewedJobIds = () => {
+  if (typeof window === "undefined") return [];
+  try {
+    const rawValue = window.localStorage.getItem(VIEWED_JOB_IDS_STORAGE_KEY);
+    const parsedValue = rawValue ? JSON.parse(rawValue) : [];
+    if (!Array.isArray(parsedValue)) return [];
+    return parsedValue.map(String).filter(Boolean);
+  } catch {
+    return [];
+  }
+};
+
+const formatCoursePrice = (price: number | null | undefined) => {
+  if (!price || price <= 0) return "Miễn phí/không rõ";
+  return `${price.toLocaleString("vi-VN")} đ`;
+};
+
+const recColorMap: Record<
+  string,
+  { border: string; bg: string; text: string; icon: string }
+> = {
+  rose: {
+    border: "border-rose-200 dark:border-rose-900/60",
+    bg: "bg-rose-50 dark:bg-rose-950/20",
+    text: "text-rose-700 dark:text-rose-300",
+    icon: "bg-rose-200 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300",
+  },
+};
+
+const kanbanStages = [
+  {
+    key: "bookmarked" as const,
+    label: "Quan tâm",
+    Icon: Heart,
+    color: "rose",
+    desc: "Đã lưu để xem lại",
+  },
+];
 
 const normalizePercent = (value: number | string | null | undefined) => {
   const numericValue = Number(value);
@@ -158,9 +249,11 @@ function RadarCategoryDropdown({
 
 // ── Component ────────────────────────────────────────────────────
 export function PersonalDashboard() {
-  const [activeTab, setActiveTab] = useState<"jobs" | "skills" | "progress">(
+  const [activeTab, setActiveTab] = useState<"jobs" | "skills" | "progress" | "recommendations">(
     "jobs",
   );
+  const router = useRouter();
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [categories, setCategories] = useState<MatchCategoryResponse[]>([]);
   const [isCategoryLoading, setIsCategoryLoading] = useState<boolean>(false);
   const [skillCategory, setSkillCategory] = useState<string>("");
@@ -181,6 +274,15 @@ export function PersonalDashboard() {
   const [roadmapCourses, setRoadmapCourses] = useState<CourseItemDto[]>([]);
   const [isLoadingRoadmap, setIsLoadingRoadmap] = useState(false);
   const [matchHistory, setMatchHistory] = useState<any[]>([]);
+
+  // States dành riêng cho tab Đề xuất
+  const [recJobs, setRecJobs] = useState<RecommendedJobRec[]>([]);
+  const [recReports, setRecReports] = useState<SavedReportItem[]>([]);
+  const [prioritySkills, setPrioritySkills] = useState<PrioritySkill[]>([]);
+  const [careerPaths, setCareerPaths] = useState<CareerPathRecommendation[]>([]);
+  const [learningRecs, setLearningRecs] = useState<SkillGapLearningRecommendationDto[]>([]);
+  const [savedJobsFromProfile, setSavedJobsFromProfile] = useState<any[]>([]);
+  const [viewedJobDetails, setViewedJobDetails] = useState<JobDetailResponse[]>([]);
 
   // Kích hoạt gọi API khi vào trang lần đầu
 
@@ -382,6 +484,145 @@ export function PersonalDashboard() {
     };
   }, [urgentGapSkills]);
 
+  // Fetch d\u1eef li\u1ec7u c\u1ee7a tab \u0110\u1ec1 xu\u1ea5t (lazy: ch\u1ec9 g\u1ecdi API khi user click v\u00e0o tab)
+  useEffect(() => {
+    if (activeTab !== "recommendations") return;
+    const fetchRecData = async () => {
+      try {
+        const [
+          jobsRes,
+          reportsRes,
+          prioritySkillsRes,
+          careerPathsRes,
+          learningPathsRes,
+          savedJobsRes,
+        ] = await Promise.all([
+          PersonalDashboardApi.getRecommendedJobs(),
+          RecommendationApi.getSavedReports(),
+          RecommendationApi.getPrioritySkills(4),
+          RecommendationApi.getCareerPaths(3),
+          SkillGapApi.getLearningPaths(4),
+          ProfileApi.getSavedJobs(),
+        ]);
+        if (jobsRes?.data) setRecJobs(jobsRes.data as RecommendedJobRec[]);
+        if (reportsRes?.data) setRecReports(reportsRes.data);
+        if (prioritySkillsRes?.data) setPrioritySkills(prioritySkillsRes.data);
+        if (careerPathsRes?.data) setCareerPaths(careerPathsRes.data);
+        if (learningPathsRes?.data) setLearningRecs(learningPathsRes.data);
+        if (savedJobsRes?.data) setSavedJobsFromProfile(savedJobsRes.data);
+      } catch (err) {
+        console.error("Failed to fetch \u0110\u1ec1 xu\u1ea5t tab data:", err);
+      }
+    };
+    fetchRecData();
+  }, [activeTab]);
+
+  // Viewed jobs t\u1eeb localStorage (gi\u1ed1ng Recommendations.tsx)
+  const loadViewedJobsFromStorage = useCallback(async () => {
+    const viewedJobIds = readViewedJobIds();
+    if (viewedJobIds.length === 0) { setViewedJobDetails([]); return; }
+    const results = await Promise.allSettled(
+      viewedJobIds.map((jobId) => JobApi.findOne(jobId)),
+    );
+    const details = results
+      .map((r) => {
+        if (r.status !== "fulfilled") return null;
+        const raw = r.value?.data as any;
+        return (raw?.data || raw || null) as JobDetailResponse | null;
+      })
+      .filter((item): item is JobDetailResponse => !!item?.job?.job_id);
+    setViewedJobDetails(details);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== "recommendations") return;
+    loadViewedJobsFromStorage();
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.key || e.key === VIEWED_JOB_IDS_STORAGE_KEY) loadViewedJobsFromStorage();
+    };
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", loadViewedJobsFromStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", loadViewedJobsFromStorage);
+    };
+  }, [activeTab, loadViewedJobsFromStorage]);
+
+  // savedReports memo
+  const savedReports = useMemo(() => {
+    return recReports.map((report, idx) => ({
+      id: idx + 1,
+      type: report.match_type === "cv_job" ? "cv-match" : "gap",
+      title: report.report_name,
+      subtitle: report.match_type === "cv_job" ? "Ph\u00e2n t\u00edch theo c\u00f4ng vi\u1ec7c" : "So kh\u1edbp theo nh\u00f3m ngh\u1ec1",
+      score: report.match_score,
+      date: report.created_at
+        ? new Date(report.created_at).toLocaleDateString("vi-VN")
+        : "Ch\u01b0a r\u00f5 ng\u00e0y",
+      tags: ["D\u1eef li\u1ec7u t\u1eeb h\u1ec7 th\u1ed1ng"],
+      status: report.match_score >= 80 ? "strong" : "moderate",
+      onViewReport: async () => {
+        try {
+          setIsRedirecting(true);
+          if (report.cv_id) await ProfileApi.setDefaultCv(report.cv_id);
+          await ProfileApi.setDefaultMatching(report.match_id);
+          router.push("/skill-gap");
+        } catch {
+          setIsRedirecting(false);
+        }
+      },
+    }));
+  }, [recReports, router]);
+
+  // kanbanColumns memo
+  const kanbanColumns = useMemo(() => {
+    const profileSavedJobIds = new Set(
+      savedJobsFromProfile.map((item) => String(item.job?.job_id)),
+    );
+    const apiJobById = new Map(recJobs.map((j) => [String(j.job_id), j]));
+    const viewedJobsFromStorage: PipelineJobItem[] = viewedJobDetails.map((detail) => {
+      const jobId = String(detail.job.job_id);
+      const suggestedJob = apiJobById.get(jobId);
+      return {
+        job: {
+          job_id: jobId,
+          title: detail.job.title,
+          company: { name: (detail as any).company?.name || "N/A" },
+          location: detail.job.location,
+          work_type: detail.job.work_type,
+          salary: {
+            min_salary: suggestedJob?.salary_text || formatSalaryRange((detail as any).salary),
+            max_salary: "",
+          },
+        },
+        overall_score: suggestedJob ? parseMatchRate(suggestedJob.match_rate) : null,
+      };
+    });
+    const bookmarkedItems: PipelineJobItem[] = savedJobsFromProfile
+      .filter((item) => item.job)
+      .map((item) => {
+        const jobId = String(item.job!.job_id);
+        const suggestedJob = apiJobById.get(jobId);
+        return {
+          job: {
+            job_id: jobId,
+            title: item.job!.title,
+            company: { name: item.job!.company?.name || "N/A" },
+            location: item.job!.location || null,
+            work_type: null,
+            salary: { min_salary: suggestedJob?.salary_text || item.job!.salary || "", max_salary: "" },
+          },
+          overall_score: suggestedJob ? parseMatchRate(suggestedJob.match_rate) : null,
+        };
+      });
+    return {
+      viewing: viewedJobsFromStorage.filter((m) => !profileSavedJobIds.has(String(m.job.job_id))),
+      bookmarked: bookmarkedItems,
+      learning: [],
+      applied: [],
+    };
+  }, [savedJobsFromProfile, recJobs, viewedJobDetails]);
+
   // Ánh xạ dữ liệu động từ API phục vụ các logic hiển thị hoặc cảnh báo
   const strength = statistics?.profile_completion_percentage ?? 0;
   const hasCV = !!(profile?.all_cvs && profile.all_cvs.length > 0);
@@ -473,12 +714,19 @@ export function PersonalDashboard() {
     {
       href: "/jobs",
       icon: Briefcase,
-      title: `${totalSuitableCount} jobs phù hợp với bạn`,
+      title:
+        totalSuitableCount > 0
+          ? `${totalSuitableCount} jobs phù hợp với bạn`
+          : "Tìm job phù hợp với CV",
       desc:
-        avgMatchScore > 0
-          ? `${avgMatchScore}% match với CV mặc định`
-          : "Dựa trên CV mặc định",
-      badge: "Mới",
+        totalSuitableCount > 0
+          ? avgMatchScore > 0
+            ? `${avgMatchScore}% match với CV mặc định`
+            : "Dựa trên CV mặc định"
+          : hasMatched
+            ? "Chưa có job ≥ 70% — thử cập nhật CV hoặc nhóm nghề"
+            : "Chạy đối soát CV để tìm job phù hợp",
+      badge: totalSuitableCount > 0 ? "Mới" : "Gợi ý",
     },
   ];
 
@@ -570,13 +818,32 @@ export function PersonalDashboard() {
             <p className="text-blue-100 text-sm max-w-lg">
               {hasCV ? (
                 <>
-                  Hồ sơ của bạn khớp với{" "}
-                  <span className="text-white font-bold">
-                    {totalSuitableCount} jobs
-                  </span>{" "}
-                  (match ≥ 70%). Điểm match CV mặc định:{" "}
-                  <span className="text-white font-bold">{avgMatchScore}%</span>
-                  .
+                  {totalSuitableCount > 0 ? (
+                    <>
+                      Hồ sơ của bạn khớp với{" "}
+                      <span className="text-white font-bold">
+                        {totalSuitableCount} jobs
+                      </span>{" "}
+                      (match ≥ 70%). Điểm match CV mặc định:{" "}
+                      <span className="text-white font-bold">{avgMatchScore}%</span>
+                      .
+                    </>
+                  ) : hasMatched ? (
+                    <>
+                      CV đã được phân tích (match{" "}
+                      <span className="text-white font-bold">{avgMatchScore}%</span>
+                      ), nhưng chưa có job nào đạt ngưỡng 70% — thử cập nhật CV
+                      hoặc chọn nhóm nghề khác.
+                    </>
+                  ) : (
+                    <>
+                      Tải CV để hệ thống phân tích và gợi ý{" "}
+                      <span className="text-white font-bold">
+                        job phù hợp chính xác
+                      </span>{" "}
+                      với hồ sơ của bạn.
+                    </>
+                  )}
                 </>
               ) : (
                 <>
@@ -607,13 +874,23 @@ export function PersonalDashboard() {
                 Phân tích lại CV
               </Link>
             )}
-            <Link
-              href="/jobs"
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-500/40 text-white border border-blue-400 rounded-xl text-sm font-semibold hover:bg-blue-500/60 transition-colors"
-            >
-              <Briefcase className="w-4 h-4" />
-              Xem jobs ({personalMatchedCount})
-            </Link>
+            {personalMatchedCount > 0 ? (
+              <Link
+                href="/jobs"
+                className="flex items-center gap-2 px-5 py-2.5 bg-blue-500/40 text-white border border-blue-400 rounded-xl text-sm font-semibold hover:bg-blue-500/60 transition-colors"
+              >
+                <Briefcase className="w-4 h-4" />
+                Xem jobs ({personalMatchedCount})
+              </Link>
+            ) : (
+              <span
+                title={hasMatched ? "Chưa có job nào đạt ≥ 70% — thử cập nhật CV hoặc chạy lại matching" : "Chạy phân tích CV để tìm job phù hợp"}
+                className="flex items-center gap-2 px-5 py-2.5 bg-blue-500/20 text-blue-200/60 border border-blue-400/30 rounded-xl text-sm font-semibold cursor-not-allowed select-none"
+              >
+                <Briefcase className="w-4 h-4" />
+                Xem jobs (0)
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -740,8 +1017,13 @@ export function PersonalDashboard() {
             icon: Briefcase,
             label: "Jobs Phù Hợp",
             value: totalSuitableCount.toString(),
-            sub: "Match ≥ 70%",
-            tone: "success", // tốt
+            sub:
+              totalSuitableCount > 0
+                ? "Match ≥ 70%"
+                : hasMatched
+                  ? "Chưa khớp — thử cập nhật CV"
+                  : "Cần chạy matching trước",
+            tone: totalSuitableCount > 0 ? "success" : "warning",
           },
           {
             icon: AlertCircle,
@@ -822,16 +1104,18 @@ export function PersonalDashboard() {
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
         {/* Tab headers */}
         <div className="flex border-b border-slate-100 dark:border-slate-800">
-          {(["jobs", "skills", "progress"] as const).map((tab) => {
+          {(["jobs", "skills", "progress", "recommendations"] as const).map((tab) => {
             const labels = {
-              jobs: "Jobs Gợi Ý",
-              skills: "Kỹ Năng Của Bạn",
-              progress: "Tiến Độ",
+              jobs: "Jobs G\u1ee3i \u00dd",
+              skills: "K\u1ef9 N\u0103ng C\u1ee7a B\u1ea1n",
+              progress: "Ti\u1ebfn \u0110\u1ed9",
+              recommendations: "\u0110\u1ec1 Xu\u1ea5t",
             };
             const icons = {
               jobs: Briefcase,
               skills: BarChart3,
               progress: TrendingUp,
+              recommendations: BookmarkCheck,
             };
             const Icon = icons[tab];
             return (
@@ -847,8 +1131,14 @@ export function PersonalDashboard() {
                 <Icon className="w-4 h-4" />
                 {labels[tab]}
                 {tab === "jobs" && (
-                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold">
-                    {personalMatchedCount}
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      personalMatchedCount > 0
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-slate-100 text-slate-400"
+                    }`}
+                  >
+                    {personalMatchedCount > 0 ? personalMatchedCount : "\u2013"}
                   </span>
                 )}
               </button>
@@ -1381,6 +1671,301 @@ export function PersonalDashboard() {
                 )}
               </div>
             </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab: \u0110\u1ec1 xu\u1ea5t */}
+        {activeTab === "recommendations" && (
+          <div className="p-5 space-y-5">
+            {/* Job Pipeline / Kanban */}
+            <div className="bg-slate-50/60 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Lu\u1ed3ng c\u00f4ng vi\u1ec7c c\u1ee7a b\u1ea1n</h3>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">C\u00e1c c\u00f4ng vi\u1ec7c b\u1ea1n \u0111\u00e3 l\u01b0u \u0111\u1ec3 xem l\u1ea1i.</p>
+                </div>
+                <Link href="/jobs" className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
+                  Th\u00eam job <Plus className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {kanbanStages.map((stage) => {
+                  const items = kanbanColumns[stage.key];
+                  const c = recColorMap[stage.color];
+                  return (
+                    <div key={stage.key} className={`rounded-xl border ${c.border} ${c.bg} p-3 min-h-[160px] flex flex-col`}>
+                      <div className="mb-3 flex items-center gap-2">
+                        <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${c.icon}`}>
+                          <stage.Icon className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-xs font-bold ${c.text}`}>{stage.label}</p>
+                          <p className="text-xs text-slate-500 truncate dark:text-slate-400">{stage.desc}</p>
+                        </div>
+                        <span className="rounded-full bg-white dark:bg-slate-900 px-2 py-0.5 text-xs font-bold text-slate-600 dark:text-slate-300">
+                          {items.length}
+                        </span>
+                      </div>
+                      <div className="space-y-2 flex-1">
+                        {items.length === 0 ? (
+                          <p className="rounded-lg border border-dashed border-slate-300 bg-white/60 p-3 text-center text-xs text-slate-400 dark:border-slate-700 dark:bg-slate-900/60">
+                            Tr\u1ed1ng \u2014 b\u1ea5m + Th\u00eam job
+                          </p>
+                        ) : (
+                          items.map((m: PipelineJobItem) => {
+                            const score = m.overall_score;
+                            return (
+                              <div key={m.job.job_id} className="rounded-lg bg-white border border-slate-200 p-2.5 shadow-sm dark:bg-slate-900 dark:border-slate-700">
+                                <Link href={`/jobs/${m.job.job_id}`} className="block text-xs font-semibold text-slate-900 dark:text-white hover:text-blue-700 line-clamp-2">
+                                  {toTitleCase(m.job.title)}
+                                </Link>
+                                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 truncate">{m.job.company.name}</p>
+                                <div className="mt-2 flex items-center justify-between">
+                                  <span className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${score === null ? "bg-slate-100 text-slate-600" : score >= 80 ? "bg-emerald-100 text-emerald-700" : score >= 70 ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
+                                    {score === null ? "\u0110\u00e3 xem" : `${score}%`}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Priority Skills */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-orange-500" />
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">K\u1ef9 N\u0103ng \u01afu Ti\u00ean C\u1ea7n Ph\u00e1t Tri\u1ec3n</h3>
+                </div>
+                <Link href="/skill-gap" className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                  Ph\u00e2n t\u00edch chi ti\u1ebft <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm divide-y divide-slate-50 dark:divide-slate-800">
+                {prioritySkills.length === 0 ? (
+                  <EmptyState icon={TrendingUp} title="Ch\u01b0a c\u00f3 k\u1ef9 n\u0103ng \u01b0u ti\u00ean" description="Ch\u1ea1y \u0111\u1ed1i so\u00e1t CV \u0111\u1ec3 h\u1ec7 th\u1ed1ng x\u00e1c \u0111\u1ecbnh k\u1ef9 n\u0103ng c\u00f2n thi\u1ebfu." ctaLabel="\u0110\u1ed1i so\u00e1t CV" ctaHref="/cv-matching" compact />
+                ) : (
+                  prioritySkills.map((skill) => {
+                    const uc = urgencyConfig[skill.priority] || urgencyConfig.low;
+                    return (
+                      <div key={skill.skill_id} className="px-5 py-4">
+                        <div className="flex items-start justify-between gap-4 mb-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <h4 className="font-bold text-slate-900 dark:text-white text-sm">{toTitleCase(skill.skill_name)}</h4>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${uc.bg} ${uc.text}`}>{uc.label}</span>
+                              <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold">
+                                {skill.status === "Missing" ? "\u0110ang thi\u1ebfu" : "Kh\u1edbp m\u1ed9t ph\u1ea7n"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{skill.reason}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-xs font-bold text-emerald-600">{skill.impact}</p>
+                            <p className="text-[11px] text-slate-400">{skill.job_count.toLocaleString("vi-VN")} c\u00f4ng vi\u1ec7c y\u00eau c\u1ea7u</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                            <Clock className="w-3 h-3" /> {skill.timeframe}
+                          </span>
+                          <Link href="/skill-gap" className="px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-700 transition-colors">
+                            Xem g\u1ee3i \u00fd
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Career Paths */}
+            <div>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-violet-600" />
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">L\u1ed9 tr\u00ecnh ngh\u1ec1 nghi\u1ec7p \u0111\u1ec1 xu\u1ea5t</h3>
+                </div>
+                <Link href="/cv-matching" className="hidden text-xs font-semibold text-violet-600 hover:text-violet-700 sm:inline-flex">
+                  C\u1eadp nh\u1eadt ph\u00e2n t\u00edch
+                </Link>
+              </div>
+              {careerPaths.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 text-center">
+                  <Award className="mx-auto mb-2 h-8 w-8 text-slate-300 dark:text-slate-700" />
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">Ch\u01b0a c\u00f3 l\u1ed9 tr\u00ecnh ngh\u1ec1 nghi\u1ec7p \u0111\u1ec1 xu\u1ea5t</p>
+                  <p className="mx-auto mt-1 max-w-xl text-xs text-slate-500 dark:text-slate-400">H\u00e3y ch\u1ecdn CV m\u1eb7c \u0111\u1ecbnh v\u00e0 ch\u1ea1y so kh\u1edbp \u0111\u1ec3 h\u1ec7 th\u1ed1ng l\u1ea5y nh\u00f3m ngh\u1ec1, k\u1ef9 n\u0103ng c\u00f2n thi\u1ebfu v\u00e0 d\u1eef li\u1ec7u th\u1ecb tr\u01b0\u1eddng.</p>
+                  <Link href="/cv-matching" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-xs font-bold text-white hover:bg-violet-700">
+                    Ph\u00e2n t\u00edch CV <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                  {careerPaths.map((path) => (
+                    <div key={path.id} className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-300">{path.readiness_label}</p>
+                          <h4 className="mt-1 line-clamp-2 text-sm font-bold text-slate-900 dark:text-white">{path.title}</h4>
+                        </div>
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-600 dark:bg-violet-950/40 dark:text-violet-300">
+                          <Award className="h-4 w-4" />
+                        </div>
+                      </div>
+                      <div className="mb-3">
+                        <div className="mb-1.5 flex items-center justify-between text-xs">
+                          <span className="text-slate-500 dark:text-slate-400">M\u1ee9c \u0111\u1ed9 s\u1eb5n s\u00e0ng</span>
+                          <span className="font-bold text-slate-900 dark:text-white">{path.current_match}% \u2192 {path.target_match}%</span>
+                        </div>
+                        <div className="relative h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                          <div className="absolute h-full rounded-full bg-violet-500 transition-all" style={{ width: `${Math.min(path.current_match, 100)}%` }} />
+                          <div className="absolute bottom-0 top-0 w-0.5 rounded-full bg-violet-900 dark:bg-violet-200" style={{ left: `${Math.min(path.target_match, 100)}%` }} />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 border-t border-slate-100 pt-3 dark:border-slate-800 text-xs">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400"><Clock className="h-3 w-3" /> Th\u1eddi gian chu\u1ea9n b\u1ecb</span>
+                          <span className="font-semibold text-slate-900 dark:text-white">{path.time_to_ready}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400"><DollarSign className="h-3 w-3" /> Kho\u1ea3ng l\u01b0\u01a1ng</span>
+                          <span className="text-right font-bold text-emerald-600">{path.salary_range}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400"><Briefcase className="h-3 w-3" /> C\u01a1 h\u1ed9i \u0111ang m\u1edf</span>
+                          <span className="font-semibold text-blue-700 dark:text-blue-300">{path.openings_count.toLocaleString("vi-VN")} c\u00f4ng vi\u1ec7c</span>
+                        </div>
+                      </div>
+                      <Link href={path.href} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900">
+                        Xem g\u1ee3i \u00fd h\u00e0nh \u0111\u1ed9ng <ChevronRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Saved Reports */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-slate-900 dark:text-white text-sm">B\u00e1o c\u00e1o \u0111\u00e3 l\u01b0u</h3>
+                <span className="text-xs text-slate-500 dark:text-slate-400">{savedReports.length} b\u00e1o c\u00e1o</span>
+              </div>
+              {savedReports.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 text-center">
+                  <FileText className="mx-auto mb-3 h-8 w-8 text-slate-300" />
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">Ch\u01b0a c\u00f3 b\u00e1o c\u00e1o \u0111\u1ec1 xu\u1ea5t</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">Ch\u1ea1y ph\u00e2n t\u00edch CV \u0111\u1ec3 h\u1ec7 th\u1ed1ng l\u01b0u l\u1ecbch s\u1eed \u0111\u1ec1 xu\u1ea5t.</p>
+                  <Link href="/cv-matching" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">
+                    Ph\u00e2n t\u00edch CV <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {savedReports.map((report) => (
+                    <div key={report.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${report.type === "cv-match" ? "bg-blue-100" : "bg-violet-100"}`}>
+                            {report.type === "cv-match" ? <FileText className="w-4 h-4 text-blue-600" /> : <BarChart3 className="w-4 h-4 text-violet-600" />}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-0.5">{report.title}</h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{report.subtitle}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${report.score >= 90 ? "bg-emerald-100 text-emerald-700" : report.score >= 75 ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
+                            {report.score}% ph\u00f9 h\u1ee3p
+                          </span>
+                          <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                            <Calendar className="w-3 h-3" /> {report.date}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-slate-50 dark:border-slate-800">
+                        <button onClick={() => report.onViewReport()} disabled={isRedirecting} className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors disabled:opacity-50">
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          {isRedirecting ? "\u0110ang m\u1edf..." : "Xem b\u00e1o c\u00e1o"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Learning Resources */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-slate-900 dark:text-white text-sm">T\u00e0i nguy\u00ean h\u1ecdc t\u1eadp</h3>
+                <Link href="/roadmap" className="flex shrink-0 items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
+                  T\u1edbi Roadmap <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {learningRecs.length === 0 ? (
+                  <div className="col-span-full">
+                    <EmptyState icon={BookOpen} title="Ch\u01b0a c\u00f3 t\u00e0i nguy\u00ean h\u1ecdc t\u1eadp \u0111\u1ec1 xu\u1ea5t" description="Ch\u1ea1y ph\u00e2n t\u00edch k\u1ef9 n\u0103ng \u0111\u1ec3 h\u1ec7 th\u1ed1ng \u0111\u1ec1 xu\u1ea5t kh\u00f3a h\u1ecdc ph\u00f9 h\u1ee3p." ctaLabel="Ph\u00e2n t\u00edch k\u1ef9 n\u0103ng" ctaHref="/skill-gap" compact />
+                  </div>
+                ) : (
+                  learningRecs.map((rec) => {
+                    const primaryCourse = rec.courses[0];
+                    const primaryPath = rec.paths[0];
+                    const resourceTitle = primaryCourse?.title || primaryPath?.title || `B\u1ed5 sung ${toTitleCase(rec.skill_name)}`;
+                    const resourceProvider = primaryCourse?.provider || (primaryPath ? "L\u1ed9 tr\u00ecnh h\u1ecdc" : "Nova");
+                    const resourceDuration = primaryCourse?.duration || primaryPath?.duration || rec.estimated_time;
+                    const resourceRating = primaryCourse?.rating || 0;
+                    const resourceUrl = primaryCourse?.source_url || `/roadmap?skill=${encodeURIComponent(rec.skill_name)}`;
+                    const isExternal = resourceUrl.startsWith("http");
+                    return (
+                      <div key={rec.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${rec.status === "Missing" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                                {rec.status === "Missing" ? "\u0110ang thi\u1ebfu" : "Kh\u1edbp m\u1ed9t ph\u1ea7n"}
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-bold">{toTitleCase(rec.skill_name)}</span>
+                            </div>
+                            <h4 className="font-bold text-slate-900 dark:text-white text-sm">{resourceTitle}</h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{resourceProvider}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="font-bold text-slate-900 dark:text-white text-sm">
+                              {primaryCourse ? formatCoursePrice(primaryCourse.price) : "L\u1ed9 tr\u00ecnh"}
+                            </p>
+                            {resourceRating > 0 && (
+                              <div className="flex items-center gap-0.5 text-amber-400 justify-end mt-0.5">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <Star key={i} className={`w-3 h-3 ${i < Math.floor(resourceRating) ? "fill-amber-400" : "fill-slate-200 text-slate-200"}`} />
+                                ))}
+                                <span className="text-[10px] text-slate-500 dark:text-slate-400 ml-0.5">{resourceRating}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                            <Clock className="w-3 h-3" /> {resourceDuration}
+                          </div>
+                          <a href={resourceUrl} target={isExternal ? "_blank" : undefined} rel={isExternal ? "noreferrer" : undefined} className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors">
+                            Xem <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
         )}

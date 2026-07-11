@@ -85,10 +85,13 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
       .catch(() => setGapSkills([]));
   }, []);
 
+  // Tham số truy vấn kết hợp: ưu tiên từ khóa tìm kiếm (search box), nếu rỗng thì dùng kỹ năng (chip)
+  const apiSkillParam = debouncedSearchQuery || activeSkill || undefined;
+
   useEffect(() => {
     setPathsLoading(true);
     LearningRoadmapApi.getRoadmap({
-      skill: activeSkill || undefined,
+      skill: apiSkillParam,
       limit: 50,
     })
       .then((res) => {
@@ -102,14 +105,14 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
         setLearningPaths([]);
         setPathsLoading(false);
       });
-  }, [activeSkill]);
+  }, [apiSkillParam]);
 
   useEffect(() => {
     setRecommendationsLoading(true);
     // KHÔNG gửi level: khóa học không có dữ liệu cấp độ thật (backend hardcode
     // 'Intermediate') → lọc theo level sẽ ra rỗng. Chỉ lọc theo kỹ năng.
     LearningRoadmapApi.getRecommendedCourses({
-      skill: activeSkill || undefined,
+      skill: apiSkillParam,
       limit: 6,
     })
       .then((res) => {
@@ -121,7 +124,7 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
         setRecommendedCourses([]);
       })
       .finally(() => setRecommendationsLoading(false));
-  }, [activeSkill]);
+  }, [apiSkillParam]);
 
   const filteredPaths = useMemo(() => {
     const q = debouncedSearchQuery.toLowerCase();

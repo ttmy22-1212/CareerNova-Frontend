@@ -28,6 +28,7 @@ type AuthUser = {
   prefer_remote: boolean;
   onboarding_completed: boolean;
   current_step: number;
+  default_cv_id?: string | null;
 };
 
 type UpdateProfilePatch = {
@@ -96,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       school: userData.school || "",
       onboarding_completed: !!userData.onboarding_completed,
       current_step: userData.current_step ?? 1,
+      default_cv_id: rawData.default_cv?.cv_id || null,
     };
   }, []);
 
@@ -219,6 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             school: "",
             onboarding_completed: false,
             current_step: 1,
+            default_cv_id: null,
           });
         }
       } else {

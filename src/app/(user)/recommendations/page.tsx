@@ -1,19 +1,9 @@
-"use client";
-import { Recommendations } from "@/components/career-lens/Recommendations";
-import AllowMatchingModal from "@/components/cv-matching/AllowMatchingModal";
-import { useMatchingPermission } from "@/hooks/useMatchingPermission";
+import { redirect } from "next/navigation";
 
+/**
+ * Trang Đề xuất đã được gộp vào Tổng quan (/my-dashboard).
+ * Redirect vĩnh viễn để URL cũ không bị trống.
+ */
 export default function Page() {
-  const { showModal, activate, dismissModal } = useMatchingPermission();
-
-  return (
-    <>
-      <Recommendations />
-      <AllowMatchingModal
-        open={showModal}
-        onClose={dismissModal}
-        onActivated={activate}
-      />
-    </>
-  );
+  redirect("/my-dashboard");
 }

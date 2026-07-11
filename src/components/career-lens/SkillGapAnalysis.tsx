@@ -335,7 +335,7 @@ export function SkillGapAnalysis() {
 
   const formatCategoryGapScore = (value: number) => {
     const roundedValue = Number(value.toFixed(1));
-    return `${roundedValue > 0 ? "+" : ""}${roundedValue}pt`;
+    return `${roundedValue > 0 ? "+" : ""}${roundedValue}%`;
   };
 
   const clampPercent = (value: number) => Math.min(Math.max(value, 0), 100);

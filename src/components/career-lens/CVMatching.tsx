@@ -13,7 +13,6 @@ import {
   BarChart3,
   ArrowRight,
   Info,
-  RefreshCcw,
   Loader2,
   Star,
   History,
@@ -202,27 +201,46 @@ const normalizePercent = (value: number | string | null | undefined) => {
 // nhờ vậy danh sách bên trái luôn đồng bộ với radar bên phải.
 // "missing" vẫn kèm `match` (độ tương đồng cao nhất, thường thấp) để hiển thị
 // minh bạch thay vì coi như hoàn toàn không có.
-const buildAnalysis = (radarSource: any[], gapReport: any) => ({
-  strongMatches: (radarSource || [])
+// Giữ lại weight gốc từ backend để sort & tính đóng góp điểm.
+// Toàn bộ 3 nhóm đều được sắp xếp theo weight giảm dần.
+const buildAnalysis = (radarSource: any[], gapReport: any) => {
+  const strong = (radarSource || [])
     .filter((s: any) => normalizePercent(s.similarity) >= 70)
     .map((s: any) => ({
       skill: s.skill_name,
       required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
       match: normalizePercent(s.similarity),
-    })),
-  partialMatches: (gapReport?.partially_matched_skills || []).map((s: any) => ({
+      weight: Number(s.weight) || 0,
+    }))
+    .sort((a: any, b: any) => b.weight - a.weight);
+
+  const partial = (gapReport?.partially_matched_skills || []).map((s: any) => ({
     skill: s.skill_name,
     required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
     match: normalizePercent(s.similarity),
     matchedVia: s.matched_via || null,
-  })),
-  missingSkills: (gapReport?.missing_skills || []).map((s: any) => ({
+    weight: Number(s.weight) || 0,
+  })).sort((a: any, b: any) => b.weight - a.weight);
+
+  const missing = (gapReport?.missing_skills || []).map((s: any) => ({
     skill: s.skill_name,
     required: s.weight >= 0.2 ? "Bắt buộc" : "Ưa thích",
     priority: s.weight >= 0.2 ? "Tối thiểu" : "Tốt để có",
     match: normalizePercent(s.similarity),
-  })),
-});
+    weight: Number(s.weight) || 0,
+  })).sort((a: any, b: any) => b.weight - a.weight);
+
+  return { strongMatches: strong, partialMatches: partial, missingSkills: missing };
+};
+
+// Tính tổng trọng số của toàn bộ kỹ năng (strong + partial + missing)
+// để quy đổi ra % đóng góp của mỗi kỹ năng vào điểm matching tổng.
+const computeContribution = (items: any[], totalWeight: number) =>
+  items.map((it) => ({
+    ...it,
+    contribution:
+      totalWeight > 0 ? Math.round((it.weight / totalWeight) * 100) : 0,
+  }));
 
 function ScoreRing({ score, size = 96 }: { score: number; size?: number }) {
   const r = (size - 12) / 2;
@@ -265,7 +283,7 @@ function ScoreRing({ score, size = 96 }: { score: number; size?: number }) {
 
 export function CVMatching() {
   const [mode, setMode] = useState<InputMode>("role");
-  const [selectedRole, setSelectedRole] = useState("Senior React Developer");
+  const [selectedRole, setSelectedRole] = useState("");
   const [benchmarkRoles, setBenchmarkRoles] = useState<string[]>([
     "Frontend Developer",
     "Full Stack Developer",
@@ -327,6 +345,7 @@ export function CVMatching() {
   const [rightFile, setRightFile] = useState<File | null>(null);
   const [isUploadingRight, setIsUploadingRight] = useState(false);
   const [rightUploadError, setRightUploadError] = useState("");
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const rightFileInputRef = useRef<HTMLInputElement>(null);
 
   const [showResultModal, setShowResultModal] = useState(false);
@@ -669,6 +688,7 @@ export function CVMatching() {
       typeof roleOverride === "string" ? roleOverride : undefined;
     // Luồng kiểm soát: Ưu tiên lấy thông tin cv hoạt động
     const targetCvId = activeCv?.cv_id;
+    setSubmitAttempted(true);
 
     if (!targetCvId && !rightFile) {
       setApiError(
@@ -676,6 +696,9 @@ export function CVMatching() {
       );
       return;
     }
+
+    if (!overrideRole && mode === "role" && !selectedRole) return;
+    if (!overrideRole && mode === "url" && (!jdUrl.trim() || isJobUrlInvalid)) return;
 
     // Khi đối soát theo vai trò gợi ý: ép về chế độ "role" và đồng bộ state
     const effectiveMode = overrideRole ? "role" : mode;
@@ -842,9 +865,7 @@ export function CVMatching() {
   // Kiểm soát trạng thái nút bấm: Nếu đã có Active CV chọn sẵn, không làm mờ nút (Trừ trường hợp mode là URL trống)
   const isAnalyzeDisabled =
     isLoading ||
-    (!activeCv?.cv_id && !rightFile) ||
-    (mode === "url" && !jdUrl.trim()) ||
-    isJobUrlInvalid;
+    (!activeCv?.cv_id && !rightFile);
 
   // Danh sách kỹ năng hiển thị bên trái: theo nhóm đang lọc nếu có, ngược lại tổng quan.
   // (Thẻ điểm tổng ở trên vẫn giữ số liệu toàn bộ — chỉ các trường chi tiết đổi theo radar.)
@@ -867,153 +888,22 @@ export function CVMatching() {
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
         <div className="p-5 border-b border-slate-100 dark:border-slate-800">
           <h2 className="font-bold text-slate-900 dark:text-white mb-0.5">
-            Cấu hình phân tích
+            So khớp CV
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Tải lên CV của bạn và cung cấp mô tả công việc hoặc vị trí so sánh
-            để bắt đầu so sánh.
+            Chọn CV và mục tiêu nghề nghiệp để xem mức độ phù hợp.
           </p>
         </div>
 
         <div className="p-5 space-y-5">
-          {/* Khu vực phân chia 2 cột bằng nhau */}
+          {/* Hai bước chính: chọn CV và chọn mục tiêu so khớp. */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
-            {/* CỘT BÊN TRÁI: QUẢN LÝ PHÂN TÁCH CV DEFAULT VÀ DANH SÁCH ALL CVS */}
-            <div className="space-y-4">
-              {/* Hàng 1: Hiển thị System Default CV */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide">
-                  CV Mặc định của bạn
-                </label>
-                {defaultCv ? (
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
-                    <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
-                      <Star className="w-4 h-4 text-blue-600 fill-blue-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                        {defaultCv.file_name}
-                      </p>
-                    </div>
-                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-md shrink-0">
-                      Mặc định
-                    </span>
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400 italic pl-1">
-                    Chưa thiết lập CV mặc định.
-                  </p>
-                )}
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">1</span>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">CV của bạn</h3>
               </div>
-
-              {/* Hàng 2: Hiển thị Active CV để quét và Dropdown chọn All CVs bên dưới */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide">
-                  Chọn CV để phân tích
-                </label>
-                {activeCv ? (
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-                      <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
-                        <FileText className="w-5 h-5 text-emerald-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-emerald-700 font-medium">
-                          Đang chọn quét AI
-                        </p>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                          {activeCv.file_name}
-                        </p>
-                      </div>
-                      {activeCv.file_url && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Ngăn chặn sự kiện lan ra ngoài
-                            setViewingCvUrl(activeCv.file_url);
-                            setViewingCvName(activeCv.file_name);
-                          }}
-                          className="p-1.5 hover:bg-emerald-100 text-emerald-700 rounded-lg transition-colors"
-                          title="Xem nội dung CV"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button
-                        onClick={handleAnalyzeAndMatch}
-                        disabled={isLoading}
-                        title="Chạy đối sánh nhanh với CV này"
-                        className="p-1.5 hover:bg-emerald-100 rounded-lg transition-colors text-emerald-700 disabled:opacity-40"
-                      >
-                        {isLoading ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <RefreshCcw className="w-3.5 h-3.5" />
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Dropdown bốc all_cvs và tích hợp nút cài đặt default */}
-                    {allCvs.length > 0 && (
-                      <div className="p-3 border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl flex items-center gap-3 justify-between">
-                        <div className="flex-1">
-                          <select
-                            value={activeCv.cv_id}
-                            onChange={(e) => {
-                              const selected = allCvs.find(
-                                (c) => c.cv_id === e.target.value,
-                              );
-                              if (selected) setActiveCv(selected);
-                            }}
-                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-xs rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 dark:text-slate-200 font-medium"
-                          >
-                            {allCvs.map((cv) => (
-                              <option key={cv.cv_id} value={cv.cv_id}>
-                                {cv.file_name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={
-                            isUpdatingDefault ||
-                            activeCv.cv_id === defaultCv?.cv_id
-                          }
-                          onClick={() => handleSetDefaultCv(activeCv.cv_id)}
-                          className="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-semibold rounded-lg text-[11px] hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 whitespace-nowrap transition-all"
-                        >
-                          {isUpdatingDefault
-                            ? "Đang cập nhật..."
-                            : activeCv.cv_id === defaultCv?.cv_id
-                              ? "Mặc định?  ⭐"
-                              : "Đặt làm mặc định"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl p-4 text-center flex flex-col justify-center items-center h-[114px]">
-                    <AlertCircle className="w-5 h-5 text-slate-400 mb-1" />
-                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-0.5">
-                      Không có tài liệu CV nào được chọn
-                    </p>
-                    <p className="text-[11px] text-slate-400">
-                      Vui lòng tải lên hoặc quản lý CV của bạn trong cài đặt Hồ
-                      sơ.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* CỘT BÊN PHẢI: UPLOAD CV NHANH VÀ CẤU HÌNH MATCHING */}
-            <div className="space-y-4">
-              {/* Hàng 1: Khối Upload CV nhanh */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide">
-                  Tải CV mới
-                </label>
+              <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                 <input
                   type="file"
                   ref={rightFileInputRef}
@@ -1021,46 +911,66 @@ export function CVMatching() {
                   accept=".pdf,.jpg,.jpeg,.png"
                   className="hidden"
                 />
-                <div
-                  onClick={() =>
-                    !isUploadingRight && rightFileInputRef.current?.click()
-                  }
-                  className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-center hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer flex items-center justify-center min-h-[58px]"
-                >
-                  {isUploadingRight ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                        Đang tải lên...
-                      </p>
+                {isUploadingRight ? (
+                  <div className="flex min-h-[88px] items-center justify-center gap-2 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                    <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Đang tải CV...</p>
+                  </div>
+                ) : activeCv ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/30">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{activeCv.file_name}</p>
+                          {activeCv.cv_id === defaultCv?.cv_id && <span className="shrink-0 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">Mặc định</span>}
+                        </div>
+                        <p className="mt-0.5 text-xs text-slate-500">CV sẽ được dùng cho lần phân tích này</p>
+                      </div>
+                      {activeCv.file_url && (
+                        <button type="button" onClick={() => { setViewingCvUrl(activeCv.file_url); setViewingCvName(activeCv.file_name); }} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-blue-600" title="Xem CV">
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
-                  ) : rightFile ? (
-                    <div className="flex items-center gap-2 w-full justify-center">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[180px]">
-                        {rightFile.name}
-                      </p>
-                      <span className="text-[10px] text-emerald-600 font-medium shrink-0">
-                        (Hoàn tất)
-                      </span>
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                      {allCvs.length > 1 && (
+                        <select value={activeCv.cv_id} onChange={(e) => { const selected = allCvs.find((cv) => cv.cv_id === e.target.value); if (selected) setActiveCv(selected); }} className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                          {allCvs.map((cv) => <option key={cv.cv_id} value={cv.cv_id}>{cv.file_name}</option>)}
+                        </select>
+                      )}
+                      <button type="button" onClick={() => rightFileInputRef.current?.click()} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300">
+                        <Upload className="h-3.5 w-3.5" /> Thay CV
+                      </button>
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                      <Upload className="w-4 h-4 text-slate-400" />
-                      <p className="text-xs font-medium">
-                        Tải lên CV để phân tích (.pdf, .jpg, .png)
-                      </p>
-                    </div>
-                  )}
-                </div>
+                    {activeCv.cv_id !== defaultCv?.cv_id && (
+                      <button type="button" disabled={isUpdatingDefault} onClick={() => handleSetDefaultCv(activeCv.cv_id)} className="mt-3 text-xs font-semibold text-slate-500 hover:text-blue-600 disabled:opacity-50">
+                        {isUpdatingDefault ? "Đang cập nhật..." : "Đặt làm CV mặc định"}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <button type="button" onClick={() => rightFileInputRef.current?.click()} className="flex min-h-[116px] w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 px-4 text-center hover:border-blue-400 hover:bg-blue-50/40 dark:border-slate-700 dark:hover:bg-blue-950/20">
+                    <Upload className="mb-2 h-5 w-5 text-blue-600" />
+                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Tải CV lên</span>
+                    <span className="mt-1 text-xs text-slate-500">PDF, JPG hoặc PNG · tối đa 5 MB</span>
+                  </button>
+                )}
                 {rightUploadError && (
                   <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5" /> {rightUploadError}
                   </p>
                 )}
               </div>
+            </div>
 
-              {/* Hàng 2: Trình chọn Source và Action Match */}
+            <div className="space-y-4">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">2</span>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Bạn muốn so khớp với</h3>
+              </div>
               <div className="space-y-2.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide">
@@ -1089,15 +999,26 @@ export function CVMatching() {
                       <button
                         type="button"
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className="w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 dark:text-slate-200 font-medium h-[34px] flex items-center justify-between text-left shadow-sm hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all"
+                        className={`w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/50 border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium h-[34px] flex items-center justify-between text-left shadow-sm hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all ${
+                          !selectedRole
+                            ? "border-amber-300 dark:border-amber-700 text-slate-400 dark:text-slate-500"
+                            : "border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200"
+                        }`}
                       >
                         <span className="truncate">
-                          {selectedRole ? toTitleCase(selectedRole) : "Chọn vị trí tuyển dụng..."}
+                          {selectedRole ? toTitleCase(selectedRole) : "Chọn nhóm nghề so khớp"}
                         </span>
                         <ChevronDown
                           className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isDropdownOpen ? "transform rotate-180" : ""}`}
                         />
                       </button>
+                      {/* Cảnh báo khi chưa chọn nhóm nghề */}
+                      {submitAttempted && !selectedRole && !isDropdownOpen && (
+                        <div className="mt-1.5 flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 dark:border-amber-900/40 dark:bg-amber-950/20">
+                          <AlertCircle className="w-3 h-3 shrink-0 text-amber-500" />
+                          <p className="text-[11px] text-amber-800 dark:text-amber-200">Vui lòng chọn nhóm nghề trước khi so khớp.</p>
+                        </div>
+                      )}
 
                       {/* Khung tìm kiếm và danh sách lựa chọn */}
                       {isDropdownOpen && (
@@ -1158,7 +1079,11 @@ export function CVMatching() {
                             : "border-slate-200 dark:border-slate-700 focus:ring-blue-500"
                         }`}
                       />
-                      {isJobUrlInvalid ? (
+                      {submitAttempted && !jdUrl.trim() ? (
+                        <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-amber-700">
+                          <AlertCircle className="h-3 w-3" /> Vui lòng nhập URL công việc.
+                        </p>
+                      ) : submitAttempted && isJobUrlInvalid ? (
                         <div className="mt-1.5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 dark:border-red-900/40 dark:bg-red-950/20">
                           <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-px text-red-500 dark:text-red-400" />
                           <p className="text-[11px] leading-relaxed text-red-800 dark:text-red-200/90">
@@ -1171,17 +1096,9 @@ export function CVMatching() {
                           </p>
                         </div>
                       ) : (
-                        <div className="mt-1.5 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 dark:border-amber-900/40 dark:bg-amber-950/20">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-px text-amber-500 dark:text-amber-400" />
-                          <p className="text-[11px] leading-relaxed text-amber-900/90 dark:text-amber-100/80">
-                            Vui lòng dùng link từ{" "}
-                            <span className="font-bold text-amber-900 dark:text-amber-100">
-                              ITviec, VietnamWorks, CareerViet, LinkedIn
-                            </span>
-                            . Đây là các nền tảng uy tín có mô tả công việc chuẩn,
-                            giúp kết quả phân tích chính xác nhất.
-                          </p>
-                        </div>
+                        <p className="mt-1.5 text-[11px] text-slate-400">
+                          Hỗ trợ LinkedIn, ITviec, VietnamWorks và CareerViet.
+                        </p>
                       )}
                     </>
                   )}
@@ -1459,261 +1376,371 @@ export function CVMatching() {
                   </button>
                 </div>
               )}
-              {/* Strong Matches */}
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-                <button
-                  onClick={() => toggleSection("strong")}
-                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-bold text-slate-900 dark:text-white text-sm">
-                        Tương thích mạnh
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Kỹ năng bạn đã thể hiện đầy đủ
-                      </p>
-                    </div>
-                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full ml-1">
-                      {displayAnalysis.strongMatches.length}
-                    </span>
-                  </div>
-                  {expandedSection === "strong" ? (
-                    <ChevronUp className="w-4 h-4 text-slate-400" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
-                  )}
-                </button>
-                {expandedSection !== "strong" && (
-                  <div className="px-5 pb-4 flex flex-wrap gap-2">
-                    {displayAnalysis.strongMatches.map((item: any) => (
-                      <span
-                        key={item.skill}
-                        className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full"
-                      >
-                        {toTitleCase(item.skill)}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {expandedSection === "strong" && (
-                  <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-50">
-                    {displayAnalysis.strongMatches.map((item: any) => (
-                      <div
-                        key={item.skill}
-                        className="px-5 py-3 flex items-center gap-4"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                              {toTitleCase(item.skill)}
-                            </span>
-                            <span className="text-xs font-bold text-emerald-600">
-                              {item.match}% Tương thích
-                            </span>
-                          </div>
-                          <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 rounded-full w-full" />
-                          </div>
-                          <div className="flex gap-4 mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                            <span>
-                              Độ tương đồng:{" "}
-                              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                                {item.match}%
-                              </span>
-                            </span>
-                            <span>
-                              Yêu cầu:{" "}
-                              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                                {item.required}
-                              </span>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {/* ── Tính tổng trọng số của toàn bộ kỹ năng để quy đổi % đóng góp ── */}
+              {(() => {
+                const allItems = [
+                  ...displayAnalysis.strongMatches,
+                  ...displayAnalysis.partialMatches,
+                  ...displayAnalysis.missingSkills,
+                ];
+                const totalWeight = allItems.reduce(
+                  (s: number, i: any) => s + (i.weight || 0),
+                  0,
+                );
 
-              {/* Partial Matches */}
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-                <button
-                  onClick={() => toggleSection("partial")}
-                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                      <AlertCircle className="w-4 h-4 text-amber-600" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-bold text-slate-900 dark:text-white text-sm">
-                        Tương thích một phần
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Kỹ năng bạn có nhưng cần nâng cấp
-                      </p>
-                    </div>
-                    <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full ml-1">
-                      {displayAnalysis.partialMatches.length}
-                    </span>
-                  </div>
-                  {expandedSection === "partial" ? (
-                    <ChevronUp className="w-4 h-4 text-slate-400" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
-                  )}
-                </button>
-                {expandedSection !== "partial" && (
-                  <div className="px-5 pb-4 flex flex-wrap gap-2">
-                    {displayAnalysis.partialMatches.map((item: any) => (
-                      <span
-                        key={item.skill}
-                        className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full"
+                const strongWithContrib = computeContribution(
+                  displayAnalysis.strongMatches,
+                  totalWeight,
+                );
+                const partialWithContrib = computeContribution(
+                  displayAnalysis.partialMatches,
+                  totalWeight,
+                );
+                const missingWithContrib = computeContribution(
+                  displayAnalysis.missingSkills,
+                  totalWeight,
+                );
+
+                return (
+                  <>
+                    {/* Strong Matches */}
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+                      <button
+                        onClick={() => toggleSection("strong")}
+                        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                       >
-                        {toTitleCase(item.skill)}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {expandedSection === "partial" && (
-                  <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-50">
-                    {displayAnalysis.partialMatches.map((item: any) => (
-                      <div key={item.skill} className="px-5 py-3">
-                        <div className="flex items-center justify-between mb-1.5 gap-2">
-                          <div className="flex items-center gap-2 flex-wrap min-w-0">
-                            <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          </div>
+                          <div className="text-left">
+                            <p className="font-bold text-slate-900 dark:text-white text-sm">
+                              Tương thích mạnh
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              Kỹ năng bạn đã thể hiện đầy đủ · sắp xếp theo trọng số
+                            </p>
+                          </div>
+                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full ml-1">
+                            {strongWithContrib.length}
+                          </span>
+                        </div>
+                        {expandedSection === "strong" ? (
+                          <ChevronUp className="w-4 h-4 text-slate-400" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-slate-400" />
+                        )}
+                      </button>
+
+                      {/* Collapsed: pill badges */}
+                      {expandedSection !== "strong" && (
+                        <div className="px-5 pb-4 flex flex-wrap gap-2">
+                          {strongWithContrib.map((item: any) => (
+                            <span
+                              key={item.skill}
+                              className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full"
+                              title={`Trọng số: ${(item.weight * 100).toFixed(0)}% · Đóng góp: ${item.contribution}% tổng điểm`}
+                            >
                               {toTitleCase(item.skill)}
                             </span>
-                            {item.matchedVia &&
-                              item.matchedVia.toLowerCase() !==
-                                item.skill.toLowerCase() &&
-                              item.match >= SEMANTIC_BADGE_MIN_SIMILARITY && (
-                                <span
-                                  className="flex items-center gap-1 px-1.5 py-0.5 bg-violet-50 text-violet-700 rounded-full text-[10px] font-semibold"
-                                  title={`Kỹ năng gần nhất trong hồ sơ của bạn theo ngữ nghĩa (tương đồng ${item.match}%)`}
-                                >
-                                  <Sparkles className="w-2.5 h-2.5" />
-                                  liên quan tới {item.matchedVia}
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Expanded: full rows with weight + contribution */}
+                      {expandedSection === "strong" && (
+                        <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-50 dark:divide-slate-800">
+                          {strongWithContrib.map((item: any, idx: number) => (
+                            <div key={item.skill} className="px-5 py-3.5">
+                              {/* Header row */}
+                              <div className="flex items-center justify-between mb-2 gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {/* Rank badge */}
+                                  <span className="shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold flex items-center justify-center">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                    {toTitleCase(item.skill)}
+                                  </span>
+                                  <span
+                                    className={`shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                                      item.required === "Bắt buộc"
+                                        ? "bg-red-50 text-red-600 border border-red-100"
+                                        : "bg-slate-100 text-slate-500"
+                                    }`}
+                                  >
+                                    {item.required}
+                                  </span>
+                                </div>
+                                <span className="text-xs font-bold text-emerald-600 shrink-0">
+                                  {item.match}% khớp
                                 </span>
-                              )}
-                          </div>
-                          <span
-                            className="text-xs font-bold text-amber-600 shrink-0"
-                            title="Mức độ tương đồng ngữ nghĩa giữa kỹ năng của bạn và yêu cầu"
-                          >
-                            {item.match}%
-                          </span>
-                        </div>
-                        <div className="relative h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-1.5">
-                          <div
-                            className="h-full bg-amber-400 rounded-full"
-                            style={{ width: `${item.match}%` }}
-                          />
-                        </div>
-                        <div className="flex gap-4 text-[11px] text-slate-500 dark:text-slate-400">
-                          <span>
-                            Yêu cầu:{" "}
-                            <span className="font-semibold text-slate-700 dark:text-slate-200">
-                              {item.required}
-                            </span>
-                          </span>
-                        </div>
-                        <div className="mt-2 flex items-start gap-1.5 p-2 bg-amber-50 rounded-lg">
-                          <Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                          <p className="text-[11px] text-amber-700 font-medium">
-                            Xem xét việc nâng cao kỹ năng để đạt được cấp độ yêu
-                            cầu
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                              </div>
 
-              {/* Missing Skills */}
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-                <button
-                  onClick={() => toggleSection("missing")}
-                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                      <XCircle className="w-4 h-4 text-red-500" />
+                              {/* Match bar */}
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] text-slate-400 w-[58px] shrink-0">Tương thích</span>
+                                <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                                    style={{ width: `${item.match}%` }}
+                                  />
+                                </div>
+                                <span className="text-[10px] font-semibold text-emerald-600 w-8 text-right shrink-0">{item.match}%</span>
+                              </div>
+
+                              {/* Contribution bar */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-slate-400 w-[58px] shrink-0">Đóng góp</span>
+                                <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-blue-400 rounded-full transition-all duration-700"
+                                    style={{ width: `${item.contribution}%` }}
+                                  />
+                                </div>
+                                <span className="text-[10px] font-semibold text-blue-500 w-8 text-right shrink-0">{item.contribution}%</span>
+                              </div>
+                              <p className="mt-1.5 text-[10px] text-slate-400">
+                                Kỹ năng này đóng góp <span className="font-bold text-blue-500">{item.contribution}%</span> vào tổng điểm matching.
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <div className="text-left">
-                      <p className="font-bold text-slate-900 dark:text-white text-sm">
-                        Kỹ năng cần bổ sung
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Yêu cầu vị trí mà hồ sơ chưa thể hiện rõ
-                      </p>
-                    </div>
-                    <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded-full ml-1">
-                      {displayAnalysis.missingSkills.length}
-                    </span>
-                  </div>
-                  {expandedSection === "missing" ? (
-                    <ChevronUp className="w-4 h-4 text-slate-400" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
-                  )}
-                </button>
-                {expandedSection !== "missing" && (
-                  <div className="px-5 pb-4 flex flex-wrap gap-2">
-                    {displayAnalysis.missingSkills.map((item: any) => (
-                      <span
-                        key={item.skill}
-                        className="px-3 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded-full border border-red-200"
-                        title="Độ tương đồng ngữ nghĩa cao nhất với kỹ năng trong hồ sơ của bạn"
+
+                    {/* Partial Matches */}
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+                      <button
+                        onClick={() => toggleSection("partial")}
+                        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                       >
-                        {toTitleCase(item.skill)}
-                        <span className="ml-1 font-normal text-red-400">
-                          {item.match}%
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {expandedSection === "missing" && (
-                  <div className="border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3 p-4">
-                    {displayAnalysis.missingSkills.map((item: any) => (
-                      <div
-                        key={item.skill}
-                        className="p-3 bg-red-50 border border-red-100 rounded-xl"
-                      >
-                        <div className="flex items-center justify-between mb-1 gap-2">
-                          <span className="text-sm font-bold text-slate-900 dark:text-white min-w-0 truncate">
-                            {toTitleCase(item.skill)}
-                          </span>
-                          <span
-                            className="shrink-0 text-[11px] font-bold text-red-500"
-                            title="Độ tương đồng ngữ nghĩa cao nhất với kỹ năng trong hồ sơ của bạn"
-                          >
-                            {item.match}%
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                            <AlertCircle className="w-4 h-4 text-amber-600" />
+                          </div>
+                          <div className="text-left">
+                            <p className="font-bold text-slate-900 dark:text-white text-sm">
+                              Tương thích một phần
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              Kỹ năng cần nâng cấp · sắp xếp theo trọng số
+                            </p>
+                          </div>
+                          <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full ml-1">
+                            {partialWithContrib.length}
                           </span>
                         </div>
-                        <div className="h-1.5 bg-red-100 rounded-full overflow-hidden mb-1.5">
-                          <div
-                            className="h-full bg-red-400 rounded-full"
-                            style={{ width: `${item.match}%` }}
-                          />
+                        {expandedSection === "partial" ? (
+                          <ChevronUp className="w-4 h-4 text-slate-400" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-slate-400" />
+                        )}
+                      </button>
+
+                      {expandedSection !== "partial" && (
+                        <div className="px-5 pb-4 flex flex-wrap gap-2">
+                          {partialWithContrib.map((item: any) => (
+                            <span
+                              key={item.skill}
+                              className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full"
+                              title={`Trọng số: ${(item.weight * 100).toFixed(0)}% · Đóng góp: ${item.contribution}% tổng điểm`}
+                            >
+                              {toTitleCase(item.skill)}
+                            </span>
+                          ))}
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
-                          Yêu cầu: {item.required}
-                        </p>
-                        <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-full">
-                          {item.priority}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      )}
+
+                      {expandedSection === "partial" && (
+                        <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-50 dark:divide-slate-800">
+                          {partialWithContrib.map((item: any, idx: number) => (
+                            <div key={item.skill} className="px-5 py-3.5">
+                              <div className="flex items-center justify-between mb-2 gap-2">
+                                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                  <span className="shrink-0 w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold flex items-center justify-center">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                                    {toTitleCase(item.skill)}
+                                  </span>
+                                  <span
+                                    className={`shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                                      item.required === "Bắt buộc"
+                                        ? "bg-red-50 text-red-600 border border-red-100"
+                                        : "bg-slate-100 text-slate-500"
+                                    }`}
+                                  >
+                                    {item.required}
+                                  </span>
+                                  {item.matchedVia &&
+                                    item.matchedVia.toLowerCase() !== item.skill.toLowerCase() &&
+                                    item.match >= SEMANTIC_BADGE_MIN_SIMILARITY && (
+                                      <span
+                                        className="flex items-center gap-1 px-1.5 py-0.5 bg-violet-50 text-violet-700 rounded-full text-[10px] font-semibold"
+                                        title={`Kỹ năng gần nhất theo ngữ nghĩa (${item.match}%)`}
+                                      >
+                                        <Sparkles className="w-2.5 h-2.5" />
+                                        liên quan tới {item.matchedVia}
+                                      </span>
+                                    )}
+                                </div>
+                                <span className="text-xs font-bold text-amber-600 shrink-0">{item.match}% khớp</span>
+                              </div>
+
+                              {/* Match bar */}
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] text-slate-400 w-[58px] shrink-0">Tương thích</span>
+                                <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-amber-400 rounded-full transition-all duration-700"
+                                    style={{ width: `${item.match}%` }}
+                                  />
+                                </div>
+                                <span className="text-[10px] font-semibold text-amber-600 w-8 text-right shrink-0">{item.match}%</span>
+                              </div>
+
+                              {/* Contribution bar */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-slate-400 w-[58px] shrink-0">Đóng góp</span>
+                                <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-blue-400 rounded-full transition-all duration-700"
+                                    style={{ width: `${item.contribution}%` }}
+                                  />
+                                </div>
+                                <span className="text-[10px] font-semibold text-blue-500 w-8 text-right shrink-0">{item.contribution}%</span>
+                              </div>
+                              <p className="mt-1.5 text-[10px] text-slate-400">
+                                Đóng góp <span className="font-bold text-blue-500">{item.contribution}%</span> tổng điểm — nâng cấp kỹ năng này để cải thiện đáng kể.
+                              </p>
+
+                              <div className="mt-2 flex items-start gap-1.5 p-2 bg-amber-50 rounded-lg">
+                                <Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                                <p className="text-[11px] text-amber-700 font-medium">
+                                  Xem xét việc nâng cao kỹ năng để đạt được cấp độ yêu cầu
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Missing Skills */}
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+                      <button
+                        onClick={() => toggleSection("missing")}
+                        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                            <XCircle className="w-4 h-4 text-red-500" />
+                          </div>
+                          <div className="text-left">
+                            <p className="font-bold text-slate-900 dark:text-white text-sm">
+                              Kỹ năng cần bổ sung
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              Ưu tiên học theo trọng số — quan trọng nhất lên trên
+                            </p>
+                          </div>
+                          <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded-full ml-1">
+                            {missingWithContrib.length}
+                          </span>
+                        </div>
+                        {expandedSection === "missing" ? (
+                          <ChevronUp className="w-4 h-4 text-slate-400" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-slate-400" />
+                        )}
+                      </button>
+
+                      {expandedSection !== "missing" && (
+                        <div className="px-5 pb-4 flex flex-wrap gap-2">
+                          {missingWithContrib.map((item: any) => (
+                            <span
+                              key={item.skill}
+                              className="px-3 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded-full border border-red-200"
+                              title={`Trọng số: ${(item.weight * 100).toFixed(0)}% · Đóng góp: ${item.contribution}% tổng điểm`}
+                            >
+                              {toTitleCase(item.skill)}
+                              <span className="ml-1 font-normal text-red-400">{item.match}%</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {expandedSection === "missing" && (
+                        <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-50 dark:divide-slate-800">
+                          {missingWithContrib.map((item: any, idx: number) => (
+                            <div key={item.skill} className="px-5 py-3.5">
+                              <div className="flex items-center justify-between mb-2 gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="shrink-0 w-5 h-5 rounded-full bg-red-100 text-red-500 text-[10px] font-bold flex items-center justify-center">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                                    {toTitleCase(item.skill)}
+                                  </span>
+                                  <span
+                                    className={`shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                                      item.required === "Bắt buộc"
+                                        ? "bg-red-50 text-red-600 border border-red-100"
+                                        : "bg-slate-100 text-slate-500"
+                                    }`}
+                                  >
+                                    {item.required}
+                                  </span>
+                                </div>
+                                <span
+                                  className="shrink-0 text-[11px] font-bold text-red-500"
+                                  title="Độ tương đồng ngữ nghĩa cao nhất với kỹ năng trong hồ sơ"
+                                >
+                                  {item.match}%
+                                </span>
+                              </div>
+
+                              {/* Match (closest semantic) bar */}
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] text-slate-400 w-[58px] shrink-0">Gần nhất</span>
+                                <div className="flex-1 h-1.5 bg-red-100 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-red-400 rounded-full transition-all duration-700"
+                                    style={{ width: `${item.match}%` }}
+                                  />
+                                </div>
+                                <span className="text-[10px] font-semibold text-red-500 w-8 text-right shrink-0">{item.match}%</span>
+                              </div>
+
+                              {/* Contribution bar */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-slate-400 w-[58px] shrink-0">Đóng góp</span>
+                                <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-blue-400 rounded-full transition-all duration-700"
+                                    style={{ width: `${item.contribution}%` }}
+                                  />
+                                </div>
+                                <span className="text-[10px] font-semibold text-blue-500 w-8 text-right shrink-0">{item.contribution}%</span>
+                              </div>
+                              <p className="mt-1.5 text-[10px] text-slate-400">
+                                Học kỹ năng này sẽ bổ sung <span className="font-bold text-blue-500">{item.contribution}%</span> vào điểm matching của bạn.
+                              </p>
+
+                              <div className="mt-2 flex items-center justify-between">
+                                <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-full">
+                                  {item.priority}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Radar Chart Sidebar */}

@@ -80,7 +80,9 @@ export function JobSearch() {
   // Chỉ cho phép tối đa 7 ngày (bỏ "bất kỳ thời gian" vì quá rộng/cũ). Mặc định 7 ngày.
   const [listedWithinDays, setListedWithinDays] = useState<number>(7);
   const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy] = useState<string>("match_score");
+  // Mặc định hiển thị việc mới nhất để trang luôn có dữ liệu ngay lần mở đầu.
+  // Người dùng vẫn có thể chủ động chuyển sang "Phù hợp nhất" khi muốn dùng CV.
+  const [sortBy, setSortBy] = useState<string>("listed_time");
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -101,6 +103,7 @@ export function JobSearch() {
     const loc = searchParams.get("location") || "";
     const exp = searchParams.get("experience_level") || "";
     const withinDays = searchParams.get("listed_within_days");
+    const requestedSort = searchParams.get("sort");
     // Giới hạn trần 7 ngày để đồng nhất với bộ lọc (không nhận giá trị lớn hơn).
 
     if (q) setSearchTerm(q);
@@ -109,9 +112,12 @@ export function JobSearch() {
     if (loc) setLocation(loc);
     if (exp) setSelectedExp(exp);
     if (withinDays) setListedWithinDays(Math.min(7, Number(withinDays)));
+    if (["match_score", "salary_med", "listed_time"].includes(requestedSort || "")) {
+      setSortBy(requestedSort!);
+    }
 
     // Có bộ lọc cụ thể → chuyển sang chế độ tìm kiếm thường (không dùng "Phù hợp nhất")
-    if (q || sg || wt || loc || exp) {
+    if ((q || sg || wt || loc || exp) && !requestedSort) {
       setSortBy("listed_time");
       setShowFilters(true);
     }
@@ -210,6 +216,18 @@ export function JobSearch() {
     }, 500);
     return () => clearTimeout(timer);
   }, [loadJobs]);
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setSelectedType("");
+    setSelectedExp("");
+    setLocation("");
+    setSearchGroup("");
+    setListedWithinDays(7);
+    setMinMatch(undefined);
+    setSortBy("listed_time");
+    setCurrentPage(1);
+  };
 
   const handleToggleSaveJobInList = async (
     jobId: string,
@@ -366,6 +384,16 @@ export function JobSearch() {
 
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="mb-3 flex justify-end">
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                <X className="h-3.5 w-3.5" />
+                Đặt lại bộ lọc
+              </button>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
