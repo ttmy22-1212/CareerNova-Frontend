@@ -862,9 +862,7 @@ export function SkillGapAnalysis() {
                               className="flex items-center gap-3 p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg hover:bg-blue-50 transition-colors group"
                             >
                               <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 text-base">
-                                {course.image || (
-                                  <BookOpen className="w-4 h-4 text-blue-600" />
-                                )}
+                                <BookOpen className="w-4 h-4 text-blue-600" />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
@@ -880,11 +878,6 @@ export function SkillGapAnalysis() {
                                     ★ {course.rating.toFixed(1)}
                                   </p>
                                 )}
-                                <p className="text-[10px] text-slate-400">
-                                  {course.price > 0
-                                    ? `$${course.price}`
-                                    : "Free"}
-                                </p>
                               </div>
                             </Link>
                           ))}

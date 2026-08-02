@@ -95,13 +95,6 @@ const formatPipelineSalary = (
   return formatSalaryRange(salary);
 };
 
-const formatCoursePrice = (price: number | null | undefined) => {
-  if (!price || price <= 0) {
-    return "Miễn phí/không rõ";
-  }
-
-  return `${price.toLocaleString("vi-VN")} đ`;
-};
 
 export function Recommendations() {
   const [activeTab, setActiveTab] = useState<
@@ -1111,9 +1104,7 @@ export function Recommendations() {
                       </div>
                       <div className="text-right shrink-0">
                         <p className="font-bold text-slate-900 dark:text-white text-sm">
-                          {primaryCourse
-                            ? formatCoursePrice(primaryCourse.price)
-                            : "Lộ trình"}
+                          {primaryCourse ? "Khóa học" : "Lộ trình"}
                         </p>
                         {resourceRating > 0 && (
                           <div className="flex items-center gap-0.5 text-amber-400 justify-end mt-0.5">

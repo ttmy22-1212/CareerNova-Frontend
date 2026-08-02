@@ -1204,17 +1204,6 @@ export default function ProfilePage() {
                             <div>
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex items-center gap-2.5">
-                                  {course.thumbnail_icon ? (
-                                    <img
-                                      src={course.thumbnail_icon}
-                                      alt={course.course_title}
-                                      className="h-10 w-10 rounded-lg object-cover border border-slate-100 dark:border-slate-800"
-                                    />
-                                  ) : (
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                                      <GraduationCap className="h-5 w-5" />
-                                    </div>
-                                  )}
                                   <div className="min-w-0">
                                     <h4
                                       className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1"
@@ -1252,11 +1241,6 @@ export default function ProfilePage() {
                                     {course.rating}
                                   </span>
                                 )}
-                                <span className="font-semibold text-blue-600 dark:text-blue-400">
-                                  {course.price === 0
-                                    ? "Miễn phí"
-                                    : `${course.price.toLocaleString()} ${course.currency || "đ"}`}
-                                </span>
                               </div>
 
                               {course.skills_tags &&

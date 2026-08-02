@@ -117,10 +117,6 @@ const readViewedJobIds = () => {
   }
 };
 
-const formatCoursePrice = (price: number | null | undefined) => {
-  if (!price || price <= 0) return "Miễn phí/không rõ";
-  return `${price.toLocaleString("vi-VN")} đ`;
-};
 
 const recColorMap: Record<
   string,
@@ -484,7 +480,7 @@ export function PersonalDashboard() {
     };
   }, [urgentGapSkills]);
 
-  // Fetch d\u1eef li\u1ec7u c\u1ee7a tab \u0110\u1ec1 xu\u1ea5t (lazy: ch\u1ec9 g\u1ecdi API khi user click v\u00e0o tab)
+  // Fetch dữ liệu của tab Đề xuất (lazy: chỉ gọi API khi user click vào tab)
   useEffect(() => {
     if (activeTab !== "recommendations") return;
     const fetchRecData = async () => {
@@ -511,13 +507,13 @@ export function PersonalDashboard() {
         if (learningPathsRes?.data) setLearningRecs(learningPathsRes.data);
         if (savedJobsRes?.data) setSavedJobsFromProfile(savedJobsRes.data);
       } catch (err) {
-        console.error("Failed to fetch \u0110\u1ec1 xu\u1ea5t tab data:", err);
+        console.error("Failed to fetch Đề xuất tab data:", err);
       }
     };
     fetchRecData();
   }, [activeTab]);
 
-  // Viewed jobs t\u1eeb localStorage (gi\u1ed1ng Recommendations.tsx)
+  // Viewed jobs từ localStorage (giống Recommendations.tsx)
   const loadViewedJobsFromStorage = useCallback(async () => {
     const viewedJobIds = readViewedJobIds();
     if (viewedJobIds.length === 0) { setViewedJobDetails([]); return; }
@@ -554,12 +550,12 @@ export function PersonalDashboard() {
       id: idx + 1,
       type: report.match_type === "cv_job" ? "cv-match" : "gap",
       title: report.report_name,
-      subtitle: report.match_type === "cv_job" ? "Ph\u00e2n t\u00edch theo c\u00f4ng vi\u1ec7c" : "So kh\u1edbp theo nh\u00f3m ngh\u1ec1",
+      subtitle: report.match_type === "cv_job" ? "Phân tích theo công việc" : "So khớp theo nhóm nghề",
       score: report.match_score,
       date: report.created_at
         ? new Date(report.created_at).toLocaleDateString("vi-VN")
-        : "Ch\u01b0a r\u00f5 ng\u00e0y",
-      tags: ["D\u1eef li\u1ec7u t\u1eeb h\u1ec7 th\u1ed1ng"],
+        : "Chưa rõ ngày",
+      tags: ["Dữ liệu từ hệ thống"],
       status: report.match_score >= 80 ? "strong" : "moderate",
       onViewReport: async () => {
         try {
@@ -1106,10 +1102,10 @@ export function PersonalDashboard() {
         <div className="flex border-b border-slate-100 dark:border-slate-800">
           {(["jobs", "skills", "progress", "recommendations"] as const).map((tab) => {
             const labels = {
-              jobs: "Jobs G\u1ee3i \u00dd",
-              skills: "K\u1ef9 N\u0103ng C\u1ee7a B\u1ea1n",
-              progress: "Ti\u1ebfn \u0110\u1ed9",
-              recommendations: "\u0110\u1ec1 Xu\u1ea5t",
+              jobs: "Jobs Gợi Ý",
+              skills: "Kỹ Năng Của Bạn",
+              progress: "Tiến Độ",
+              recommendations: "Đề Xuất",
             };
             const icons = {
               jobs: Briefcase,
@@ -1138,7 +1134,7 @@ export function PersonalDashboard() {
                         : "bg-slate-100 text-slate-400"
                     }`}
                   >
-                    {personalMatchedCount > 0 ? personalMatchedCount : "\u2013"}
+                    {personalMatchedCount > 0 ? personalMatchedCount : "–"}
                   </span>
                 )}
               </button>
@@ -1675,18 +1671,18 @@ export function PersonalDashboard() {
           </div>
         )}
 
-        {/* Tab: \u0110\u1ec1 xu\u1ea5t */}
+        {/* Tab: Đề xuất */}
         {activeTab === "recommendations" && (
           <div className="p-5 space-y-5">
             {/* Job Pipeline / Kanban */}
             <div className="bg-slate-50/60 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Lu\u1ed3ng c\u00f4ng vi\u1ec7c c\u1ee7a b\u1ea1n</h3>
-                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">C\u00e1c c\u00f4ng vi\u1ec7c b\u1ea1n \u0111\u00e3 l\u01b0u \u0111\u1ec3 xem l\u1ea1i.</p>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Luồng công việc của bạn</h3>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Các công việc bạn đã lưu để xem lại.</p>
                 </div>
                 <Link href="/jobs" className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
-                  Th\u00eam job <Plus className="h-3.5 w-3.5" />
+                  Thêm job <Plus className="h-3.5 w-3.5" />
                 </Link>
               </div>
               <div className="grid grid-cols-1 gap-3">
@@ -1710,7 +1706,7 @@ export function PersonalDashboard() {
                       <div className="space-y-2 flex-1">
                         {items.length === 0 ? (
                           <p className="rounded-lg border border-dashed border-slate-300 bg-white/60 p-3 text-center text-xs text-slate-400 dark:border-slate-700 dark:bg-slate-900/60">
-                            Tr\u1ed1ng \u2014 b\u1ea5m + Th\u00eam job
+                            Trống — bấm + Thêm job
                           </p>
                         ) : (
                           items.map((m: PipelineJobItem) => {
@@ -1723,7 +1719,7 @@ export function PersonalDashboard() {
                                 <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 truncate">{m.job.company.name}</p>
                                 <div className="mt-2 flex items-center justify-between">
                                   <span className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${score === null ? "bg-slate-100 text-slate-600" : score >= 80 ? "bg-emerald-100 text-emerald-700" : score >= 70 ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
-                                    {score === null ? "\u0110\u00e3 xem" : `${score}%`}
+                                    {score === null ? "Đã xem" : `${score}%`}
                                   </span>
                                 </div>
                               </div>
@@ -1742,15 +1738,15 @@ export function PersonalDashboard() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-orange-500" />
-                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">K\u1ef9 N\u0103ng \u01afu Ti\u00ean C\u1ea7n Ph\u00e1t Tri\u1ec3n</h3>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">Kỹ Năng Ưu Tiên Cần Phát Triển</h3>
                 </div>
                 <Link href="/skill-gap" className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-                  Ph\u00e2n t\u00edch chi ti\u1ebft <ChevronRight className="w-3.5 h-3.5" />
+                  Phân tích chi tiết <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
               <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm divide-y divide-slate-50 dark:divide-slate-800">
                 {prioritySkills.length === 0 ? (
-                  <EmptyState icon={TrendingUp} title="Ch\u01b0a c\u00f3 k\u1ef9 n\u0103ng \u01b0u ti\u00ean" description="Ch\u1ea1y \u0111\u1ed1i so\u00e1t CV \u0111\u1ec3 h\u1ec7 th\u1ed1ng x\u00e1c \u0111\u1ecbnh k\u1ef9 n\u0103ng c\u00f2n thi\u1ebfu." ctaLabel="\u0110\u1ed1i so\u00e1t CV" ctaHref="/cv-matching" compact />
+                  <EmptyState icon={TrendingUp} title="Chưa có kỹ năng ưu tiên" description="Chạy đối soát CV để hệ thống xác định kỹ năng còn thiếu." ctaLabel="Đối soát CV" ctaHref="/cv-matching" compact />
                 ) : (
                   prioritySkills.map((skill) => {
                     const uc = urgencyConfig[skill.priority] || urgencyConfig.low;
@@ -1762,14 +1758,14 @@ export function PersonalDashboard() {
                               <h4 className="font-bold text-slate-900 dark:text-white text-sm">{toTitleCase(skill.skill_name)}</h4>
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${uc.bg} ${uc.text}`}>{uc.label}</span>
                               <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold">
-                                {skill.status === "Missing" ? "\u0110ang thi\u1ebfu" : "Kh\u1edbp m\u1ed9t ph\u1ea7n"}
+                                {skill.status === "Missing" ? "Đang thiếu" : "Khớp một phần"}
                               </span>
                             </div>
                             <p className="text-xs text-slate-500 dark:text-slate-400">{skill.reason}</p>
                           </div>
                           <div className="text-right shrink-0">
                             <p className="text-xs font-bold text-emerald-600">{skill.impact}</p>
-                            <p className="text-[11px] text-slate-400">{skill.job_count.toLocaleString("vi-VN")} c\u00f4ng vi\u1ec7c y\u00eau c\u1ea7u</p>
+                            <p className="text-[11px] text-slate-400">{skill.job_count.toLocaleString("vi-VN")} công việc yêu cầu</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
@@ -1777,7 +1773,7 @@ export function PersonalDashboard() {
                             <Clock className="w-3 h-3" /> {skill.timeframe}
                           </span>
                           <Link href="/skill-gap" className="px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-700 transition-colors">
-                            Xem g\u1ee3i \u00fd
+                            Xem gợi ý
                           </Link>
                         </div>
                       </div>
@@ -1792,19 +1788,19 @@ export function PersonalDashboard() {
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Award className="h-5 w-5 text-violet-600" />
-                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">L\u1ed9 tr\u00ecnh ngh\u1ec1 nghi\u1ec7p \u0111\u1ec1 xu\u1ea5t</h3>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">Lộ trình nghề nghiệp đề xuất</h3>
                 </div>
                 <Link href="/cv-matching" className="hidden text-xs font-semibold text-violet-600 hover:text-violet-700 sm:inline-flex">
-                  C\u1eadp nh\u1eadt ph\u00e2n t\u00edch
+                  Cập nhật phân tích
                 </Link>
               </div>
               {careerPaths.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 text-center">
                   <Award className="mx-auto mb-2 h-8 w-8 text-slate-300 dark:text-slate-700" />
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">Ch\u01b0a c\u00f3 l\u1ed9 tr\u00ecnh ngh\u1ec1 nghi\u1ec7p \u0111\u1ec1 xu\u1ea5t</p>
-                  <p className="mx-auto mt-1 max-w-xl text-xs text-slate-500 dark:text-slate-400">H\u00e3y ch\u1ecdn CV m\u1eb7c \u0111\u1ecbnh v\u00e0 ch\u1ea1y so kh\u1edbp \u0111\u1ec3 h\u1ec7 th\u1ed1ng l\u1ea5y nh\u00f3m ngh\u1ec1, k\u1ef9 n\u0103ng c\u00f2n thi\u1ebfu v\u00e0 d\u1eef li\u1ec7u th\u1ecb tr\u01b0\u1eddng.</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">Chưa có lộ trình nghề nghiệp đề xuất</p>
+                  <p className="mx-auto mt-1 max-w-xl text-xs text-slate-500 dark:text-slate-400">Hãy chọn CV mặc định và chạy so khớp để hệ thống lấy nhóm nghề, kỹ năng còn thiếu và dữ liệu thị trường.</p>
                   <Link href="/cv-matching" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-xs font-bold text-white hover:bg-violet-700">
-                    Ph\u00e2n t\u00edch CV <ChevronRight className="h-3.5 w-3.5" />
+                    Phân tích CV <ChevronRight className="h-3.5 w-3.5" />
                   </Link>
                 </div>
               ) : (
@@ -1822,8 +1818,8 @@ export function PersonalDashboard() {
                       </div>
                       <div className="mb-3">
                         <div className="mb-1.5 flex items-center justify-between text-xs">
-                          <span className="text-slate-500 dark:text-slate-400">M\u1ee9c \u0111\u1ed9 s\u1eb5n s\u00e0ng</span>
-                          <span className="font-bold text-slate-900 dark:text-white">{path.current_match}% \u2192 {path.target_match}%</span>
+                          <span className="text-slate-500 dark:text-slate-400">Mức độ sẵn sàng</span>
+                          <span className="font-bold text-slate-900 dark:text-white">{path.current_match}% → {path.target_match}%</span>
                         </div>
                         <div className="relative h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                           <div className="absolute h-full rounded-full bg-violet-500 transition-all" style={{ width: `${Math.min(path.current_match, 100)}%` }} />
@@ -1832,20 +1828,20 @@ export function PersonalDashboard() {
                       </div>
                       <div className="space-y-1.5 border-t border-slate-100 pt-3 dark:border-slate-800 text-xs">
                         <div className="flex items-center justify-between gap-3">
-                          <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400"><Clock className="h-3 w-3" /> Th\u1eddi gian chu\u1ea9n b\u1ecb</span>
+                          <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400"><Clock className="h-3 w-3" /> Thời gian chuẩn bị</span>
                           <span className="font-semibold text-slate-900 dark:text-white">{path.time_to_ready}</span>
                         </div>
                         <div className="flex items-center justify-between gap-3">
-                          <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400"><DollarSign className="h-3 w-3" /> Kho\u1ea3ng l\u01b0\u01a1ng</span>
+                          <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400"><DollarSign className="h-3 w-3" /> Khoảng lương</span>
                           <span className="text-right font-bold text-emerald-600">{path.salary_range}</span>
                         </div>
                         <div className="flex items-center justify-between gap-3">
-                          <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400"><Briefcase className="h-3 w-3" /> C\u01a1 h\u1ed9i \u0111ang m\u1edf</span>
-                          <span className="font-semibold text-blue-700 dark:text-blue-300">{path.openings_count.toLocaleString("vi-VN")} c\u00f4ng vi\u1ec7c</span>
+                          <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400"><Briefcase className="h-3 w-3" /> Cơ hội đang mở</span>
+                          <span className="font-semibold text-blue-700 dark:text-blue-300">{path.openings_count.toLocaleString("vi-VN")} công việc</span>
                         </div>
                       </div>
                       <Link href={path.href} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900">
-                        Xem g\u1ee3i \u00fd h\u00e0nh \u0111\u1ed9ng <ChevronRight className="h-3.5 w-3.5" />
+                        Xem gợi ý hành động <ChevronRight className="h-3.5 w-3.5" />
                       </Link>
                     </div>
                   ))}
@@ -1856,16 +1852,16 @@ export function PersonalDashboard() {
             {/* Saved Reports */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-slate-900 dark:text-white text-sm">B\u00e1o c\u00e1o \u0111\u00e3 l\u01b0u</h3>
-                <span className="text-xs text-slate-500 dark:text-slate-400">{savedReports.length} b\u00e1o c\u00e1o</span>
+                <h3 className="font-bold text-slate-900 dark:text-white text-sm">Báo cáo đã lưu</h3>
+                <span className="text-xs text-slate-500 dark:text-slate-400">{savedReports.length} báo cáo</span>
               </div>
               {savedReports.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 text-center">
                   <FileText className="mx-auto mb-3 h-8 w-8 text-slate-300" />
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">Ch\u01b0a c\u00f3 b\u00e1o c\u00e1o \u0111\u1ec1 xu\u1ea5t</p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">Ch\u1ea1y ph\u00e2n t\u00edch CV \u0111\u1ec3 h\u1ec7 th\u1ed1ng l\u01b0u l\u1ecbch s\u1eed \u0111\u1ec1 xu\u1ea5t.</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">Chưa có báo cáo đề xuất</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">Chạy phân tích CV để hệ thống lưu lịch sử đề xuất.</p>
                   <Link href="/cv-matching" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">
-                    Ph\u00e2n t\u00edch CV <ChevronRight className="h-3.5 w-3.5" />
+                    Phân tích CV <ChevronRight className="h-3.5 w-3.5" />
                   </Link>
                 </div>
               ) : (
@@ -1884,7 +1880,7 @@ export function PersonalDashboard() {
                         </div>
                         <div className="flex flex-col items-end gap-1.5 shrink-0">
                           <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${report.score >= 90 ? "bg-emerald-100 text-emerald-700" : report.score >= 75 ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
-                            {report.score}% ph\u00f9 h\u1ee3p
+                            {report.score}% phù hợp
                           </span>
                           <div className="flex items-center gap-1 text-[11px] text-slate-400">
                             <Calendar className="w-3 h-3" /> {report.date}
@@ -1894,7 +1890,7 @@ export function PersonalDashboard() {
                       <div className="mt-3 pt-3 border-t border-slate-50 dark:border-slate-800">
                         <button onClick={() => report.onViewReport()} disabled={isRedirecting} className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors disabled:opacity-50">
                           <ExternalLink className="w-3.5 h-3.5" />
-                          {isRedirecting ? "\u0110ang m\u1edf..." : "Xem b\u00e1o c\u00e1o"}
+                          {isRedirecting ? "Đang mở..." : "Xem báo cáo"}
                         </button>
                       </div>
                     </div>
@@ -1906,22 +1902,22 @@ export function PersonalDashboard() {
             {/* Learning Resources */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-slate-900 dark:text-white text-sm">T\u00e0i nguy\u00ean h\u1ecdc t\u1eadp</h3>
+                <h3 className="font-bold text-slate-900 dark:text-white text-sm">Tài nguyên học tập</h3>
                 <Link href="/roadmap" className="flex shrink-0 items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
-                  T\u1edbi Roadmap <ChevronRight className="w-3.5 h-3.5" />
+                  Tới Roadmap <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {learningRecs.length === 0 ? (
                   <div className="col-span-full">
-                    <EmptyState icon={BookOpen} title="Ch\u01b0a c\u00f3 t\u00e0i nguy\u00ean h\u1ecdc t\u1eadp \u0111\u1ec1 xu\u1ea5t" description="Ch\u1ea1y ph\u00e2n t\u00edch k\u1ef9 n\u0103ng \u0111\u1ec3 h\u1ec7 th\u1ed1ng \u0111\u1ec1 xu\u1ea5t kh\u00f3a h\u1ecdc ph\u00f9 h\u1ee3p." ctaLabel="Ph\u00e2n t\u00edch k\u1ef9 n\u0103ng" ctaHref="/skill-gap" compact />
+                    <EmptyState icon={BookOpen} title="Chưa có tài nguyên học tập đề xuất" description="Chạy phân tích kỹ năng để hệ thống đề xuất khóa học phù hợp." ctaLabel="Phân tích kỹ năng" ctaHref="/skill-gap" compact />
                   </div>
                 ) : (
                   learningRecs.map((rec) => {
                     const primaryCourse = rec.courses[0];
                     const primaryPath = rec.paths[0];
-                    const resourceTitle = primaryCourse?.title || primaryPath?.title || `B\u1ed5 sung ${toTitleCase(rec.skill_name)}`;
-                    const resourceProvider = primaryCourse?.provider || (primaryPath ? "L\u1ed9 tr\u00ecnh h\u1ecdc" : "Nova");
+                    const resourceTitle = primaryCourse?.title || primaryPath?.title || `Bổ sung ${toTitleCase(rec.skill_name)}`;
+                    const resourceProvider = primaryCourse?.provider || (primaryPath ? "Lộ trình học" : "Nova");
                     const resourceDuration = primaryCourse?.duration || primaryPath?.duration || rec.estimated_time;
                     const resourceRating = primaryCourse?.rating || 0;
                     const resourceUrl = primaryCourse?.source_url || `/roadmap?skill=${encodeURIComponent(rec.skill_name)}`;
@@ -1932,7 +1928,7 @@ export function PersonalDashboard() {
                           <div>
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${rec.status === "Missing" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
-                                {rec.status === "Missing" ? "\u0110ang thi\u1ebfu" : "Kh\u1edbp m\u1ed9t ph\u1ea7n"}
+                                {rec.status === "Missing" ? "Đang thiếu" : "Khớp một phần"}
                               </span>
                               <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-bold">{toTitleCase(rec.skill_name)}</span>
                             </div>
@@ -1941,7 +1937,7 @@ export function PersonalDashboard() {
                           </div>
                           <div className="text-right shrink-0">
                             <p className="font-bold text-slate-900 dark:text-white text-sm">
-                              {primaryCourse ? formatCoursePrice(primaryCourse.price) : "L\u1ed9 tr\u00ecnh"}
+                              {primaryCourse ? "Khóa học" : "Lộ trình"}
                             </p>
                             {resourceRating > 0 && (
                               <div className="flex items-center gap-0.5 text-amber-400 justify-end mt-0.5">

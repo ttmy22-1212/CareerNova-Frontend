@@ -335,7 +335,6 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
     <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full min-w-0">
       {courses.map((course) => {
         const learners = formatLearners(course.learners);
-        const isFree = !course.price || course.price <= 0;
         return (
           <div
             key={course.id}
@@ -351,15 +350,6 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
                     {course.provider}
                   </p>
                 </div>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                    isFree
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                  }`}
-                >
-                  {isFree ? "Miễn phí" : `$${course.price}`}
-                </span>
               </div>
               <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                 <span className="flex items-center gap-1">
