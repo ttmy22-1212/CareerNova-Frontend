@@ -386,7 +386,6 @@ export function JobSearch() {
             className="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
             <option value="match_score">Phù hợp nhất</option>
-            <option value="salary_med">Lương cao nhất</option>
             <option value="listed_time">Gần đây nhất</option>
           </select>
         </div>
@@ -474,22 +473,6 @@ export function JobSearch() {
                       }`}
                     >
                       {r.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
-                  Lương (Tham khảo)
-                </label>
-                <div className="space-y-1">
-                  {["Bất kỳ mức lương", "Mức thị trường"].map((r, idx) => (
-                    <button
-                      key={r}
-                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors ${idx === 0 ? "bg-slate-50 dark:bg-slate-800/50 font-semibold" : ""}`}
-                    >
-                      {r}
                     </button>
                   ))}
                 </div>
