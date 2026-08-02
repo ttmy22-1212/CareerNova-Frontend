@@ -29,15 +29,7 @@ const jobTypes = [
   { label: "Tất cả", value: "" },
   { label: "Toàn thời gian", value: "Full-time" },
   { label: "Làm việc từ xa", value: "Remote" },
-  { label: "Linh hoạt", value: "Hybrid" },
   { label: "Bán thời gian", value: "Part-time" },
-];
-
-const experienceLevels = [
-  { label: "Mọi cấp độ", value: "" },
-  { label: "Junior", value: "Junior" },
-  { label: "Cấp độ Trung bình", value: "Mid" },
-  { label: "Senior", value: "Senior" },
 ];
 
 const typeColors: Record<string, string> = {
@@ -405,53 +397,6 @@ export function JobSearch() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
-                  Cấp độ kinh nghiệm
-                </label>
-                <div className="space-y-1">
-                  {experienceLevels.map((l) => (
-                    <button
-                      key={l.value}
-                      onClick={() => setSelectedExp(l.value)}
-                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                        selectedExp === l.value
-                          ? "bg-blue-50 text-blue-700"
-                          : "hover:bg-slate-50 text-slate-600"
-                      }`}
-                    >
-                      {l.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
-                  Điểm phù hợp tối thiểu
-                </label>
-                <div className="space-y-1">
-                  {[
-                    { label: "Bất kỳ phù hợp", value: undefined },
-                    { label: "80%+ Phù hợp", value: 80 },
-                    { label: "70%+ Phù hợp", value: 70 },
-                    { label: "60%+ Phù hợp", value: 60 },
-                  ].map((r) => (
-                    <button
-                      key={r.label}
-                      onClick={() => setMinMatch(r.value)}
-                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                        minMatch === r.value
-                          ? "bg-blue-50 text-blue-700"
-                          : "hover:bg-slate-50 text-slate-600"
-                      }`}
-                    >
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
                   Đăng trong
                 </label>
                 <div className="space-y-1">
@@ -487,8 +432,7 @@ export function JobSearch() {
           <span className="text-base">✨</span>
           <span>
             <strong>Xếp theo độ phù hợp với CV mặc định</strong> — công việc phù
-            hợp nhất hiển thị trước (cao → thấp). Muốn lọc ngưỡng tối thiểu? Dùng
-            bộ lọc “Điểm phù hợp tối thiểu”.{" "}
+            hợp nhất hiển thị trước (cao → thấp).{" "}
             {total === 0 && !loading && (
               <span className="text-blue-500">
                 Chưa có dữ liệu — hãy tải CV và chạy so khớp CV trước.
