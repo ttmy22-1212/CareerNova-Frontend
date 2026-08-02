@@ -242,6 +242,27 @@ const computeContribution = (items: any[], totalWeight: number) =>
       totalWeight > 0 ? Math.round((it.weight / totalWeight) * 100) : 0,
   }));
 
+// Dựng điểm radar từ danh sách kỹ năng. `you` = mức bạn đáp ứng; `required` =
+// ĐỘ QUAN TRỌNG của kỹ năng (weight) quy về 0-100 theo kỹ năng nặng nhất trong
+// tập — nhờ vậy vòng "Độ quan trọng" phản ánh đúng job coi trọng gì, thay vì
+// phẳng 100 (vô nghĩa). Chỗ vòng "Bạn" tụt sâu trong vòng "Độ quan trọng" =
+// đúng kỹ năng quan trọng đang thiếu.
+const buildRadarPoints = (skills: any[]) => {
+  const maxW = Math.max(
+    0.0001,
+    ...skills.map((s) => Number(s.weight) || 0),
+  );
+  return skills.map((s) => {
+    const you = normalizePercent(s.similarity);
+    return {
+      subject: s.skill_name,
+      you: you === 0 ? 0.1 : you,
+      required: Math.round(((Number(s.weight) || 0) / maxW) * 100),
+      matchedVia: s.matched_via || null,
+    };
+  });
+};
+
 // Hiển thị độ quan trọng của kỹ năng với vị trí (đưa weight ra khỏi tooltip):
 // chấm bậc + "chiếm X% yêu cầu". weight là 0..1, tổng các kỹ năng của 1 vị trí = 1.
 function SkillImportance({ weight }: { weight: number }) {
@@ -516,15 +537,11 @@ export function CVMatching() {
       setSelectedModalCategory("All");
       setModalCategoryAnalysis(null);
 
-      const allData = [
+      const allData = buildRadarPoints([
         ...(analyzeResult.radar_data || []),
         ...(analyzeResult.gap_report?.partially_matched_skills || []),
         ...(analyzeResult.gap_report?.missing_skills || []),
-      ].map((s: any) => ({
-        subject: s.skill_name,
-        you: normalizePercent(s.similarity),
-        required: 100,
-      }));
+      ]);
 
       setModalRadarDataFiltered(allData);
       setOriginalModalRadarData(allData);
@@ -543,12 +560,7 @@ export function CVMatching() {
       jobTitle: backendData.job_title || backendData.search_group || "",
       company: backendData.company_name || "",
       analysis: buildAnalysis(backendData.radar_data, backendData.gap_report),
-      radarData: allSkillsForRadar.map((s: any) => ({
-        subject: s.skill_name,
-        you: normalizePercent(s.similarity),
-        required: 100,
-        matchedVia: s.matched_via || null,
-      })),
+      radarData: buildRadarPoints(allSkillsForRadar),
     };
     setOriginalRadarData(mappedResult.radarData);
     setOriginalModalRadarData(mappedResult.radarData);
@@ -602,7 +614,7 @@ export function CVMatching() {
           MatchingApi.getRadarByCategory(matchId, c.category).catch(() => null),
         ),
       );
-      const overview = results
+      const overviewRaw = results
         .map((res, i) => {
           const gap = (res?.data?.gap_report as any) || {};
           const skills = [
@@ -611,19 +623,41 @@ export function CVMatching() {
             ...(gap.missing_skills || []),
           ];
           if (!skills.length) return null;
-          const avg =
-            skills.reduce(
-              (sum: number, s: any) => sum + normalizePercent(s.similarity),
-              0,
-            ) / skills.length;
+          const totW = skills.reduce(
+            (sum: number, s: any) => sum + (Number(s.weight) || 0),
+            0,
+          );
+          // Điểm đáp ứng của nhóm = trung bình CÓ NHÂN TRỌNG SỐ (kỹ năng quan
+          // trọng tính nặng hơn), thay vì trung bình cào bằng.
+          const weightedYou =
+            totW > 0
+              ? skills.reduce(
+                  (sum: number, s: any) =>
+                    sum +
+                    normalizePercent(s.similarity) * (Number(s.weight) || 0),
+                  0,
+                ) / totW
+              : skills.reduce(
+                  (sum: number, s: any) => sum + normalizePercent(s.similarity),
+                  0,
+                ) / skills.length;
           return {
             subject: matched[i].category,
-            you: Math.round(avg),
-            required: 100,
+            you: Math.round(weightedYou),
+            __w: totW,
           };
         })
-        .filter(Boolean);
-      setCategoryOverviewData(overview as any[]);
+        .filter(Boolean) as any[];
+      // `required` của nhóm = ĐỘ QUAN TRỌNG của nhóm (tổng trọng số kỹ năng trong
+      // nhóm) quy về 0-100 theo nhóm nặng nhất → vòng xanh lá cho biết nhóm nào
+      // job coi trọng nhất, không còn phẳng 100.
+      const maxCatW = Math.max(0.0001, ...overviewRaw.map((o) => o.__w || 0));
+      const overview = overviewRaw.map((o) => ({
+        subject: o.subject,
+        you: o.you,
+        required: Math.round((o.__w / maxCatW) * 100),
+      }));
+      setCategoryOverviewData(overview);
     } catch (err) {
       console.error("Lỗi tính overview theo category:", err);
       setCategoryOverviewData([]);
@@ -682,20 +716,7 @@ export function CVMatching() {
           ...(rawGapReport.missing_skills || []),
         ];
 
-        const formattedData = combinedSkills.map((s: any) => {
-          let youScore = normalizePercent(s.similarity);
-
-          if (youScore === 0) {
-            youScore = 0.1;
-          }
-
-          return {
-            subject: s.skill_name,
-            you: youScore,
-            required: 100,
-            matchedVia: s.matched_via || null,
-          };
-        });
+        const formattedData = buildRadarPoints(combinedSkills);
 
         if (isModal) {
           setModalRadarDataFiltered(formattedData);
@@ -1795,6 +1816,10 @@ export function CVMatching() {
             <div className="lg:col-span-2 space-y-4">
               <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
                 <h3 className="font-bold text-slate-900 dark:text-white mb-1">Radar kỹ năng</h3>
+                <p className="mb-3 text-[11px] text-slate-500 dark:text-slate-400">
+                  Xanh lá = mức job coi trọng · Xanh dương = mức bạn đáp ứng. Xanh
+                  dương lấp càng kín xanh lá thì bạn càng sẵn sàng.
+                </p>
 
                 {categories.length > 0 && (
                   <div className="mb-4">
@@ -1830,7 +1855,7 @@ export function CVMatching() {
                       )}
                       {isOverview && (
                         <p className="mb-2 text-[11px] text-slate-500 dark:text-slate-400">
-                          Điểm trung bình theo nhóm — bấm vào tên nhóm để xem chi tiết
+                          Mức đáp ứng theo nhóm (đã nhân trọng số) — bấm tên nhóm để xem chi tiết kỹ năng
                         </p>
                       )}
                       {isOverviewLoading ? (
@@ -1841,7 +1866,8 @@ export function CVMatching() {
                       ) : (
                         <SkillRadar
                           data={dataToRender}
-                          requiredLabel="Yêu cầu"
+                          requiredLabel="Độ quan trọng"
+                          youLabel="Bạn đáp ứng"
                           matchedViaLabel="liên quan tới"
                           clickableLabels={isOverview}
                           onLabelClick={(cat) =>
@@ -1902,16 +1928,11 @@ export function CVMatching() {
         (() => {
           // Trích xuất và chuẩn hóa dữ liệu từ analyzeResult cho Modal
           const modalScore = normalizePercent(analyzeResult.match_score);
-          const modalRadarData = [
+          const modalRadarData = buildRadarPoints([
             ...(analyzeResult.radar_data || []),
             ...(analyzeResult.gap_report?.partially_matched_skills || []),
             ...(analyzeResult.gap_report?.missing_skills || []),
-          ].map((s: any) => ({
-            subject: s.skill_name,
-            you: normalizePercent(s.similarity),
-            required: 100,
-            matchedVia: s.matched_via || null,
-          }));
+          ]);
 
           // Danh sách kỹ năng theo nhóm đang lọc (nếu có) — đồng bộ với radar bên phải.
           const useModalCat =
@@ -2137,8 +2158,8 @@ export function CVMatching() {
                           )}
                           {isModalOverview && (
                             <p className="mb-2 text-[11px] text-slate-500 dark:text-slate-400">
-                              Điểm trung bình theo nhóm — bấm vào tên nhóm để xem
-                              chi tiết
+                              Mức đáp ứng theo nhóm (đã nhân trọng số) — bấm tên
+                              nhóm để xem chi tiết kỹ năng
                             </p>
                           )}
                           <SkillRadar
@@ -2150,7 +2171,8 @@ export function CVMatching() {
                                   ? modalRadarDataFiltered
                                   : modalRadarData
                             }
-                            requiredLabel="Yêu cầu"
+                            requiredLabel="Độ quan trọng"
+                          youLabel="Bạn đáp ứng"
                             matchedViaLabel="liên quan tới"
                             clickableLabels={isModalOverview}
                             onLabelClick={(cat) =>
