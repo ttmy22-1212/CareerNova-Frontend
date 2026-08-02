@@ -50,6 +50,8 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
   // Danh sách khóa học phổ biến (không lọc) — dùng làm fallback khi tìm kiếm
   // theo 1 kỹ năng nhưng không có khóa nào khớp, để không bao giờ hiện trống.
   const [popularCourses, setPopularCourses] = useState<CourseItemDto[]>([]);
+  // Tương tự cho lộ trình: danh sách lộ trình phổ biến dùng làm fallback.
+  const [popularPaths, setPopularPaths] = useState<LearningPathDto[]>([]);
 
   const [pathsLoading, setPathsLoading] = useState<boolean>(true);
   const [recommendationsLoading, setRecommendationsLoading] =
@@ -139,6 +141,13 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
       .catch(() => setPopularCourses([]));
   }, []);
 
+  // Nạp trước danh sách lộ trình phổ biến (không lọc) để làm fallback.
+  useEffect(() => {
+    LearningRoadmapApi.getRoadmap({ limit: 6 })
+      .then((res) => setPopularPaths(res?.learning_paths || []))
+      .catch(() => setPopularPaths([]));
+  }, []);
+
   const filteredPaths = useMemo(() => {
     const q = debouncedSearchQuery.toLowerCase();
     let paths = [...learningPaths];
@@ -188,12 +197,13 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
           courses.map((c) =>
             c.id === courseId ? { ...c, is_saved: isSavedNewStatus } : c,
           );
-        setLearningPaths((prev) =>
-          prev.map((path) => ({
+        const updatePathCourses = (paths: LearningPathDto[]) =>
+          paths.map((path) => ({
             ...path,
             courses: updateCourseStatus(path.courses),
-          })),
-        );
+          }));
+        setLearningPaths(updatePathCourses);
+        setPopularPaths(updatePathCourses);
         setRecommendedCourses((prev) => updateCourseStatus(prev));
         setPopularCourses((prev) => updateCourseStatus(prev));
       }
@@ -207,6 +217,118 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
 
   // Từ khóa đang lọc khóa học (ô tìm kiếm hoặc chip kỹ năng) — dùng cho fallback.
   const activeFilterTerm = debouncedSearchQuery || activeSkill || "";
+
+  // Lưới thẻ lộ trình — tách riêng để dùng lại cho danh sách khớp và danh sách phổ biến.
+  const renderPathGrid = (paths: LearningPathDto[]) => (
+    <div className="grid items-start gap-4 grid-cols-1 xl:grid-cols-2 w-full">
+      {paths.map((path, idx) => {
+        const isExpanded = expandedPath === path.id;
+        return (
+          <div
+            key={path.id}
+            className="overflow-hidden rounded-xl border border-slate-200 bg-white transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900 w-full min-w-0"
+            style={{ borderLeft: `4px solid ${categoryColor(idx)}` }}
+          >
+            {/* Header lộ trình — nhẹ, chỉ chấm màu nhận diện */}
+            <button
+              type="button"
+              onClick={() => setExpandedPath(isExpanded ? null : path.id)}
+              aria-expanded={isExpanded}
+              className="flex w-full items-start gap-3 p-5 text-left"
+            >
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-2xl"
+                style={{ backgroundColor: `${categoryColor(idx)}1a` }}
+              >
+                {path.icon}
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-[15px] font-bold leading-snug text-slate-900 dark:text-white line-clamp-2">
+                  {path.title}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500 line-clamp-2 dark:text-slate-400">
+                  {path.description}
+                </p>
+                <div className="mt-2 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="flex items-center gap-1">
+                    <BookOpen className="h-3.5 w-3.5" />
+                    {path.courses.length} khóa học
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    {path.duration}
+                  </span>
+                </div>
+              </div>
+            </button>
+
+            {/* Danh sách khóa học (mở/đóng) */}
+            {isExpanded && (
+              <div className="space-y-3 border-t border-slate-100 p-5 dark:border-slate-800">
+                {path.courses.map((course) => (
+                  <div
+                    key={course.id}
+                    className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50 w-full min-w-0"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="text-sm font-bold leading-snug text-slate-900 dark:text-white line-clamp-2">
+                          {course.title}
+                        </h4>
+                        <span className="flex shrink-0 items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                          {course.rating}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                        {course.provider} • {course.duration}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {course.skills.slice(0, 3).map((skill) => (
+                          <span
+                            key={skill}
+                            className="rounded bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex items-center gap-2">
+                        {course.source_url && (
+                          <button
+                            onClick={() =>
+                              window.open(course.source_url, "_blank")
+                            }
+                            className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700"
+                          >
+                            Đi tới khóa học
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleToggleSave(course.id)}
+                          className={`rounded-lg border px-2.5 py-1.5 transition-all ${
+                            course.is_saved
+                              ? "border-amber-500 bg-amber-50 text-amber-500"
+                              : "border-slate-300 text-slate-500 hover:border-slate-400"
+                          }`}
+                          title={course.is_saved ? "Bỏ lưu" : "Lưu khóa học"}
+                        >
+                          <BookmarkPlus
+                            className={`h-4 w-4 ${course.is_saved ? "fill-amber-500" : ""}`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 
   // Lưới thẻ khóa học — tách riêng để dùng lại cho danh sách khớp và danh sách phổ biến.
   const renderCourseGrid = (courses: CourseItemDto[]) => (
@@ -405,132 +527,34 @@ export function LearningRoadmap({ selectedSkillFromDB }: LearningRoadmapProps) {
             ))}
           </div>
         ) : displayLearningPaths.length === 0 ? (
-          <EmptyState
-            icon={Layers}
-            title="Chưa có lộ trình phù hợp"
-            description={
-              hasActiveFilter
-                ? "Thử bỏ bớt bộ lọc hoặc từ khóa tìm kiếm."
-                : "Hãy đối soát CV để hệ thống gợi ý lộ trình theo kỹ năng bạn còn thiếu."
-            }
-            ctaLabel={hasActiveFilter ? "Xoá bộ lọc" : "Đối soát CV"}
-            ctaHref={hasActiveFilter ? undefined : "/cv-matching"}
-            onCta={hasActiveFilter ? clearFilters : undefined}
-          />
+          activeFilterTerm && popularPaths.length > 0 ? (
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                <Layers className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  Chưa có lộ trình khớp “{activeFilterTerm}” — dưới đây là các
+                  lộ trình phổ biến bạn có thể tham khảo.
+                </span>
+              </div>
+              {renderPathGrid(popularPaths)}
+            </div>
+          ) : (
+            <EmptyState
+              icon={Layers}
+              title="Chưa có lộ trình phù hợp"
+              description={
+                hasActiveFilter
+                  ? "Thử bỏ bớt bộ lọc hoặc từ khóa tìm kiếm."
+                  : "Hãy đối soát CV để hệ thống gợi ý lộ trình theo kỹ năng bạn còn thiếu."
+              }
+              ctaLabel={hasActiveFilter ? "Xoá bộ lọc" : "Đối soát CV"}
+              ctaHref={hasActiveFilter ? undefined : "/cv-matching"}
+              onCta={hasActiveFilter ? clearFilters : undefined}
+            />
+          )
         ) : (
           <>
-            <div className="grid items-start gap-4 grid-cols-1 xl:grid-cols-2 w-full">
-              {displayLearningPaths.map((path, idx) => {
-                const isExpanded = expandedPath === path.id;
-                return (
-                  <div
-                    key={path.id}
-                    className="overflow-hidden rounded-xl border border-slate-200 bg-white transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900 w-full min-w-0"
-                    style={{ borderLeft: `4px solid ${categoryColor(idx)}` }}
-                  >
-                    {/* Header lộ trình — nhẹ, chỉ chấm màu nhận diện */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedPath(isExpanded ? null : path.id)
-                      }
-                      aria-expanded={isExpanded}
-                      className="flex w-full items-start gap-3 p-5 text-left"
-                    >
-                      <span
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-2xl"
-                        style={{ backgroundColor: `${categoryColor(idx)}1a` }}
-                      >
-                        {path.icon}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-[15px] font-bold leading-snug text-slate-900 dark:text-white line-clamp-2">
-                          {path.title}
-                        </h3>
-                        <p className="mt-1 text-sm text-slate-500 line-clamp-2 dark:text-slate-400">
-                          {path.description}
-                        </p>
-                        <div className="mt-2 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-                          <span className="flex items-center gap-1">
-                            <BookOpen className="h-3.5 w-3.5" />
-                            {path.courses.length} khóa học
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
-                            {path.duration}
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* Danh sách khóa học (mở/đóng) */}
-                    {isExpanded && (
-                      <div className="space-y-3 border-t border-slate-100 p-5 dark:border-slate-800">
-                        {path.courses.map((course) => (
-                          <div
-                            key={course.id}
-                            className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50 w-full min-w-0"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <h4 className="text-sm font-bold leading-snug text-slate-900 dark:text-white line-clamp-2">
-                                  {course.title}
-                                </h4>
-                                <span className="flex shrink-0 items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-                                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                  {course.rating}
-                                </span>
-                              </div>
-                              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                                {course.provider} • {course.duration}
-                              </p>
-                              <div className="mt-2 flex flex-wrap gap-1">
-                                {course.skills.slice(0, 3).map((skill) => (
-                                  <span
-                                    key={skill}
-                                    className="rounded bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
-                                  >
-                                    {skill}
-                                  </span>
-                                ))}
-                              </div>
-                              <div className="mt-3 flex items-center gap-2">
-                                {course.source_url && (
-                                  <button
-                                    onClick={() =>
-                                      window.open(course.source_url, "_blank")
-                                    }
-                                    className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700"
-                                  >
-                                    Đi tới khóa học
-                                    <ExternalLink className="h-3.5 w-3.5" />
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => handleToggleSave(course.id)}
-                                  className={`rounded-lg border px-2.5 py-1.5 transition-all ${
-                                    course.is_saved
-                                      ? "border-amber-500 bg-amber-50 text-amber-500"
-                                      : "border-slate-300 text-slate-500 hover:border-slate-400"
-                                  }`}
-                                  title={
-                                    course.is_saved ? "Bỏ lưu" : "Lưu khóa học"
-                                  }
-                                >
-                                  <BookmarkPlus
-                                    className={`h-4 w-4 ${course.is_saved ? "fill-amber-500" : ""}`}
-                                  />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            {renderPathGrid(displayLearningPaths)}
 
             {!debouncedSearchQuery &&
               filteredPaths.length > PATHS_PREVIEW_COUNT && (
