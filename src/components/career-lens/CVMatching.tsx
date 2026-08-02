@@ -242,6 +242,37 @@ const computeContribution = (items: any[], totalWeight: number) =>
       totalWeight > 0 ? Math.round((it.weight / totalWeight) * 100) : 0,
   }));
 
+// Hiển thị độ quan trọng của kỹ năng với vị trí (đưa weight ra khỏi tooltip):
+// chấm bậc + "chiếm X% yêu cầu". weight là 0..1, tổng các kỹ năng của 1 vị trí = 1.
+function SkillImportance({ weight }: { weight: number }) {
+  const pct = Math.round((weight || 0) * 100);
+  const dots = weight >= 0.15 ? 3 : weight >= 0.07 ? 2 : 1;
+  const label = dots === 3 ? "Cốt lõi" : dots === 2 ? "Quan trọng" : "Bổ trợ";
+  return (
+    <span className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+      <span
+        className="flex items-center gap-0.5"
+        title="Độ quan trọng của kỹ năng với vị trí"
+      >
+        {[1, 2, 3].map((i) => (
+          <span
+            key={i}
+            className={`w-1 h-1 rounded-full ${
+              i <= dots ? "bg-blue-500" : "bg-slate-200 dark:bg-slate-700"
+            }`}
+          />
+        ))}
+      </span>
+      <span className="font-semibold text-slate-600 dark:text-slate-300">
+        {label}
+      </span>
+      · chiếm{" "}
+      <b className="font-semibold text-slate-700 dark:text-slate-200">{pct}%</b>{" "}
+      yêu cầu
+    </span>
+  );
+}
+
 function ScoreRing({ score, size = 96 }: { score: number; size?: number }) {
   const r = (size - 12) / 2;
   const circ = 2 * Math.PI * r;
@@ -1477,6 +1508,10 @@ export function CVMatching() {
                                 </span>
                               </div>
 
+                              <div className="mb-2 -mt-0.5">
+                                <SkillImportance weight={item.weight} />
+                              </div>
+
                               {/* Match bar */}
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="text-[10px] text-slate-400 w-[58px] shrink-0">Tương thích</span>
@@ -1588,6 +1623,10 @@ export function CVMatching() {
                                 <span className="text-xs font-bold text-amber-600 shrink-0">{item.match}% khớp</span>
                               </div>
 
+                              <div className="mb-2 -mt-0.5">
+                                <SkillImportance weight={item.weight} />
+                              </div>
+
                               {/* Match bar */}
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="text-[10px] text-slate-400 w-[58px] shrink-0">Tương thích</span>
@@ -1665,7 +1704,12 @@ export function CVMatching() {
                               title={`Trọng số: ${(item.weight * 100).toFixed(0)}% · Đóng góp: ${item.contribution}% tổng điểm`}
                             >
                               {toTitleCase(item.skill)}
-                              <span className="ml-1 font-normal text-red-400">{item.match}%</span>
+                              <span
+                                className="ml-1 font-normal text-red-400"
+                                title="Độ quan trọng của kỹ năng với vị trí"
+                              >
+                                · {Math.round(item.weight * 100)}% yêu cầu
+                              </span>
                             </span>
                           ))}
                         </div>
@@ -1699,6 +1743,10 @@ export function CVMatching() {
                                 >
                                   {item.match}%
                                 </span>
+                              </div>
+
+                              <div className="mb-2 -mt-0.5">
+                                <SkillImportance weight={item.weight} />
                               </div>
 
                               {/* Match (closest semantic) bar */}
